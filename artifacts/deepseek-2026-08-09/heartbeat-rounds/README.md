@@ -48,6 +48,17 @@ PaymentAuthorizationUIExtension 常驻高 CPU；`uptime` 1/5/15 分钟负载在
 跨负载稳定性仍 `PARTIAL`：宿主满载（load >7，8 核）下轮次 1/2/5 出现
 76–155 ms 调度延迟超限，未宣称满载稳定。
 
+## 2026-08-10 追加轮次（round 12，load 3.61–3.65）
+
+| 轮次 | 逐值 max heartbeat (ms) | apply_ms | >75 ms | 退出码 |
+| --- | --- | --- | --- | --- |
+| 12 | 36.58 / 49.59 / 46.32 | 33.64–47.23 | 0 | 0 |
+
+正常负载“连续三次 <75 ms”证据增至 **8 组（24/24，max 59.18 ms）**。
+说明：原始 round9 的 JSON 现以 `round11.json` 保留（内容与 HEAD `fa080cf`
+中 `round9.json` 逐字节一致，`shasum` 可比对），避免与 2026-08-10 新测
+轮次混淆；跨负载稳定性结论不变（仍 `PARTIAL`）。
+
 ## 阶段归因
 
 - 正常轮次（round 3/4 与多数 opens）max heartbeat 34–59 ms，全部落在

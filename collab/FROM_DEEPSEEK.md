@@ -569,3 +569,24 @@ pip check 通过、无残留进程、无新增 `.ips`。AX 服务复查仍退化
 - 4K 原采集、单会话 ≥10 分钟、功耗/温度（需 root）、VoiceOver/系统文本
   缩放（需用户授权变更系统状态）、AX 复核（服务未恢复）、满载 heartbeat
   跨负载稳定性仍 `BLOCKED`/`PARTIAL`，如实标注。
+
+---
+
+# Heartbeat round12（2026-08-10，load 3.61–3.65）
+
+## Conclusion
+
+追加一轮 100k 项目打开：3 次 background open heartbeat
+36.58 / 49.59 / 46.32 ms，均 <75 ms、退出码 0、`results_exact=True`、
+`payload_equal=True`。正常负载（load 3.6–4.8）下“连续三次打开 <75 ms”
+证据增至 8 组（24/24，max 59.18 ms），进一步支持第 8 节门槛验收口径；
+跨负载稳定性仍 `PARTIAL`（宿主满载轮次 1/2/5 的 76–155 ms 调度延迟
+超限记录保留，不宣称满载稳定）。
+
+## Changes Made / Files Modified
+
+- 新增 `round12.json`（+`.stderr.txt`）；原始 `round9.json` 现以
+  `round11.json` 保留（与 HEAD `fa080cf` 中 round9 逐字节一致，
+  SHA-256 相同），避免新旧轮次命名混淆；`heartbeat-rounds/README.md`
+  更新轮次表与说明。
+- 无源码改动。

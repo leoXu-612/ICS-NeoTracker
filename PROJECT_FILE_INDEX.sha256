@@ -1,7 +1,7 @@
 a382de1396d6906cf2d7e9b3f830b7a76c623c09e881e72e4f1970ecdc1d226c  ./.gitignore
 19f5f9cce580d2b4ee9d32b7549a197dbab324e3e96858de34acb5f35971f997  ./FORDEEPSEEK.md
 a68e9c529565944c873530a399fdaab7906e80221369865486544ca46d20d36b  ./MIGRATION_RECORD.md
-3b56c581701d47284809029cbea494346bb0046ff23930bd596974953848212a  ./PROJECT_INDEX.md
+6aa44f4f135a96fe38ca651c8b3bb5e14b9dd13ae193e74893e99f4cc32cc5c3  ./PROJECT_INDEX.md
 6899f33c5a99de508940db05cf9a58c83867bbc9999bb1149b8c96fbe56eee00  ./README.md
 2cff680330304f0dd6a811106f707df5f94e562f3b0bfc4213d638991881f746  ./artifacts/code-review-ui-2026-07-22/01-media-ready.png
 2b98f252469573d4cab7bc2802788e5f4c1993689ff553e3eb018cdef1fda35f  ./artifacts/code-review-ui-2026-07-22/01b-media-ready-1024x768.png
@@ -65,11 +65,15 @@ f55128ff8f162b7e2d0fd30b65bdecca33ae77301b32f63f64729b50a98b2aa4  ./artifacts/de
 c5884d55cc4ad8b55f5276e5380638300b8fdbd6f65aaff72de431f7d1981665  ./artifacts/deepseek-2026-08-09/benchmark-round2.json
 d3899389b53b214d210162c6c99e2d39fa885c4d7598c5e764ac8b2c1f0066cf  ./artifacts/deepseek-2026-08-09/benchmark-slomo-round1.json
 4d1bcc537621834a5b70616c709db9f8ead62ce8a87e4e90432242d2e4d85982  ./artifacts/deepseek-2026-08-09/benchmark-slomo-round1.stderr.txt
-812976f3fb967f1e923b85e6b2b0a172807701cbdf2d052f66ff3930b67212a3  ./artifacts/deepseek-2026-08-09/heartbeat-rounds/README.md
+8ad48857fc14b316685e77a207a3169a2a8d59d8f1d68acd850ecfcbdefb7ffe  ./artifacts/deepseek-2026-08-09/heartbeat-rounds/README.md
 8448636d09675695b5fd7dc3b1e742f0934c76fdf69d4b5dd5a5859ccbe800a1  ./artifacts/deepseek-2026-08-09/heartbeat-rounds/round1.json
 f55128ff8f162b7e2d0fd30b65bdecca33ae77301b32f63f64729b50a98b2aa4  ./artifacts/deepseek-2026-08-09/heartbeat-rounds/round1.stderr.txt
 ada1dd8143cbd90bd0d7a61454976c652889b021debe4710a8d3bc3114d77e60  ./artifacts/deepseek-2026-08-09/heartbeat-rounds/round10.json
 ba488c1b91978e47b124853b4103a5ec723d1333b4833deb3d0000d97b6de26e  ./artifacts/deepseek-2026-08-09/heartbeat-rounds/round10.stderr.txt
+d6273965f2cea32cff2307508605f5f2ec3b3dfa0c5426041c02888f5330f949  ./artifacts/deepseek-2026-08-09/heartbeat-rounds/round11.json
+090bb6cc411f2fb503de6705d99037354a2f9ae9ecc2f85cc55b20622a0c288d  ./artifacts/deepseek-2026-08-09/heartbeat-rounds/round11.stderr.txt
+b6c3dd954673fc2b1bf284ca72fbe86d7e27d9886e82475c7dd67bfea3624f86  ./artifacts/deepseek-2026-08-09/heartbeat-rounds/round12.json
+5b93888a08fb14c2e1c79f7b59a2b63d7d7abbf617036d81a5e9f8165048ffdf  ./artifacts/deepseek-2026-08-09/heartbeat-rounds/round12.stderr.txt
 a2aaf08d03af9f1e0a5a81572c3db71bfd8637c4d657d0b24a41e583fdd752b4  ./artifacts/deepseek-2026-08-09/heartbeat-rounds/round2.json
 82ab8b34019812cfc6a049d3f4742cb68501b6be5081fb17ea48415cbdaf5241  ./artifacts/deepseek-2026-08-09/heartbeat-rounds/round2.stderr.txt
 a578c6cd21cc6486d8ea8e9f6663071f2f0ec52ba5388d393a5f5881f28be447  ./artifacts/deepseek-2026-08-09/heartbeat-rounds/round3.json
@@ -84,8 +88,6 @@ ec917b94b71145d98df2c43b060275abf9c44dffd3777e241edbfe0a039e6010  ./artifacts/de
 090bb6cc411f2fb503de6705d99037354a2f9ae9ecc2f85cc55b20622a0c288d  ./artifacts/deepseek-2026-08-09/heartbeat-rounds/round7.stderr.txt
 787368146645b14d7b227cfbb687d08f97f87762dd41fbc2a7087349a25d86d7  ./artifacts/deepseek-2026-08-09/heartbeat-rounds/round8.json
 aff093712bab7a9ba6e20f197c0f3593a9eaef6feade7f2d802c92c90cfdf575  ./artifacts/deepseek-2026-08-09/heartbeat-rounds/round8.stderr.txt
-d6273965f2cea32cff2307508605f5f2ec3b3dfa0c5426041c02888f5330f949  ./artifacts/deepseek-2026-08-09/heartbeat-rounds/round9.json
-090bb6cc411f2fb503de6705d99037354a2f9ae9ecc2f85cc55b20622a0c288d  ./artifacts/deepseek-2026-08-09/heartbeat-rounds/round9.stderr.txt
 08d731726e181e334e803022494423c43a76530bc6a1f3bdfc03b7f76d063535  ./artifacts/deepseek-2026-08-09/media-matrix/hevc-transcode.mp4
 8ea26d72ce42846aedaa177f00f07b90e23dc260d4b12167eaf96a231fdc5555  ./artifacts/deepseek-2026-08-09/media-matrix/source-swap-base.mp4
 638672cee1a7e0f78d5008391e81a03d8676ac2182428687242ec9c5bb755b0f  ./artifacts/deepseek-2026-08-09/media-matrix/truncated.mp4
@@ -391,7 +393,7 @@ e4d5b7c0cc91b2fa84387e180918fb5c7b2f507bb31d0a60b5c3a8346917d4ad  ./build/lib/ne
 df3162e19e40006ea4fd3e031d13bc2fe9f2d07d524e9c1f84f7d7b9e1aa56ce  ./build/lib/neo_tracker/visualization.py
 5a429f7d4b2b1311d85b2b1f7c20cd3f1b97cc4775c4c45136a3fc3308b21331  ./collab/FROM_CLAUDE.md
 ec4f6317dcf8def9817e5f6954dbfb8dee85f5e114353e0011d7d558b2169b11  ./collab/FROM_CODEX.md
-2ce753457e8fa4691afcf231b8441f6208e302169fd47d048fce096ba6165a47  ./collab/FROM_DEEPSEEK.md
+211b811d16e8e78a853359598b1c04fd943204ec09fc27369ca5a8029cf3b778  ./collab/FROM_DEEPSEEK.md
 b546e574e3ba1349d1d89b0f86e008526fb436b3f4c40c86f0d53b312645c0ee  ./collab/PROTOCOL.md
 983ac6388cc710983f58d668dcd5ed65e4cbcaf4e579ad7c2978bb02592fa41f  ./neo_tracker.egg-info/PKG-INFO
 afaad9ddd8dc469a13833468ce9a5253d734467fe26b29c2975e0fc01625eafe  ./neo_tracker.egg-info/SOURCES.txt
@@ -478,4 +480,4 @@ c17661815cd19899305810d7038acd1db5c2c566ecbaf15b6eda1331db65e546  ./tests/test_t
 832fa5aedb68e50e5d6b70eed4695678c35d6c6eb0b7b4ad2db75d67e39e6280  ./tests/test_tracking_pipeline.py
 d3c3292de09a9e0581d1b5a8aae9de409d3a13b2fed8a6b01d422519aaacc635  ./tests/test_tracking_worker.py
 7b925aacf926451c08ab243336d276e53c53df9952100c571e78ac5b6b2cbb61  ./tests/test_ui_main_window.py
-955c3d6f324ff7c61646145fb5d66890dcd99f85bc2989ab005060b64269a92f  ./交接.md
+cdac045a1ec9edfac693d1794e06bef9b5dc09f7adb85f2f5d9e7d716e32a7ec  ./交接.md
