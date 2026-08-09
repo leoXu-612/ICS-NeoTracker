@@ -3333,19 +3333,20 @@ class MainWindowStructureTests(unittest.TestCase):
         gui_thread_ident = threading.get_ident()
         probe_thread_idents: list[int] = []
         probe_paths: list[str] = []
-        paths = [f"/media/slow-{index}.mp4" for index in range(4)]
+        paths = [f"/media/slow-{index}.wav" for index in range(4)]
 
         def slow_probe(path: str) -> MediaInfo:
             probe_thread_idents.append(threading.get_ident())
             probe_paths.append(path)
             time.sleep(0.03)
             return MediaInfo(
-                fps=30.0,
-                frame_count=300,
-                width=1920,
-                height=1080,
+                frame_count=48_000,
                 duration_s=10.0,
                 available=True,
+                kind="audio",
+                sample_rate_hz=4_800.0,
+                channels=1,
+                sample_width_bytes=2,
             )
 
         window.project_controller.media_probe = slow_probe

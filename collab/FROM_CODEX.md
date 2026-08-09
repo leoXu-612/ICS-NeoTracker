@@ -730,3 +730,53 @@ Codex 已在权威工作区完成：
 ### Next Integration Step
 
 - 进入 G3：分别提取 Media Import 和 Project Open/Save 生命周期，保持 prepared → validate → atomic apply、取消不替换当前项目及 save revision/path guard。
+
+## [2026-08-09 21:21 Asia/Taipei] G3 Media Import 与 Project IO Coordinator — DONE
+
+### Conclusion
+
+- `MediaImportCoordinator` 统一拥有批量 probe 的 QThread/Worker、generation、取消、批次顺序/类型校验和 thread-stop 后终态提交。
+- `ProjectIOCoordinator` 统一拥有 staged Project Open 与后台 Project Save 生命周期；Window 只接收验证后的 `PreparedProjectOpen` / `CompletedProjectSave` 并执行 UI 原子提交与 revision dirty-state 呈现。
+- Window 不再构造或保存 MediaProbe、ProjectOpen、ProjectSave Worker/QThread/Job；只读兼容属性暂时保留给旧测试与关闭门禁。
+
+### Files Changed
+
+- `neo_tracker/application/media_import_coordinator.py`
+- `neo_tracker/application/project_io_coordinator.py`
+- `neo_tracker/ui/main_window.py`
+- `tests/test_media_import_coordinator.py`
+- `tests/test_project_io_coordinator.py`
+- `tests/test_main_window_architecture.py`
+- `tests/test_ui_main_window.py`
+- `artifacts/parallel-gpt-2026-08-09/g3/**`
+- `collab/FROM_CODEX.md`
+
+### Tests
+
+- 红：两个 Coordinator 模块缺失，Window 仍直接拥有三组 Worker/QThread，预期失败。
+- Coordinator/架构定向：11/11，PASS；覆盖 invalid/reordered payload、late result、cancel open、stale save revision/path 与 close during save。
+- 全量：477/477，77.659 秒，PASS。
+- `compileall` 与 `pip check`：PASS。
+- 定向测试中发现的 Qt 原生退出已归因于 MP4 probe fixture 意外启动独立 Preview 后立即遍历顶层窗口；该 probe 专项 fixture 改用 WAV 隔离职责，真实视频 Preview/isolated-decoder 回归未删除。
+
+### Performance
+
+- 10 万结果 5 次 heartbeat：38.21 / 50.87 / 52.27 / 52.38 / 53.69 ms；P50 52.27、P95/max 53.69 ms；0/5 超过 75 ms，退出码 0。
+- GUI apply：36.01 / 48.63 / 50.00 / 48.58 / 51.39 ms；P50 48.63、P95/max 51.39 ms。
+- fully usable：3974.59 / 4000.90 / 3993.12 / 4032.11 / 4038.62 ms；P50 4000.90、P95/max 4038.62 ms。
+- `payload_equal=True`、`results_exact=True`，fingerprint 保持 `d9c2dd5992ccbd437da8cf320d4422a3137a6b7ef8ec815999f0947051c250b0`；无稳定 >20% 回退，不将单组 5 轮结果外推为跨负载提升。
+
+### Compatibility
+
+- Public API changes: none。
+- Project format/limits changes: none。
+- Open 失败/取消不替换当前项目；保存期间可继续编辑且旧 revision 完成后仍 dirty；close during save 等待原子保存终止。
+
+### Remaining Risks
+
+- UI atomic apply 内部仍由 Window 执行；Coordinator 只保证 prepared payload 验证及 thread-stop 后交付，G6 前不移动项目渲染职责。
+- offscreen benchmark 不证明原生 macOS、VoiceOver、真实磁盘压力或长时媒体稳定。
+
+### Next Integration Step
+
+- 进入 G4：提取 Tracking Full/Rerun 生命周期；在首个有效新帧之前不得替换旧 Results/Edits，保留 source drift 隔离、checkpoint/prefetch 与 spawn 进程终止语义。

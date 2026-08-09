@@ -55,6 +55,11 @@ from neo_tracker.application.media_import_coordinator import (
 )
 from neo_tracker.application.playback_coordinator import PlaybackCoordinator
 from neo_tracker.application.preview_coordinator import PreviewCoordinator, PreviewRequest
+from neo_tracker.application.project_io_coordinator import (
+    ProjectIOCoordinator,
+    ProjectOpenRequest,
+    ProjectSaveRequest,
+)
 from neo_tracker.application.task_supervisor import TaskSupervisor
 from neo_tracker.config import apply_pipeline_config, validate_roi_config
 from neo_tracker.core import TrackingPipeline, TrackerResult
@@ -97,8 +102,8 @@ from neo_tracker.ui.preview_decode_worker import (
     PreviewDecodeResult,
     same_preview_request,
 )
-from neo_tracker.ui.project_open_worker import PreparedProjectOpen, ProjectOpenWorker
-from neo_tracker.ui.project_save_worker import CompletedProjectSave, ProjectSaveWorker, save_project
+from neo_tracker.ui.project_open_worker import PreparedProjectOpen
+from neo_tracker.ui.project_save_worker import CompletedProjectSave, save_project
 from neo_tracker.ui.project_status_panel import (
     ProjectStatusPanel,
     build_rerun_replacement_dialog,
@@ -403,13 +408,7 @@ class NeoTrackerWindow(QMainWindow):
         self._analysis_thread: QThread | None = None
         self._analysis_worker: AnalysisWorker | None = None
         self._analysis_job: AnalysisJob | None = None
-        self._project_open_thread: QThread | None = None
-        self._project_open_worker: ProjectOpenWorker | None = None
-        self._project_open_job: ProjectOpenJob | None = None
         self.project_loader = NeoTrackerProject.load
-        self._project_save_thread: QThread | None = None
-        self._project_save_worker: ProjectSaveWorker | None = None
-        self._project_save_job: ProjectSaveJob | None = None
         self.project_saver = save_project
         self._review_response_thread: QThread | None = None
         self._review_response_worker: ReviewResponseWorker | None = None
@@ -424,6 +423,14 @@ class NeoTrackerWindow(QMainWindow):
         self._media_import_coordinator.failed.connect(self._media_import_failed)
         self._media_import_coordinator.canceled.connect(self._media_import_canceled)
         self._media_import_coordinator.idle_reached.connect(self._media_import_idle)
+        self._project_io_coordinator = ProjectIOCoordinator(self._task_supervisor)
+        self._project_io_coordinator.open_progressed.connect(self._project_open_progressed)
+        self._project_io_coordinator.open_prepared.connect(self._project_io_open_prepared)
+        self._project_io_coordinator.open_failed.connect(self._project_io_open_failed)
+        self._project_io_coordinator.open_canceled.connect(self._project_io_open_canceled)
+        self._project_io_coordinator.save_completed.connect(self._project_io_save_completed)
+        self._project_io_coordinator.save_failed.connect(self._project_io_save_failed)
+        self._project_io_coordinator.idle_reached.connect(self._project_io_idle)
         self._preview_coordinator = PreviewCoordinator(self._task_supervisor)
         self._preview_coordinator.result_ready.connect(self._preview_coordinator_completed)
         self._preview_coordinator.failed.connect(self._preview_coordinator_failed)
@@ -467,6 +474,30 @@ class NeoTrackerWindow(QMainWindow):
     @property
     def _media_probe_job(self) -> MediaProbeJob | None:
         return self._media_import_coordinator.job
+
+    @property
+    def _project_open_thread(self) -> QThread | None:
+        return self._project_io_coordinator.open_thread
+
+    @property
+    def _project_open_worker(self) -> object | None:
+        return self._project_io_coordinator.open_worker
+
+    @property
+    def _project_open_job(self) -> ProjectOpenJob | None:
+        return self._project_io_coordinator.open_job
+
+    @property
+    def _project_save_thread(self) -> QThread | None:
+        return self._project_io_coordinator.save_thread
+
+    @property
+    def _project_save_worker(self) -> object | None:
+        return self._project_io_coordinator.save_worker
+
+    @property
+    def _project_save_job(self) -> ProjectSaveJob | None:
+        return self._project_io_coordinator.save_job
 
     @property
     def _preview_decode_thread(self) -> QThread | None:
@@ -2083,33 +2114,16 @@ class NeoTrackerWindow(QMainWindow):
         project_path = Path(path)
         if self._project_open_thread is not None:
             return False
-        token = self._background_tasks.start("project-open")
-        if token is None:
-            return False
-        job = ProjectOpenJob(token=token, path=project_path)
-        thread = QThread(self)
-        worker = ProjectOpenWorker(
-            project_path,
-            self.project_controller,
-            project_loader=self.project_loader,
+        accepted = self._project_io_coordinator.start_open(
+            ProjectOpenRequest(
+                path=project_path,
+                controller=self.project_controller,
+                project_loader=self.project_loader,
+            )
         )
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.progressed.connect(self._project_open_progressed)
-        worker.completed.connect(self._project_open_completed)
-        worker.failed.connect(self._project_open_failed)
-        worker.canceled.connect(self._project_open_canceled)
-        worker.completed.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        worker.canceled.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(self._project_open_thread_finished)
-        self._project_open_job = job
-        self._project_open_thread = thread
-        self._project_open_worker = worker
+        if not accepted:
+            return False
         self._set_media_probe_busy(True, operation="open")
-        thread.start()
         return True
 
     def _project_open_progressed(
@@ -2149,17 +2163,11 @@ class NeoTrackerWindow(QMainWindow):
         )
         self.statusBar().showMessage(detail)
 
-    def _project_open_completed(self, payload: object) -> None:
-        job = self._project_open_job
-        if (
-            job is None
-            or job.cancelled
-            or not self._background_tasks.is_current(job.token)
-        ):
-            return
-        if not isinstance(payload, PreparedProjectOpen) or payload.path != job.path:
-            job.failure_detail = "Project loading returned an invalid prepared project."
-            return
+    def _project_io_open_prepared(
+        self,
+        job: ProjectOpenJob,
+        payload: PreparedProjectOpen,
+    ) -> None:
         defer_heavy_views = bool(
             payload.tasks
             and len(payload.tasks[0].pipeline.results)
@@ -2185,30 +2193,44 @@ class NeoTrackerWindow(QMainWindow):
             )
         except Exception as exc:
             job.failure_detail = str(exc)
-            return
+            job.completed = False
         finally:
             self._last_project_open_apply_ms = (monotonic() - apply_started) * 1000.0
-        job.completed = True
+        self._finish_project_open_ui(job)
 
-    def _project_open_failed(self, message: str) -> None:
-        job = self._project_open_job
-        if job is None or not self._background_tasks.is_current(job.token):
-            return
-        job.failure_detail = str(message) or "Project loading failed."
+    def _project_io_open_failed(self, job: ProjectOpenJob, _message: str) -> None:
+        self._finish_project_open_ui(job)
 
-    def _project_open_canceled(self) -> None:
-        job = self._project_open_job
-        if job is None or not self._background_tasks.is_current(job.token):
+    def _project_io_open_canceled(self, job: ProjectOpenJob) -> None:
+        self._finish_project_open_ui(job)
+
+    def _finish_project_open_ui(self, job: ProjectOpenJob) -> None:
+        if self._background_tasks.closing:
             return
-        job.cancelled = True
+        self._set_media_probe_busy(False)
+        if not job.completed:
+            self._render_task(refresh_project_state=False)
+        if job.failure_detail:
+            QMessageBox.warning(
+                self,
+                "Open project",
+                f"Could not open project:\n{job.failure_detail}",
+            )
+        elif job.cancelled:
+            self.statusBar().showMessage(
+                "Project open canceled. The current project is unchanged.",
+                6000,
+            )
+
+    def _project_io_idle(self) -> None:
+        self._schedule_close_if_workers_stopped()
 
     def _cancel_project_open(self) -> None:
         worker = self._project_open_worker
         job = self._project_open_job
         if worker is None or job is None:
             return
-        job.cancelled = True
-        worker.request_cancel()
+        self._project_io_coordinator.cancel_open("user")
         self.open_project_button.setEnabled(False)
         self.add_media_button.setEnabled(False)
         self.open_project_button.setText("Cancelling…")
@@ -2216,30 +2238,6 @@ class NeoTrackerWindow(QMainWindow):
         self.media_probe_status_label.setAccessibleDescription(
             "Cancel requested. Waiting for the current project-read or media-inspection step to finish safely."
         )
-
-    def _project_open_thread_finished(self) -> None:
-        job = self._project_open_job
-        self._project_open_thread = None
-        self._project_open_worker = None
-        self._project_open_job = None
-        if job is not None:
-            self._background_tasks.finish(job.token)
-        if not self._background_tasks.closing:
-            self._set_media_probe_busy(False)
-            if job is None or not job.completed:
-                self._render_task(refresh_project_state=False)
-            if job is not None and job.failure_detail:
-                QMessageBox.warning(
-                    self,
-                    "Open project",
-                    f"Could not open project:\n{job.failure_detail}",
-                )
-            elif job is not None and job.cancelled:
-                self.statusBar().showMessage(
-                    "Project open canceled. The current project is unchanged.",
-                    6000,
-                )
-        self._schedule_close_if_workers_stopped()
 
     def _choose_media_relink(self) -> None:
         task = self.current_task
@@ -2418,30 +2416,17 @@ class NeoTrackerWindow(QMainWindow):
         except Exception as exc:
             QMessageBox.warning(self, "Save project", f"Could not save project:\n{exc}")
             return False
-        token = self._background_tasks.start("project-save")
-        if token is None:
-            return False
-        job = ProjectSaveJob(
-            token=token,
-            path=path,
-            content_revision=self._project_content_revision,
+        accepted = self._project_io_coordinator.start_save(
+            ProjectSaveRequest(
+                project=project,
+                path=path,
+                content_revision=self._project_content_revision,
+                project_saver=self.project_saver,
+            )
         )
-        thread = QThread(self)
-        worker = ProjectSaveWorker(project, path, project_saver=self.project_saver)
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.completed.connect(self._project_save_completed)
-        worker.failed.connect(self._project_save_failed)
-        worker.completed.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(self._project_save_thread_finished)
-        self._project_save_job = job
-        self._project_save_thread = thread
-        self._project_save_worker = worker
+        if not accepted:
+            return False
         self._set_project_save_busy(True)
-        thread.start()
         return True
 
     def _set_project_save_busy(self, busy: bool) -> None:
@@ -2457,12 +2442,12 @@ class NeoTrackerWindow(QMainWindow):
         else:
             self._apply_project_state(self._project_dirty)
 
-    def _project_save_completed(self, payload: object) -> None:
-        job = self._project_save_job
-        if job is None or not self._background_tasks.is_current(job.token):
-            return
-        if not isinstance(payload, CompletedProjectSave) or payload.path != job.path:
-            job.failure_detail = "Project saving returned an invalid result."
+    def _project_io_save_completed(
+        self,
+        job: ProjectSaveJob,
+        payload: CompletedProjectSave,
+    ) -> None:
+        if self._background_tasks.closing:
             return
         self.project_path = payload.path
         if self._project_content_revision == job.content_revision:
@@ -2474,38 +2459,24 @@ class NeoTrackerWindow(QMainWindow):
             self._saved_project_fingerprint = payload.fingerprint
             self._current_project_fingerprint = None
             self._apply_project_state(True)
-        job.completed = True
+        self._set_project_save_busy(False)
+        if self._project_dirty:
+            self.statusBar().showMessage(
+                f"Saved snapshot: {job.path}. Newer edits still need saving.",
+                8000,
+            )
+        else:
+            self.statusBar().showMessage(f"Saved project: {job.path}", 6000)
 
-    def _project_save_failed(self, message: str) -> None:
-        job = self._project_save_job
-        if job is None or not self._background_tasks.is_current(job.token):
+    def _project_io_save_failed(self, _job: ProjectSaveJob, message: str) -> None:
+        if self._background_tasks.closing:
             return
-        job.failure_detail = str(message) or "Project saving failed."
-
-    def _project_save_thread_finished(self) -> None:
-        job = self._project_save_job
-        self._project_save_thread = None
-        self._project_save_worker = None
-        self._project_save_job = None
-        if job is not None:
-            self._background_tasks.finish(job.token)
-        if not self._background_tasks.closing:
-            self._set_project_save_busy(False)
-            if job is not None and job.failure_detail:
-                QMessageBox.warning(
-                    self,
-                    "Save project",
-                    f"Could not save project:\n{job.failure_detail}",
-                )
-            elif job is not None and job.completed:
-                if self._project_dirty:
-                    self.statusBar().showMessage(
-                        f"Saved snapshot: {job.path}. Newer edits still need saving.",
-                        8000,
-                    )
-                else:
-                    self.statusBar().showMessage(f"Saved project: {job.path}", 6000)
-        self._schedule_close_if_workers_stopped()
+        self._set_project_save_busy(False)
+        QMessageBox.warning(
+            self,
+            "Save project",
+            f"Could not save project:\n{message}",
+        )
 
     def _project_transition_dialog(self, action: str) -> QMessageBox:
         project_name = self.project_path.name if self.project_path is not None else "this project"

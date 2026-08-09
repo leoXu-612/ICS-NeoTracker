@@ -3,8 +3,10 @@ from __future__ import annotations
 import time
 import unittest
 from collections.abc import Callable
+from threading import Event
 
 from PySide6.QtCore import QCoreApplication, QObject, Signal, Slot
+from PySide6.QtWidgets import QApplication, QWidget
 
 from neo_tracker.application.media_import_coordinator import (
     MediaImportCoordinator,
@@ -23,15 +25,25 @@ class _ControlledWorker(QObject):
     def __init__(self, paths: tuple[str, ...], _media_probe: object) -> None:
         super().__init__()
         self.paths = paths
-        self.cancel_requested = False
+        self.cancel_requested = Event()
+        self.release = Event()
+        self.payload: object = ()
+        self.failure = ""
+        self.ignore_cancel = False
 
     @Slot()
     def run(self) -> None:
-        return
+        self.release.wait(timeout=1.0)
+        if self.cancel_requested.is_set() and not self.ignore_cancel:
+            self.canceled.emit()
+        elif self.failure:
+            self.failed.emit(self.failure)
+        else:
+            self.completed.emit(self.payload)
 
     def request_cancel(self) -> None:
-        self.cancel_requested = True
-        self.canceled.emit()
+        self.cancel_requested.set()
+        self.release.set()
 
 
 def _pump_until(predicate: Callable[[], bool], timeout_s: float = 2.0) -> None:
@@ -47,7 +59,9 @@ def _pump_until(predicate: Callable[[], bool], timeout_s: float = 2.0) -> None:
 class MediaImportCoordinatorTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.app = QCoreApplication.instance() or QCoreApplication([])
+        cls.app = QApplication.instance() or QApplication([])
+        # On macOS, initialize the GUI backend before exercising any QThread.
+        cls.gui_anchor = QWidget()
 
     def make_coordinator(self) -> tuple[MediaImportCoordinator, TaskSupervisor]:
         supervisor = TaskSupervisor()
@@ -78,7 +92,8 @@ class MediaImportCoordinatorTests(unittest.TestCase):
             ("/media/a.mp4", MediaInfo(frame_count=10, available=True)),
             ("/media/b.mp4", MediaInfo(frame_count=20, available=True)),
         )
-        worker.completed.emit(payload)
+        worker.payload = payload
+        worker.release.set()
 
         self.assertEqual(delivered, [])
         _pump_until(lambda: not coordinator.busy)
@@ -96,12 +111,12 @@ class MediaImportCoordinatorTests(unittest.TestCase):
 
         self.assertTrue(coordinator.start(self.request("/media/a.mp4", "/media/b.mp4")))
         _pump_until(lambda: coordinator.thread is not None and coordinator.thread.isRunning())
-        coordinator.worker.completed.emit(
-            (
-                ("/media/b.mp4", MediaInfo(available=True)),
-                ("/media/a.mp4", MediaInfo(available=True)),
-            )
+        worker = coordinator.worker
+        worker.payload = (
+            ("/media/b.mp4", MediaInfo(available=True)),
+            ("/media/a.mp4", MediaInfo(available=True)),
         )
+        worker.release.set()
         _pump_until(lambda: not coordinator.busy)
 
         self.assertEqual(completed, [])
@@ -117,8 +132,9 @@ class MediaImportCoordinatorTests(unittest.TestCase):
         self.assertTrue(coordinator.start(self.request("/media/a.mp4")))
         _pump_until(lambda: coordinator.thread is not None and coordinator.thread.isRunning())
         worker = coordinator.worker
+        worker.ignore_cancel = True
+        worker.payload = (("/media/a.mp4", MediaInfo(available=True)),)
         self.assertTrue(coordinator.cancel("user"))
-        worker.completed.emit((("/media/a.mp4", MediaInfo(available=True)),))
         _pump_until(lambda: not coordinator.busy)
 
         self.assertEqual(delivered, [])
