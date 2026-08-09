@@ -7,6 +7,7 @@ from pathlib import Path
 
 import numpy as np
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QImage
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QWidget
 
@@ -112,6 +113,49 @@ class PhysicsPlotWidgetTests(unittest.TestCase):
         plot.set_fit_result(source, unavailable)
 
         self.assertIsNone(plot._fit_series)
+
+    def test_retina_batched_polyline_keeps_invalid_gap_visually_open(self) -> None:
+        class RetinaGapPlot(PhysicsPlot):
+            def devicePixelRatioF(self) -> float:  # noqa: N802
+                return 2.0
+
+        source = SampleSeries(
+            series_id="raw:gap",
+            name="Gap",
+            frame_indices=np.arange(5, dtype=np.int64),
+            time_s=np.arange(5, dtype=np.float64),
+            values=np.array([0.0, 0.0, np.nan, 10.0, 10.0]),
+            valid_mask=np.array([True, True, False, True, True]),
+            unit="m",
+            source_kind="state",
+            source_revision="results:retina-gap",
+        )
+        plot = RetinaGapPlot()
+        plot.resize(400, 200)
+        plot.set_series((source,))
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "retina-gap.png"
+            self.assertTrue(plot.export_image(path))
+            image = QImage(str(path))
+
+        self.assertEqual((image.width(), image.height()), (800, 400))
+
+        def is_trace(x: int, y: int) -> bool:
+            color = image.pixelColor(x, y)
+            return color.red() < 110 and 75 < color.green() < 155 and color.blue() > 125
+
+        self.assertTrue(
+            any(is_trace(x, y) for x in range(image.width()) for y in range(image.height()))
+        )
+        # Logical gap midpoint is (219, 92); scale to the exported 2x pixels.
+        self.assertFalse(
+            any(
+                is_trace(x, y)
+                for x in range(432, 445)
+                for y in range(178, 191)
+            )
+        )
 
 
 if __name__ == "__main__":

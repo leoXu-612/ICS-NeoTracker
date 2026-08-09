@@ -8,7 +8,7 @@ from pathlib import Path
 
 import numpy as np
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPainterPath, QPen, QPixmap
+from PySide6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPen, QPixmap, QPolygonF
 from PySide6.QtWidgets import QWidget
 
 from neo_tracker.kinematics import FitResult, FitStatus, ProcessingStep, SampleSeries
@@ -301,7 +301,11 @@ class PhysicsPlot(QWidget):
 
     def paintEvent(self, _event) -> None:  # noqa: N802
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        dense_trace = self.prepared_point_count > max(512, self.width())
+        # Dense scientific envelopes are already sub-pixel summaries. Raster
+        # antialiasing those thousands of crossings can stall the GUI thread;
+        # sparse traces retain antialiasing for presentation quality.
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, not dense_trace)
         painter.fillRect(self.rect(), QColor("#FBFCFC"))
         plot_rect = QRectF(58.0, 18.0, max(1.0, self.width() - 78.0), max(1.0, self.height() - 52.0))
         painter.setPen(QPen(QColor("#D8DEE2"), 1.0))
@@ -340,22 +344,20 @@ class PhysicsPlot(QWidget):
             else:
                 pen = QPen(color, 1.6)
             painter.setPen(pen)
-            path = QPainterPath()
-            connected = False
+            segment: list[QPointF] = []
             for time_s, value in zip(prepared.time_s, prepared.values):
                 if not math.isfinite(float(time_s)) or not math.isfinite(float(value)):
-                    connected = False
+                    if len(segment) > 1:
+                        painter.drawPolyline(QPolygonF(segment))
+                    segment.clear()
                     continue
                 point = QPointF(
                     self._x_for_time(float(time_s), plot_rect, time_min, time_max),
                     self._y_for_value(float(value), plot_rect, value_min, value_max),
                 )
-                if connected:
-                    path.lineTo(point)
-                else:
-                    path.moveTo(point)
-                    connected = True
-            painter.drawPath(path)
+                segment.append(point)
+            if len(segment) > 1:
+                painter.drawPolyline(QPolygonF(segment))
 
         self._paint_cursor(painter, plot_rect, bounds)
         painter.setPen(QColor("#626A70"))
