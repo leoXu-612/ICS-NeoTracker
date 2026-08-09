@@ -531,3 +531,41 @@ Cancel 52 ms、来源替换 fail-closed、截断 probe fail-closed、重开 ×10
 
 - 4K 原采集、单会话 ≥10 分钟、功耗/温度、VoiceOver/文本缩放/AX 复核仍需
   外部解锁；跨负载 heartbeat 仍 `PARTIAL`（宿主满载偶发调度延迟）。
+
+---
+
+# 基线复核 + 索引生成缺陷修复（2026-08-10）
+
+## Conclusion
+
+内容索引生成命令会把 `.git/` 内部元数据（COMMIT_EDITMSG、index、refs、
+logs）扫入 `PROJECT_FILE_INDEX.sha256`，任何提交/推送后校验必然出现
+伪失败；已修正为排除 `.git/` 后重建，481 个内容文件全部通过 SHA-256。
+同时完成 2026-08-10 基线复核：全量 479 tests / 68.032 s OK、compileall、
+pip check 通过、无残留进程、无新增 `.ips`。AX 服务复查仍退化
+（`AXFocusedApplication=-25204`），素材目录无新增 4K/长会话原片；
+未闭环项保持不变，任务仍 `IN_PROGRESS`（`PARTIAL`）。
+
+## Findings / Changes Made / Files Modified
+
+- 根因：第 7 节索引命令 `find . -type f` 未排除 `.git/`；8 个校验失败
+  全部为 `.git` 元数据，非内容文件损坏。修正命令增加
+  `! -path './.git/*'`，重建后 481/481 OK，索引行数 480→481（新增
+  `benchmark-slomo-round1.json` 等上一批证据）→481。
+- FORDEEPSEEK.md 第 7 节索引命令同步加 `! -path './.git/*'`，保持可复现。
+- 本会话复查：`/Users/leo.xu/Desktop/PHY-EE-导出/` 无新增文件；
+  `swift /tmp/axsyswide.swift` 仍返回 `-25204`；README 部署范围
+  （内部 Python 工具、非签名分发）已满足 P2 范围声明要求。
+
+## Testing
+
+- `shasum -a 256 -c PROJECT_FILE_INDEX.sha256`：481/481 OK。
+- `python3 -m unittest discover -s tests -q`：479 tests / 68.032 s，exit 0。
+- `compileall` exit 0；`pip check` 无 broken requirements。
+- `pgrep` 无 neo_tracker/benchmark 残留；DiagnosticReports 无 08-10 新 `.ips`。
+
+## Remaining Risks
+
+- 4K 原采集、单会话 ≥10 分钟、功耗/温度（需 root）、VoiceOver/系统文本
+  缩放（需用户授权变更系统状态）、AX 复核（服务未恢复）、满载 heartbeat
+  跨负载稳定性仍 `BLOCKED`/`PARTIAL`，如实标注。

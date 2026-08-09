@@ -270,6 +270,7 @@ find . -type f \
   ! -name '.DS_Store' \
   ! -name '*.pyc' \
   ! -path '*/__pycache__/*' \
+  ! -path './.git/*' \
   ! -name 'PROJECT_FILE_INDEX.sha256' \
   -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256 \
   > PROJECT_FILE_INDEX.sha256
