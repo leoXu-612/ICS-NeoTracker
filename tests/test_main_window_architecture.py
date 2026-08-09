@@ -271,6 +271,51 @@ class MainWindowArchitectureTests(unittest.TestCase):
             ).read_text(encoding="utf-8")
             self.assertNotIn("PySide6.QtWidgets", coordinator_source)
 
+    def test_window_is_a_shell_with_registry_view_state_and_no_worker_construction(self) -> None:
+        root = Path(__file__).parents[1]
+        source_path = root / "neo_tracker" / "ui" / "main_window.py"
+        source = source_path.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        window_class = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.ClassDef) and node.name == "NeoTrackerWindow"
+        )
+        constructed_names = {
+            node.func.id
+            for node in ast.walk(window_class)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+        }
+        worker_names = {
+            "AnalysisWorker",
+            "MediaProbeWorker",
+            "PreviewDecodeWorker",
+            "ProjectOpenWorker",
+            "ProjectSaveWorker",
+            "ReviewResponseWorker",
+            "TrackingWorker",
+        }
+
+        self.assertIn("ApplicationShell", constructed_names)
+        self.assertTrue(worker_names.isdisjoint(constructed_names))
+        self.assertNotIn("QThread(", source)
+        for direct_binding in (
+            "run_tracking_button.clicked.connect(self._run_tracking)",
+            "play_button.clicked.connect(self._toggle_playback)",
+            "open_project_button.clicked.connect(self._open_project)",
+            "save_project_button.clicked.connect(self._save_project)",
+            "run_analysis_button.clicked.connect(self._run_analysis)",
+        ):
+            self.assertNotIn(direct_binding, source)
+        self.assertLess(len(source.splitlines()), 7000)
+        for relative_path in (
+            "neo_tracker/ui/action_registry.py",
+            "neo_tracker/ui/view_state.py",
+            "neo_tracker/ui/shell/main_shell.py",
+            "neo_tracker/ui/shell/bindings.py",
+        ):
+            self.assertTrue((root / relative_path).is_file(), relative_path)
+
 
 if __name__ == "__main__":
     unittest.main()
