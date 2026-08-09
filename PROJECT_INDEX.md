@@ -83,7 +83,9 @@ max 59.18 ms）；P1-B 键盘遍历（Qt 焦点链正/反向闭环、键盘激�
 VoiceOver/文本缩放/OS 级真实按键（宿主会话阻塞）未闭环。
 内容索引已排除 `.git/` 元数据（提交/推送后不再伪失败），481 个内容文件
 SHA-256 全部通过；2026-08-10 全量 479 tests / 68.032 s OK、heartbeat
-round12 通过（load 3.61–3.65）。
+round12 通过（load 3.61–3.65）；AX 服务部分恢复，真实窗口 AX 树完整
+可读（`artifacts/deepseek-2026-08-10/nt-ax-tree.json` + 截图），
+AXPress 激活 Add media/关闭对话框已验证；AX 写入与 VoiceOver 仍受限。
 
 ## 常用命令
 

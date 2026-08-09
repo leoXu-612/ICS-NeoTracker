@@ -1,0 +1,302 @@
+{
+  "app_role" : "AXApplication",
+  "window" : {
+    "children" : [
+      {
+        "enabled" : true,
+        "role" : "AXStaticText",
+        "value" : "Neo-Tracker"
+      },
+      {
+        "desc" : "Untitled experiment",
+        "enabled" : true,
+        "role" : "AXStaticText",
+        "value" : "Untitled experiment"
+      },
+      {
+        "enabled" : true,
+        "role" : "AXStaticText",
+        "value" : "Tracking status"
+      },
+      {
+        "enabled" : true,
+        "role" : "AXStaticText",
+        "value" : "Tracking progress and result summary"
+      },
+      {
+        "desc" : "Starts tracking in the background. While tracking, this button cancels the active run.",
+        "enabled" : false,
+        "role" : "AXButton",
+        "title" : "Run video tracking"
+      },
+      {
+        "desc" : "Save the current task's tracking results as a CSV file.",
+        "enabled" : false,
+        "role" : "AXButton",
+        "title" : "Export current tracking results to CSV"
+      },
+      {
+        "desc" : "Create a Markdown report for the current media task and tracking history.",
+        "enabled" : false,
+        "role" : "AXButton",
+        "title" : "Create tracking report"
+      },
+      {
+        "children" : [
+          {
+            "children" : [
+              {
+                "desc" : "Add video or WAV files to the current project.",
+                "enabled" : true,
+                "role" : "AXButton",
+                "title" : "Add media"
+              },
+              {
+                "desc" : "Open a saved Neo-Tracker project.",
+                "enabled" : true,
+                "role" : "AXButton",
+                "title" : "Open Project"
+              },
+              {
+                "desc" : "Save media paths, settings, calibration, and results.",
+                "enabled" : true,
+                "role" : "AXButton",
+                "title" : "Save Project"
+              },
+              {
+                "desc" : "This project does not have a file yet.",
+                "enabled" : true,
+                "role" : "AXStaticText",
+                "value" : "Current project"
+              },
+              {
+                "desc" : "Add or change project content, then save it to create a project file.",
+                "enabled" : true,
+                "role" : "AXStaticText",
+                "value" : "Project save state"
+              },
+              {
+                "enabled" : true,
+                "role" : "AXStaticText",
+                "value" : "TASKS"
+              },
+              {
+                "children" : [
+                  {
+                    "children" : [
+                      {
+                        "enabled" : true,
+                        "role" : "AXStaticText",
+                        "title" : "No media tasks yet"
+                      }
+                    ],
+                    "desc" : "Choose the video or audio task to preview, track, review, or process.",
+                    "enabled" : true,
+                    "role" : "AXRow"
+                  },
+                  {
+                    "desc" : "Choose the video or audio task to preview, track, review, or process.",
+                    "enabled" : true,
+                    "role" : "AXColumn"
+                  }
+                ],
+                "desc" : "Choose the video or audio task to preview, track, review, or process.",
+                "enabled" : true,
+                "role" : "AXList",
+                "title" : "Media tasks"
+              },
+              {
+                "enabled" : true,
+                "role" : "AXStaticText",
+                "value" : "Media backend"
+              },
+              {
+                "enabled" : true,
+                "role" : "AXStaticText",
+                "value" : "OpenCV available"
+              },
+              {
+                "enabled" : true,
+                "role" : "AXStaticText",
+                "value" : "Path"
+              },
+              {
+                "desc" : "No media selected",
+                "enabled" : true,
+                "role" : "AXStaticText",
+                "value" : "Current media path"
+              },
+              {
+                "enabled" : true,
+                "role" : "AXStaticText",
+                "value" : "Source FPS"
+              },
+              {
+                "enabled" : true,
+                "role" : "AXStaticText",
+                "value" : "-"
+              },
+              {
+                "enabled" : true,
+                "role" : "AXStaticText",
+                "value" : "Frames"
+              },
+              {
+                "enabled" : true,
+                "role" : "AXStaticText",
+                "value" : "-"
+              },
+              {
+                "enabled" : true,
+                "role" : "AXStaticText",
+                "value" : "Resolution"
+              },
+              {
+                "enabled" : true,
+                "role" : "AXStaticText",
+                "value" : "-"
+              },
+              {
+                "enabled" : true,
+                "role" : "AXStaticText",
+                "value" : "Duration"
+              },
+              {
+                "enabled" : true,
+                "role" : "AXStaticText",
+                "value" : "-"
+              }
+            ],
+            "enabled" : true,
+            "role" : "AXGroup"
+          },
+          {
+            "children" : [
+              {
+                "enabled" : true,
+                "role" : "AXRadioButton",
+                "title" : "Media"
+              },
+              {
+                "enabled" : true,
+                "role" : "AXRadioButton",
+                "title" : "Tracking"
+              },
+              {
+                "enabled" : true,
+                "role" : "AXRadioButton",
+                "title" : "Review"
+              },
+              {
+                "enabled" : true,
+                "role" : "AXRadioButton",
+                "title" : "Signal"
+              },
+              {
+                "enabled" : true,
+                "role" : "AXRadioButton",
+                "title" : "Calib"
+              },
+              {
+                "enabled" : true,
+                "role" : "AXRadioButton",
+                "title" : "Flow"
+              },
+              {
+                "enabled" : true,
+                "role" : "AXRadioButton",
+                "title" : "JSON"
+              }
+            ],
+            "enabled" : true,
+            "role" : "AXTabGroup",
+            "title" : "Media"
+          },
+          {
+            "enabled" : true,
+            "role" : "AXStaticText",
+            "value" : "Preview"
+          },
+          {
+            "desc" : "No media loaded\nAdd a video or WAV file from the Media tab.",
+            "enabled" : true,
+            "role" : "AXStaticText",
+            "value" : "Video preview and ROI editor"
+          },
+          {
+            "desc" : "Move the preview one frame backward.",
+            "enabled" : false,
+            "role" : "AXButton",
+            "title" : "Previous video frame"
+          },
+          {
+            "desc" : "Play or pause the video preview. Playback stays aligned to source time and may skip preview frames if rendering falls behind.",
+            "enabled" : false,
+            "role" : "AXButton",
+            "title" : "Play video preview"
+          },
+          {
+            "desc" : "Move the preview one frame forward.",
+            "enabled" : false,
+            "role" : "AXButton",
+            "title" : "Next video frame"
+          },
+          {
+            "enabled" : true,
+            "role" : "AXStaticText",
+            "value" : "Frame"
+          },
+          {
+            "desc" : "Enter a source frame number to move the preview to that frame.",
+            "enabled" : false,
+            "role" : "AXIncrementor",
+            "title" : "Preview frame number",
+            "value" : "0"
+          },
+          {
+            "desc" : "Move along the source timeline to select a video frame for preview and review.",
+            "enabled" : false,
+            "role" : "AXSlider",
+            "title" : "Preview frame timeline",
+            "value" : "0"
+          },
+          {
+            "enabled" : true,
+            "role" : "AXGrowArea"
+          }
+        ],
+        "enabled" : true,
+        "role" : "AXSplitGroup"
+      },
+      {
+        "enabled" : true,
+        "role" : "AXButton"
+      },
+      {
+        "children" : [
+          {
+            "children" : [
+              {
+                "role" : "AXGroup"
+              }
+            ],
+            "role" : "AXGroup"
+          }
+        ],
+        "enabled" : true,
+        "role" : "AXButton"
+      },
+      {
+        "enabled" : true,
+        "role" : "AXButton"
+      },
+      {
+        "enabled" : true,
+        "role" : "AXStaticText",
+        "value" : "Neo-Tracker"
+      }
+    ],
+    "role" : "AXWindow",
+    "title" : "Neo-Tracker"
+  }
+}

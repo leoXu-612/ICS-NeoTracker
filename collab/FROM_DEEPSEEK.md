@@ -590,3 +590,30 @@ pip check 通过、无残留进程、无新增 `.ips`。AX 服务复查仍退化
   SHA-256 相同），避免新旧轮次命名混淆；`heartbeat-rounds/README.md`
   更新轮次表与说明。
 - 无源码改动。
+
+---
+
+# P1-B 真实窗口 AX 复核（2026-08-10，AX 服务部分恢复）
+
+## Conclusion
+
+AX 服务**部分恢复**：按 PID 的应用级 AX 树可读（system-wide
+`AXFocusedApplication` 仍 `-25204`），真实原生窗口（1280×808，Retina
+2×）AX 层级完整——按钮名称/描述/启用状态、tab 组、列表、步进器、滑块
+全部正确；`AXPress` 激活 Add media（返回 0）→ NSOpenPanel 实例化 →
+AXPress Cancel 关闭对话框、主窗口恢复；SIGTERM 优雅退出、无残留、无新
+`.ips`。AX 写入类操作（窗口 resize/AXRaise/几何属性）仍受限
+（`-25201/-25206`），本轮无法复测 2026-08-09 的 resize 证据，如实标注。
+
+## Evidence
+
+- `artifacts/deepseek-2026-08-10/nt-ax-tree.json`：完整窗口 AX 层级。
+- `nt-ax-window.png`：真实窗口截图 2560×1616（Retina 2×），Vision OCR
+  确认全部 UI 文本；`nt-ax-window-copy.png` 为同窗口另存副本。
+- `nt-ax-verify.md`：完整验证记录与限制。
+
+## Remaining Risks
+
+- AX 写入/窗口几何、VoiceOver、系统文本缩放、4K 外接屏、动态 compositor
+  与 OS 级真实按键仍 `BLOCKED`/未闭环；键盘遍历以 Qt 应用内事件注入
+  证据为准。
