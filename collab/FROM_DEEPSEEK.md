@@ -617,3 +617,42 @@ AXPress Cancel 关闭对话框、主窗口恢复；SIGTERM 优雅退出、无残
 - AX 写入/窗口几何、VoiceOver、系统文本缩放、4K 外接屏、动态 compositor
   与 OS 级真实按键仍 `BLOCKED`/未闭环；键盘遍历以 Qt 应用内事件注入
   证据为准。
+
+---
+
+# 完成度审计（2026-08-10，FORDEEPSEEK.md 第 8 节门槛逐项核验）
+
+## Conclusion
+
+8 项完成门槛中 5 项已由当前证据闭环，3 项仍被外部条件阻塞（真实 4K/长
+素材、功耗/温度 root 权限、VoiceOver/文本缩放授权）；任务状态保持
+`IN_PROGRESS`（`PARTIAL`），不满足 `DONE` 条件。
+
+## 逐项审计（G = 门槛）
+
+| G | 门槛 | 证据 | 状态 |
+| --- | --- | --- | --- |
+| 1 | 全量测试/compileall/pip check/内容索引 | 479 tests（68.032 s）OK、compileall OK、pip check 干净、481 文件 SHA-256 全过（2026-08-10 基线） | CLOSED |
+| 2 | 100k 项目连续三次打开 <75 ms + 一致性 | 正常负载 8 组连续三次 24/24 通过，max 59.18 ms，results/payload/fingerprint 一致 | CLOSED |
+| 3 | 真实媒体矩阵长时运行 | 真实 SloMo VFR HEVC 1080p 240fps 4 素材 184,576 帧 ×2 轮确定性、RSS 恒定、无孤儿；4K/单会话≥10 分钟无素材 | PARTIAL（4K/长会话 BLOCKED） |
+| 4 | 新鲜 .ips 堆栈归因 | 全部归因：宿主工具子进程（parentPid=1394）与 harness QThread 生命周期问题，非本应用；Qt accessibility/QThread/FFmpeg 已区分 | CLOSED |
+| 5 | 原生 Retina/文本缩放/键盘/VoiceOver/AX 实际证据 | Retina 截图、Qt 键盘焦点链正/反向 6/16/14 控件、AX 树读回 + AXPress；VoiceOver/系统文本缩放需授权 | PARTIAL（授权 BLOCKED） |
+| 6 | 打开/保存/Relink/Full/Rerun/导出/恢复无数据丢失 | P1-A1R–A4 修复 + 失败/取消/来源替换/截断 fail-closed 回归全覆盖 | CLOSED |
+| 7 | 部署范围明确 + 干净环境启动/核心工作流 | README 声明内部 Python 工具（非签名分发）；全新 venv 安装 479 tests + 原生窗口 + 真实媒体工作流通过 | CLOSED |
+| 8 | 无未关闭 P0/P1 finding | P1-A 1–6 闭环、P0-A 归因闭环、P0-B/P1-B 剩余限制均写明影响与阻塞原因 | PARTIAL（受 G3/G5 影响） |
+
+## 阻塞明细（外部条件，非可继续实施的代码工作）
+
+1. 4K 原采集、单会话 ≥10 分钟素材：素材目录无新增，拼接/循环不符合“真实
+   单会话”口径，需用户提供。
+2. 功耗/温度：`powermetrics` 需 root，本会话无授权。
+3. VoiceOver/系统文本缩放：改变系统辅助功能状态需用户明确授权（已两次
+   提示未获回复）；AX 写入类操作（窗口 resize/AXRaise）受服务限制
+   （`-25201/-25206`），OS 级真实按键受宿主占用前台限制。
+4. 满载 heartbeat 跨负载稳定性：需要宿主负载自然回落并持续三组测试窗口。
+
+## 结论
+
+代码侧可实施工作已全部完成并留痕（12 个提交，HEAD `02f15f5`，已推送
+origin/main）；剩余 3 项门槛均依赖用户/系统外部条件，未满足前不得
+建议 `DONE`。

@@ -397,7 +397,7 @@ e4d5b7c0cc91b2fa84387e180918fb5c7b2f507bb31d0a60b5c3a8346917d4ad  ./build/lib/ne
 df3162e19e40006ea4fd3e031d13bc2fe9f2d07d524e9c1f84f7d7b9e1aa56ce  ./build/lib/neo_tracker/visualization.py
 5a429f7d4b2b1311d85b2b1f7c20cd3f1b97cc4775c4c45136a3fc3308b21331  ./collab/FROM_CLAUDE.md
 ec4f6317dcf8def9817e5f6954dbfb8dee85f5e114353e0011d7d558b2169b11  ./collab/FROM_CODEX.md
-3384d45d48218d6572d2b2dd1c8b19ed0f481bacaf7dacf158fad11a5631fc37  ./collab/FROM_DEEPSEEK.md
+1f09c67e6f95ac03f4ff004a13701c8c9f6bd299a5f2325921d93a5e86b7411d  ./collab/FROM_DEEPSEEK.md
 b546e574e3ba1349d1d89b0f86e008526fb436b3f4c40c86f0d53b312645c0ee  ./collab/PROTOCOL.md
 983ac6388cc710983f58d668dcd5ed65e4cbcaf4e579ad7c2978bb02592fa41f  ./neo_tracker.egg-info/PKG-INFO
 afaad9ddd8dc469a13833468ce9a5253d734467fe26b29c2975e0fc01625eafe  ./neo_tracker.egg-info/SOURCES.txt
@@ -484,4 +484,4 @@ c17661815cd19899305810d7038acd1db5c2c566ecbaf15b6eda1331db65e546  ./tests/test_t
 832fa5aedb68e50e5d6b70eed4695678c35d6c6eb0b7b4ad2db75d67e39e6280  ./tests/test_tracking_pipeline.py
 d3c3292de09a9e0581d1b5a8aae9de409d3a13b2fed8a6b01d422519aaacc635  ./tests/test_tracking_worker.py
 7b925aacf926451c08ab243336d276e53c53df9952100c571e78ac5b6b2cbb61  ./tests/test_ui_main_window.py
-60f15357078ff06f9fdaa1ff4959ffefd20c06c5fb66c2fd41285575cb9a09dd  ./交接.md
+c713e358d9fd395707ed5ea4afc7888b587218ba10df8d4f8acf5615c496c099  ./交接.md
