@@ -8,6 +8,21 @@ from .protocols import (
     ProgressReporter,
     SeriesBuilder,
 )
+from .derivatives import derive_series
+from .export import export_csv, export_markdown, export_npz
+from .fitting import KinematicsFitOperator, fit_series
+from .residuals import residual_series
+from .runtime import (
+    CancellationToken,
+    KinematicsCancelled,
+    KinematicsEngineRuntime,
+)
+from .series import (
+    TrackingResultSnapshot,
+    TrackingSeriesBuilder,
+    snapshot_tracker_results,
+)
+from .smoothing import smooth_series
 from .types import (
     DerivativeConfig,
     DerivativeMethod,
@@ -35,6 +50,7 @@ from .validation import (
 
 __all__ = [
     "CancellationProbe",
+    "CancellationToken",
     "DerivativeConfig",
     "DerivativeMethod",
     "DerivativeOperator",
@@ -46,7 +62,10 @@ __all__ = [
     "FitStatus",
     "GapPolicy",
     "KinematicsBundle",
+    "KinematicsCancelled",
     "KinematicsEngine",
+    "KinematicsEngineRuntime",
+    "KinematicsFitOperator",
     "ProcessingStep",
     "ProgressReporter",
     "SampleSeries",
@@ -58,6 +77,16 @@ __all__ = [
     "fit_parameter_names",
     "fit_parameter_units",
     "fit_sample_mask",
+    "fit_series",
+    "derive_series",
+    "export_csv",
+    "export_markdown",
+    "export_npz",
+    "residual_series",
     "require_current_revision",
     "require_uniform_cadence",
+    "smooth_series",
+    "snapshot_tracker_results",
+    "TrackingResultSnapshot",
+    "TrackingSeriesBuilder",
 ]

@@ -184,7 +184,7 @@ class KinematicsFitCoordinator(QObject):
 
     def cancel(self, message: str = "Fit canceled.", *, state: str = "canceled") -> bool:
         job, worker = self._job, self._worker
-        if job is None or worker is None or job.cancelled:
+        if job is None or worker is None or job.cancelled or self._terminal_received:
             return False
         job.cancelled = True
         job.cancel_message = str(message)
@@ -244,9 +244,12 @@ class KinematicsFitCoordinator(QObject):
         self._job = None
         self._terminal_received = False
         if job is not None:
-            if not terminal and not job.cancelled:
-                job.failure_detail = "Kinematics fit worker ended without a terminal result."
-                self.failed.emit(job, job.failure_detail)
+            if not terminal:
+                if job.cancelled:
+                    self.canceled.emit(job)
+                else:
+                    job.failure_detail = "Kinematics fit worker ended without a terminal result."
+                    self.failed.emit(job, job.failure_detail)
             self.supervisor.finish(job.token)
             self.finished.emit(job)
         self.state_changed.emit("closed" if self._closed else "idle")

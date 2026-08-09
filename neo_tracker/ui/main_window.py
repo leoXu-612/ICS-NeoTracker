@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from functools import partial
 from pathlib import Path
@@ -58,6 +59,9 @@ from neo_tracker.application.media_import_coordinator import (
     MediaImportCoordinator,
     MediaImportRequest,
 )
+from neo_tracker.application.kinematics_workspace_coordinator import (
+    KinematicsWorkspaceCoordinator,
+)
 from neo_tracker.application.playback_coordinator import PlaybackCoordinator
 from neo_tracker.application.preview_coordinator import PreviewCoordinator, PreviewRequest
 from neo_tracker.application.project_io_coordinator import (
@@ -89,7 +93,7 @@ from neo_tracker.analysis import (
     STFTResult,
 )
 from neo_tracker.media import MediaIdentity, MediaInfo, MediaReader, has_media_backend
-from neo_tracker.kinematics import SampleSeries
+from neo_tracker.kinematics import KinematicsEngineRuntime, SampleSeries
 from neo_tracker.observations import ColorBlobObservation, observation_backend_info
 from neo_tracker.presets import PresetDescriptor, default_preset_registry
 from neo_tracker.project import (
@@ -226,6 +230,7 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
         self,
         *,
         physics_layout_store: PhysicsWorkspaceStateStore | None = None,
+        physics_export_directory_picker: Callable[[QWidget], str] | None = None,
     ) -> None:
         super().__init__()
         self.setWindowTitle("Neo-Tracker")
@@ -233,6 +238,7 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
         self._physics_layout_store = (
             physics_layout_store or PhysicsWorkspaceStateStore.application_default()
         )
+        self._physics_export_directory_picker = physics_export_directory_picker
         self._restoring_physics_layout = False
         self._canvas_focus_active = False
         self._canvas_focus_main_sizes: tuple[int, ...] = ()
@@ -479,8 +485,25 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
         self._response_mode_routing_requested = False
         self._task_supervisor = TaskSupervisor()
         self._background_tasks = self._task_supervisor
-        self.analysis_workspace_controller = AnalysisWorkspaceController(
+        self._kinematics_runtime = KinematicsEngineRuntime()
+        self._kinematics_workspace_coordinator = KinematicsWorkspaceCoordinator(
             self._task_supervisor
+        )
+        self._kinematics_workspace_coordinator.output_ready.connect(
+            self._kinematics_workspace_ready
+        )
+        self._kinematics_workspace_coordinator.failed.connect(
+            self._kinematics_workspace_failed
+        )
+        self._kinematics_workspace_coordinator.canceled.connect(
+            self._kinematics_workspace_canceled
+        )
+        self._kinematics_workspace_coordinator.idle_reached.connect(
+            self._kinematics_workspace_idle
+        )
+        self.analysis_workspace_controller = AnalysisWorkspaceController(
+            self._task_supervisor,
+            fit_operator=self._kinematics_runtime,
         )
         self.analysis_workspace_controller.stateChanged.connect(
             self._physics_fit_state_changed
@@ -492,7 +515,7 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
             self._physics_operation_requested
         )
         self.analysis_workspace_controller.idleReached.connect(
-            self._schedule_close_if_workers_stopped
+            self._physics_fit_idle
         )
         self._media_import_coordinator = MediaImportCoordinator(self._task_supervisor)
         self._media_import_coordinator.progressed.connect(self._media_probe_progressed)
@@ -2356,6 +2379,8 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
             info,
             clear_results=assessment.clear_results,
         )
+        if assessment.clear_results:
+            self._reset_physics_context()
         current_item = self.task_list.currentItem()
         if current_item is not None and current_item.data(Qt.ItemDataRole.UserRole) is not None:
             current_item.setText(task.title())
@@ -3326,6 +3351,7 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
         self._invalidate_review_responses(self.current_task)
         self.current_task.pipeline_key = key
         self.current_task.pipeline = self.registry[key].factory()
+        self.current_task.mark_results_changed()
         self.current_task.tracking_outcome = ""
         self.current_task.tracking_note = ""
         self.current_task.roi = None
@@ -3478,7 +3504,9 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
             task.calibration_rod = CalibrationRod()
             self.preview_label.set_calibration_line(None)
         task.pipeline.results.clear()
+        task.mark_results_changed()
         task.edit_history.clear()
+        self._reset_physics_context()
         self._clear_analysis_result()
         self._render_task(refresh_project_state=False)
         self._mark_project_changed()
@@ -5509,6 +5537,7 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
                 state="dirty",
             )
         self._invalidate_review_responses(task, start_frame if mode == "rerun" else None)
+        self._reset_physics_context(schedule_build=False)
         task.close_reader()
         source_path = str(task.media_path)
         tracking_reader_overridden = (
@@ -5820,6 +5849,10 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
 
     def _finish_tracking_job(self, job: TrackingJob) -> None:
         task = job.task
+        if not job.previous_result_state_restored and job.result_replacement_committed:
+            task.mark_results_changed()
+        if task is self.current_task:
+            self._reset_physics_context()
         if job.previous_result_state_restored and job.previous_analysis_run is not None:
             self.analysis_controller.accept_run(job.previous_analysis_run)
         self._render_observation_backend(task.pipeline)
@@ -6048,6 +6081,8 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
             QMessageBox.warning(self, "Correct point", f"Could not map manual point:\n{exc}")
             return
         result = task.pipeline.results[index]
+        task.mark_results_changed()
+        self._reset_physics_context()
         self._record_review_edit(task, edit)
         self.analysis_controller.refresh_result_source_cache(
             task.pipeline.results,
@@ -6084,6 +6119,8 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
             pipeline=task.pipeline,
         )
         result = task.pipeline.results[index]
+        task.mark_results_changed()
+        self._reset_physics_context()
         self._record_review_edit(task, edit)
         self.analysis_controller.refresh_result_source_cache(
             task.pipeline.results,
@@ -6323,9 +6360,11 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
         if had_results:
             self.analysis_controller.invalidate_source_cache()
             self.current_task.pipeline.reset()
+            self.current_task.mark_results_changed()
             self.current_task.edit_history.clear()
             self._render_edit_history(self.current_task)
             self._clear_analysis_result()
+            self._reset_physics_context()
             if message:
                 self.statusBar().showMessage(message, 6000)
         self._render_results(self.current_task)
@@ -6880,6 +6919,8 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
                 self.analysis_workspace_controller.cancel(
                     "Closing Neo-Tracker; the active fit was canceled."
                 )
+            if "kinematics-analysis" in active_kinds:
+                self._kinematics_workspace_coordinator.cancel()
             if "media-probe" in active_kinds:
                 self._cancel_media_probe()
             if "project-open" in active_kinds:
@@ -6900,6 +6941,7 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
             task.close_reader()
         self._retired_project_tasks.clear()
         self._analysis_coordinator.close()
+        self._kinematics_workspace_coordinator.close()
         self.analysis_workspace_controller.close()
         self._review_response_coordinator.close()
         self._preview_coordinator.close()
@@ -6933,6 +6975,12 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
 
 def run() -> int:
     app = QApplication.instance() or QApplication(sys.argv)
-    window = NeoTrackerWindow()
+    window = NeoTrackerWindow(
+        physics_export_directory_picker=lambda parent: QFileDialog.getExistingDirectory(
+            parent,
+            "Export physics analysis",
+            "",
+        )
+    )
     window.show()
     return int(app.exec())

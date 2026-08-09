@@ -186,6 +186,12 @@ class KinematicsProjectSchemaTests(unittest.TestCase):
         bad_revision["tasks"][0]["analysis_workspace"]["schema_revision"] = 2
         mutations.append((bad_revision, "schema_revision"))
 
+        implicit_resampling = json.loads(json.dumps(valid))
+        implicit_resampling["tasks"][0]["analysis_workspace"]["definitions"][0][
+            "smoothing_config"
+        ]["resample"] = True
+        mutations.append((implicit_resampling, "resample must be false"))
+
         for payload, message in mutations:
             with self.subTest(message=message), self.assertRaisesRegex(
                 (TypeError, ValueError), message

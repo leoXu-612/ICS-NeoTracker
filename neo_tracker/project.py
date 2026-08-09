@@ -201,6 +201,7 @@ def _normalize_smoothing_config(value: object) -> dict[str, object]:
         "uniformity_tolerance",
         "edge_policy",
         "gap_policy",
+        "resample",
     }
     _reject_unknown_fields(data, allowed, "analysis smoothing_config")
     if data.get("method", "savgol_uniform") != "savgol_uniform":
@@ -224,6 +225,8 @@ def _normalize_smoothing_config(value: object) -> dict[str, object]:
         raise ValueError("analysis smoothing_config edge_policy is unsupported")
     if data.get("gap_policy", "split") != "split":
         raise ValueError("analysis smoothing_config gap_policy must be split")
+    if data.get("resample", False) is not False:
+        raise ValueError("analysis smoothing_config resample must be false")
     return {
         "method": "savgol_uniform",
         "window_length": int(window),
@@ -231,6 +234,7 @@ def _normalize_smoothing_config(value: object) -> dict[str, object]:
         "uniformity_tolerance": tolerance,
         "edge_policy": edge,
         "gap_policy": "split",
+        "resample": False,
     }
 
 

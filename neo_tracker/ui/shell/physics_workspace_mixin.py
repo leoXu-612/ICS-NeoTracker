@@ -1,10 +1,23 @@
 from __future__ import annotations
 
+import hashlib
+import re
 from collections.abc import Sequence
+from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QTimer, Qt
 
-from neo_tracker.kinematics import FitResult, FitStatus, SampleSeries
+from neo_tracker.application.kinematics_workspace_coordinator import (
+    KinematicsWorkspaceJob,
+    KinematicsWorkspaceOutput,
+    KinematicsWorkspaceTask,
+)
+from neo_tracker.kinematics import FitRequest, FitResult, FitStatus, SampleSeries
+from neo_tracker.project import (
+    AnalysisDefinition,
+    AnalysisSourceReference,
+    AnalysisWorkspaceSnapshot,
+)
 from neo_tracker.ui.analysis_workspace_controller import (
     AnalysisWorkspaceState,
     FitDraft,
@@ -20,14 +33,22 @@ class PhysicsWorkspaceMixin:
 
     @staticmethod
     def _physics_task_id(task: DesktopTask) -> str:
-        return f"task:{id(task):x}"
+        return task.task_id
 
     @staticmethod
     def _physics_result_identity(task: DesktopTask) -> str:
-        return f"results:{id(task.pipeline.results):x}"
+        return f"{task.task_id}:results:{task.results_generation}"
 
-    def _reset_physics_context(self) -> None:
+    def _reset_physics_context(self, *, schedule_build: bool = True) -> None:
         task = self.current_task
+        coordinator = getattr(self, "_kinematics_workspace_coordinator", None)
+        if coordinator is not None and coordinator.busy:
+            coordinator.cancel()
+        self._physics_pending_build = None
+        self._physics_replay_queue = []
+        self._physics_replay_active_id = None
+        self._physics_replay_active_operation = None
+        self._physics_definition_states = {}
         self._physics_series_owner_token = id(task)
         self._physics_series_by_id = {}
         self.physics_workspace.set_series(())
@@ -37,8 +58,50 @@ class PhysicsWorkspaceMixin:
         self.selection_session.activate_context(
             self._physics_task_id(task),
             self._physics_result_identity(task),
-            f"unbound:{id(task.pipeline.results):x}",
+            f"checking:{task.results_generation}" if task.pipeline.results else "empty",
         )
+        if task.pipeline.results and schedule_build and not self._background_tasks.closing:
+            self._physics_pending_build = (task, task.results_generation)
+            QTimer.singleShot(0, self._start_pending_physics_build)
+
+    def refresh_physics_series(self) -> None:
+        """Rebuild current physical series from detached Results in the background."""
+
+        self._reset_physics_context(schedule_build=True)
+
+    def _start_pending_physics_build(self) -> bool:
+        pending = getattr(self, "_physics_pending_build", None)
+        if pending is None:
+            return False
+        task, generation = pending
+        if (
+            task is not self.current_task
+            or generation != task.results_generation
+            or not task.pipeline.results
+            or self._background_tasks.closing
+        ):
+            self._physics_pending_build = None
+            return False
+        coordinator = self._kinematics_workspace_coordinator
+        if coordinator.busy:
+            return False
+        request = KinematicsWorkspaceTask(
+            owner=task,
+            task_id=task.task_id,
+            results_generation=generation,
+            operation="build",
+            results=task.pipeline.results,
+            units=dict(task.pipeline.state_model.units()),
+        )
+        if not coordinator.start(request):
+            return False
+        self._physics_pending_build = None
+        self.physics_workspace.cursor_label.setText("true time — · checking Results source revision")
+        self.physics_workspace.cursor_label.setAccessibleDescription(
+            "Building immutable physical series from current tracking Results in the background."
+        )
+        self._update_physics_actions(self.analysis_workspace_controller.state)
+        return True
 
     def set_physics_series(
         self,
@@ -58,6 +121,8 @@ class PhysicsWorkspaceMixin:
             return True
         if any(not isinstance(item, SampleSeries) for item in items):
             raise TypeError("physics series must contain SampleSeries values")
+        if len(items) > 64:
+            raise ValueError("the physics workspace supports at most 64 attached series")
         series_ids = tuple(item.series_id for item in items)
         if len(set(series_ids)) != len(series_ids):
             raise ValueError("physics series_id values must be unique")
@@ -87,6 +152,23 @@ class PhysicsWorkspaceMixin:
         )
         return True
 
+    def _attach_physics_series(self, additions: Sequence[SampleSeries]) -> bool:
+        items = tuple(self._physics_series_by_id.values()) + tuple(additions)
+        if len(items) > 64:
+            return False
+        ids = [item.series_id for item in items]
+        if len(ids) != len(set(ids)):
+            return False
+        accepted = self.set_physics_series(items, owner=self.current_task)
+        if accepted and additions:
+            selected = additions[-1]
+            self.analysis_workspace_controller.select_series(selected.series_id)
+            index = self.physics_workspace.series_combo.findData(selected.series_id)
+            if index >= 0:
+                self.physics_workspace.series_combo.setCurrentIndex(index)
+            self.physics_inspector.show_series(selected)
+        return accepted
+
     def set_kinematics_fit_operator(self, operator: object | None) -> None:
         """Inject the engine protocol without importing an engine implementation."""
 
@@ -114,6 +196,16 @@ class PhysicsWorkspaceMixin:
         if not isinstance(draft_object, FitDraft):
             return
         if self._background_tasks.closing:
+            return
+        source = self._physics_series_by_id.get(draft_object.series_id)
+        if source is None:
+            return
+        selection = self.selection_session.select_series(
+            source.series_id,
+            origin=SelectionOrigin.FIT,
+            expected_source_revision=source.source_revision,
+        )
+        if not selection.accepted:
             return
         if not self.analysis_workspace_controller.run_fit(
             self.current_task,
@@ -163,6 +255,52 @@ class PhysicsWorkspaceMixin:
             expected_source_revision=result.source_revision,
         )
         self.physics_inspector.show_fit(result)
+        replay_id = getattr(self, "_physics_replay_active_id", None)
+        replay_operation = getattr(self, "_physics_replay_active_operation", None)
+        if replay_id is not None and replay_operation == "fit":
+            definition = self._physics_definition_by_id(replay_id)
+            self._physics_replay_active_id = None
+            self._physics_replay_active_operation = None
+            if definition is not None:
+                self._apply_replayed_definition_view(definition, fit_result=result)
+            return
+        request = state.active_request
+        source = self._physics_series_by_id.get(result.series_id)
+        if request is not None and source is not None:
+            digest = hashlib.sha256(
+                repr(
+                    (
+                        request.series_id,
+                        request.model.value,
+                        request.range_start_s,
+                        request.range_end_s,
+                        tuple(request.initial_parameters.items()),
+                        tuple(request.bounds.items()),
+                    )
+                ).encode("utf-8")
+            ).hexdigest()[:20]
+            try:
+                definition = AnalysisDefinition(
+                    analysis_id=f"fit:{digest}",
+                    name=f"{result.model.value.title()} fit · {source.name}"[:256],
+                    source_series=AnalysisSourceReference(
+                        self.current_task.task_id,
+                        source.series_id,
+                        source.source_kind,
+                        source.source_revision,
+                    ),
+                    fit_config=request.to_dict(),
+                    selected_range_s=(result.range_start_s, result.range_end_s),
+                    view_state={"page": "Fit", "residual_visible": False},
+                    provenance={"engine": "neo-tracker-kinematics-v0.3"},
+                )
+            except (TypeError, ValueError) as exc:
+                self.statusBar().showMessage(
+                    f"Could not save fit definition: {exc}",
+                    8000,
+                )
+                return
+            self._store_physics_definition(definition)
 
     def _export_physics_analysis(self) -> None:
         if not self.analysis_workspace_controller.request_export():
@@ -192,12 +330,377 @@ class PhysicsWorkspaceMixin:
         if not isinstance(request, KinematicsOperationRequest):
             return
         self.physicsOperationRequested.emit(request)
+        if self._background_tasks.closing:
+            return
+        source = self._physics_series_by_id.get(request.series_id)
+        if source is None or source.source_revision != request.source_revision:
+            self.statusBar().showMessage(
+                "Physics request rejected because its Results revision is stale.",
+                6000,
+            )
+            return
+        export_paths: dict[str, Path] = {}
+        if request.operation == "export":
+            picker = self._physics_export_directory_picker
+            if picker is None:
+                self.statusBar().showMessage(
+                    "Physics export request is ready for the application host.",
+                    5000,
+                )
+                return
+            directory_value = picker(self)
+            if not directory_value:
+                self.statusBar().showMessage("Physics export canceled.", 4000)
+                return
+            directory = Path(directory_value).expanduser()
+            safe_name = re.sub(r"[^A-Za-z0-9._-]+", "-", source.name).strip("-._")
+            stem = safe_name[:80] or "physics-analysis"
+            export_paths = {
+                "csv": directory / f"{stem}.csv",
+                "npz": directory / f"{stem}.npz",
+                "markdown": directory / f"{stem}.md",
+            }
+        task = KinematicsWorkspaceTask(
+            owner=self.current_task,
+            task_id=self.current_task.task_id,
+            results_generation=self.current_task.results_generation,
+            operation=request.operation,
+            source=source,
+            configuration=request.configuration,
+            export_paths=export_paths,
+        )
+        if not self._kinematics_workspace_coordinator.start(task):
+            self.statusBar().showMessage(
+                "Finish or cancel the current physics operation before starting another.",
+                6000,
+            )
+            return
         labels = {
-            "derivative": "Derivative request sent to the kinematics engine.",
-            "smooth": "Smoothing request sent to the kinematics engine.",
-            "export": "Physics export request sent to the kinematics engine.",
+            "derivative": "Computing derivative in the background…",
+            "smooth": "Smoothing physical series in the background…",
+            "export": "Exporting CSV, safe NPZ, and Markdown in the background…",
         }
-        self.statusBar().showMessage(labels[request.operation], 5000)
+        self.statusBar().showMessage(labels[request.operation])
+        self._update_physics_actions(self.analysis_workspace_controller.state)
+
+    def _kinematics_workspace_ready(
+        self,
+        job: KinematicsWorkspaceJob,
+        output: KinematicsWorkspaceOutput,
+    ) -> None:
+        task = job.task
+        if not self._physics_job_is_current(task, output):
+            return
+        if output.operation == "build":
+            if output.series:
+                if not self.set_physics_series(
+                    output.series,
+                    owner=self.current_task,
+                    result_identity=self._physics_result_identity(self.current_task),
+                ):
+                    return
+            else:
+                self.selection_session.activate_context(
+                    self.current_task.task_id,
+                    self._physics_result_identity(self.current_task),
+                    output.source_revision,
+                )
+            self._prepare_persisted_physics_definitions(output.source_revision)
+            self.statusBar().showMessage(
+                f"Built {len(output.series)} physical series from current Results.",
+                5000,
+            )
+            return
+        replay_id = getattr(self, "_physics_replay_active_id", None)
+        self._physics_replay_active_id = None
+        replay_operation = getattr(self, "_physics_replay_active_operation", None)
+        self._physics_replay_active_operation = None
+        if output.operation in {"derivative", "smooth"} and output.series:
+            if not self._attach_physics_series(output.series):
+                self.statusBar().showMessage(
+                    "Derived series was rejected because its identity is ambiguous.",
+                    6000,
+                )
+                return
+            if replay_id is None:
+                self._persist_operation_definition(job.task, output.series[0])
+            elif replay_operation == output.operation:
+                definition = self._physics_definition_by_id(replay_id)
+                if definition is not None:
+                    self._apply_replayed_definition_view(definition)
+            self.statusBar().showMessage(
+                f"Created {output.series[0].name}.",
+                5000,
+            )
+        elif output.operation == "export":
+            rendered = ", ".join(path.name for path in output.exported_paths)
+            self.statusBar().showMessage(f"Exported physics analysis: {rendered}", 8000)
+
+    def _kinematics_workspace_failed(
+        self,
+        job: KinematicsWorkspaceJob,
+        message: str,
+    ) -> None:
+        if job.task.owner is self.current_task:
+            self.statusBar().showMessage(f"Physics operation failed: {message}", 8000)
+        self._mark_active_physics_replay("failed")
+        self._physics_replay_active_id = None
+        self._physics_replay_active_operation = None
+
+    def _kinematics_workspace_canceled(self, job: KinematicsWorkspaceJob) -> None:
+        if job.task.owner is self.current_task and not self._background_tasks.closing:
+            self.statusBar().showMessage("Physics operation canceled or superseded.", 4000)
+        self._mark_active_physics_replay("canceled")
+        self._physics_replay_active_id = None
+        self._physics_replay_active_operation = None
+
+    def _kinematics_workspace_idle(self) -> None:
+        if self._start_pending_physics_build():
+            return
+        if self._start_next_physics_replay():
+            return
+        self._update_physics_actions(self.analysis_workspace_controller.state)
+        self._schedule_close_if_workers_stopped()
+
+    def _physics_fit_idle(self) -> None:
+        replay_id = getattr(self, "_physics_replay_active_id", None)
+        if replay_id is not None and self._physics_replay_active_operation == "fit":
+            if self.analysis_workspace_controller.state.fit_result is None:
+                self._mark_active_physics_replay("failed")
+            self._physics_replay_active_id = None
+            self._physics_replay_active_operation = None
+        if self._start_next_physics_replay():
+            return
+        self._update_physics_actions(self.analysis_workspace_controller.state)
+        self._schedule_close_if_workers_stopped()
+
+    def _physics_job_is_current(
+        self,
+        task: KinematicsWorkspaceTask,
+        output: KinematicsWorkspaceOutput,
+    ) -> bool:
+        current = self.current_task
+        return bool(
+            task.owner is current
+            and task.task_id == current.task_id == output.task_id
+            and task.results_generation
+            == current.results_generation
+            == output.results_generation
+            and all(
+                item.source_revision == output.source_revision
+                for item in output.series
+            )
+            and (
+                output.operation == "build"
+                or output.source_revision == self.selection_session.state.source_revision
+            )
+        )
+
+    def _prepare_persisted_physics_definitions(self, source_revision: str) -> None:
+        definitions = self.current_task.analysis_workspace.definitions
+        current: list[AnalysisDefinition] = []
+        stale = 0
+        for definition in definitions:
+            is_current = (
+                definition.source_series.task_id == self.current_task.task_id
+                and definition.source_series.source_revision == source_revision
+            )
+            state = "current" if is_current else "stale"
+            if is_current and not definition.visible:
+                state = "hidden"
+            self._physics_definition_states[definition.analysis_id] = state
+            if is_current:
+                current.append(definition)
+            else:
+                stale += 1
+        replay: list[tuple[str, AnalysisDefinition]] = []
+        for item in current:
+            if not item.visible:
+                continue
+            if item.derivative_config is not None:
+                replay.append(("derivative", item))
+            if item.smoothing_config is not None:
+                replay.append(("smooth", item))
+            if item.fit_config is not None:
+                replay.append(("fit", item))
+        self._physics_replay_queue = replay
+        detail = (
+            f"Restored {len(current)} current analysis definitions"
+            + (f"; {stale} stale definition(s) remain disabled" if stale else "")
+        )
+        if definitions:
+            self.physics_workspace.cursor_label.setToolTip(detail)
+            self.physics_workspace.cursor_label.setAccessibleDescription(detail)
+
+    def _start_next_physics_replay(self) -> bool:
+        queue = getattr(self, "_physics_replay_queue", [])
+        if (
+            not queue
+            or self._kinematics_workspace_coordinator.busy
+            or self.analysis_workspace_controller.busy
+        ):
+            return False
+        for index, entry in enumerate(tuple(queue)):
+            operation, definition = entry
+            source_id = definition.source_series.series_id
+            fit_request: FitRequest | None = None
+            if operation == "fit":
+                assert definition.fit_config is not None
+                fit_request = FitRequest.from_dict(definition.fit_config)
+                source_id = fit_request.series_id
+            source = self._physics_series_by_id.get(source_id)
+            if source is None:
+                continue
+            if source.source_revision != definition.source_series.source_revision:
+                continue
+            if operation == "fit":
+                assert fit_request is not None
+                if fit_request.source_revision != source.source_revision:
+                    continue
+                selection = self.selection_session.select_series(
+                    source.series_id,
+                    origin=SelectionOrigin.FIT,
+                    expected_source_revision=source.source_revision,
+                )
+                if not selection.accepted:
+                    continue
+                draft = FitDraft(
+                    series_id=fit_request.series_id,
+                    model=fit_request.model.value,
+                    range_start_s=fit_request.range_start_s,
+                    range_end_s=fit_request.range_end_s,
+                    initial_parameters=fit_request.initial_parameters,
+                    bounds=fit_request.bounds,
+                    use_valid_only=fit_request.use_valid_only,
+                )
+                if not self.analysis_workspace_controller.run_fit(self.current_task, draft):
+                    continue
+                del queue[index]
+                self._physics_replay_active_id = definition.analysis_id
+                self._physics_replay_active_operation = operation
+                return True
+            configuration = (
+                definition.derivative_config
+                if operation == "derivative"
+                else definition.smoothing_config
+            )
+            if operation == "derivative":
+                from neo_tracker.kinematics import DerivativeConfig
+
+                configuration = DerivativeConfig.from_dict(configuration)
+            task = KinematicsWorkspaceTask(
+                owner=self.current_task,
+                task_id=self.current_task.task_id,
+                results_generation=self.current_task.results_generation,
+                operation=operation,
+                source=source,
+                configuration=configuration,
+            )
+            if not self._kinematics_workspace_coordinator.start(task):
+                return False
+            del queue[index]
+            self._physics_replay_active_id = definition.analysis_id
+            self._physics_replay_active_operation = operation
+            return True
+        unresolved = len(queue)
+        queue.clear()
+        if unresolved:
+            self.statusBar().showMessage(
+                f"{unresolved} saved physics definition(s) could not be rebuilt because a source series is unavailable.",
+                8000,
+            )
+        return False
+
+    def _physics_definition_by_id(self, analysis_id: str) -> AnalysisDefinition | None:
+        return next(
+            (
+                item
+                for item in self.current_task.analysis_workspace.definitions
+                if item.analysis_id == analysis_id
+            ),
+            None,
+        )
+
+    def _mark_active_physics_replay(self, state: str) -> None:
+        analysis_id = getattr(self, "_physics_replay_active_id", None)
+        if analysis_id is not None:
+            self._physics_definition_states[analysis_id] = state
+
+    def _apply_replayed_definition_view(
+        self,
+        definition: AnalysisDefinition,
+        *,
+        fit_result: FitResult | None = None,
+    ) -> None:
+        page = definition.view_state.get("page")
+        if isinstance(page, str):
+            try:
+                self.physics_workspace.show_page(page)
+            except ValueError:
+                pass
+        if definition.selected_range_s is not None:
+            self.physics_workspace.plot.set_selected_range(*definition.selected_range_s)
+        if fit_result is not None:
+            residual_visible = definition.view_state.get("residual_visible", False)
+            self.analysis_workspace_controller.set_residual_visible(
+                bool(residual_visible)
+            )
+        self._physics_definition_states[definition.analysis_id] = "current"
+
+    def _persist_operation_definition(
+        self,
+        task: KinematicsWorkspaceTask,
+        result: SampleSeries,
+    ) -> None:
+        source = task.source
+        if source is None:
+            return
+        derivative = (
+            task.configuration.to_dict()
+            if task.operation == "derivative" and hasattr(task.configuration, "to_dict")
+            else None
+        )
+        smoothing = dict(task.configuration) if task.operation == "smooth" else None
+        try:
+            definition = AnalysisDefinition(
+                analysis_id=result.series_id,
+                name=result.name[:256],
+                source_series=AnalysisSourceReference(
+                    self.current_task.task_id,
+                    source.series_id,
+                    source.source_kind,
+                    source.source_revision,
+                ),
+                derivative_config=derivative,
+                smoothing_config=smoothing,
+                visible=True,
+                view_state={"page": self.physics_workspace.current_page},
+                provenance={"engine": "neo-tracker-kinematics-v0.3"},
+            )
+        except (TypeError, ValueError) as exc:
+            self.statusBar().showMessage(
+                f"Could not save analysis definition: {exc}",
+                8000,
+            )
+            return
+        self._store_physics_definition(definition)
+
+    def _store_physics_definition(self, definition: AnalysisDefinition) -> None:
+        task = self.current_task
+        definitions = list(task.analysis_workspace.definitions)
+        for index, current in enumerate(definitions):
+            if current.analysis_id == definition.analysis_id:
+                definitions[index] = definition
+                break
+        else:
+            definitions.append(definition)
+        try:
+            task.analysis_workspace = AnalysisWorkspaceSnapshot(tuple(definitions))
+        except (TypeError, ValueError) as exc:
+            self.statusBar().showMessage(f"Could not save analysis definition: {exc}", 8000)
+            return
+        self._physics_definition_states[definition.analysis_id] = "current"
+        self._mark_project_changed()
 
     def _update_physics_actions(self, state: AnalysisWorkspaceState) -> None:
         has_series = bool(
@@ -205,6 +708,7 @@ class PhysicsWorkspaceMixin:
             and state.selected_series_id in self._physics_series_by_id
         )
         mutable = has_series and state.status != "running" and not self._background_tasks.closing
+        mutable = mutable and not self._kinematics_workspace_coordinator.busy
         has_fit = bool(
             state.fit_result is not None
             and state.fit_result.status is FitStatus.OK

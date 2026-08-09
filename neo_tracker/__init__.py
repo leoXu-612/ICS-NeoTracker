@@ -24,6 +24,19 @@ from neo_tracker.presets import (
     travelling_flame_preset,
     wavefront_preset,
 )
+from neo_tracker.kinematics import (
+    CancellationToken,
+    DerivativeConfig,
+    FitModel,
+    FitRequest,
+    FitResult,
+    FitStatus,
+    KinematicsBundle,
+    KinematicsEngineRuntime,
+    ProcessingStep,
+    SampleSeries,
+    TrackingSeriesBuilder,
+)
 
 __all__ = [
     "FilterUpdate",
@@ -44,4 +57,15 @@ __all__ = [
     "path_motion_preset",
     "travelling_flame_preset",
     "wavefront_preset",
+    "CancellationToken",
+    "DerivativeConfig",
+    "FitModel",
+    "FitRequest",
+    "FitResult",
+    "FitStatus",
+    "KinematicsBundle",
+    "KinematicsEngineRuntime",
+    "ProcessingStep",
+    "SampleSeries",
+    "TrackingSeriesBuilder",
 ]

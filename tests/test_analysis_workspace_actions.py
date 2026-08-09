@@ -43,8 +43,13 @@ class PhysicsActionRegistryTests(unittest.TestCase):
         window.physicsOperationRequested.connect(requests.append)
 
         window.create_velocity_button.click()
+        pump_until(lambda: not window._kinematics_workspace_coordinator.busy)
+        window.analysis_workspace_controller.select_series(source.series_id)
         window.action_registry.action("physics.velocity").trigger()
+        pump_until(lambda: not window._kinematics_workspace_coordinator.busy)
+        window.analysis_workspace_controller.select_series(source.series_id)
         window.smooth_series_button.click()
+        pump_until(lambda: not window._kinematics_workspace_coordinator.busy)
 
         self.assertEqual([request.operation for request in requests], ["derivative", "derivative", "smooth"])
         self.assertEqual([request.configuration.order for request in requests[:2]], [1, 1])
