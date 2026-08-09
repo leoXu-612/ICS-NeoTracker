@@ -4,6 +4,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 from math import isfinite
 from pathlib import Path
+from uuid import uuid4
 
 import numpy as np
 
@@ -18,7 +19,11 @@ from neo_tracker.coordinates import (
 from neo_tracker.core import TrackerResult, TrackingPipeline
 from neo_tracker.media import MediaIdentity, MediaInfo, MediaReader, probe_media
 from neo_tracker.presets import PresetDescriptor
-from neo_tracker.project import ProjectTaskSnapshot, TrackingRunRecord
+from neo_tracker.project import (
+    AnalysisWorkspaceSnapshot,
+    ProjectTaskSnapshot,
+    TrackingRunRecord,
+)
 from neo_tracker.roi import AnnularROI, CircularROI, CurveBandROI, PolygonROI, RectangularROI
 from neo_tracker.states import FrontState, ScalarState, XYState
 
@@ -68,6 +73,9 @@ class DesktopTask:
     saved_media_info: MediaInfo | None = None
     pending_media_relink: tuple[MediaInfo, MediaRelinkAssessment] | None = None
     media_identity_requires_review: bool = False
+    task_id: str = field(default_factory=lambda: str(uuid4()))
+    analysis_workspace: AnalysisWorkspaceSnapshot = field(default_factory=AnalysisWorkspaceSnapshot)
+    results_generation: int = 0
 
     def title(self) -> str:
         if self.media_path is None:
@@ -78,6 +86,12 @@ class DesktopTask:
         if self.media_reader is not None:
             self.media_reader.close()
             self.media_reader = None
+
+    def mark_results_changed(self) -> int:
+        """Invalidate every runtime analysis derived from the current Results."""
+
+        self.results_generation += 1
+        return self.results_generation
 
 
 @dataclass(frozen=True)
@@ -355,6 +369,7 @@ class ProjectTaskController:
             task.preview_frame_index = 0
         if clear_results:
             task.pipeline.reset()
+            task.mark_results_changed()
             task.edit_history.clear()
             task.tracking_outcome = ""
             task.tracking_note = ""
@@ -440,6 +455,8 @@ class ProjectTaskController:
             tracking_outcome=task.tracking_outcome,
             tracking_note=task.tracking_note,
             run_history=list(task.run_history),
+            task_id=task.task_id,
+            analysis_workspace=task.analysis_workspace,
         )
 
     def task_from_snapshot(
@@ -455,6 +472,8 @@ class ProjectTaskController:
             pipeline_key,
             media_info=live_media_info,
         )
+        task.task_id = snapshot.task_id
+        task.analysis_workspace = snapshot.analysis_workspace
         live_media_info = task.media_info
         saved_media_info = self.media_info_from_snapshot(snapshot.media_info, None)
         task.saved_media_info = saved_media_info or live_media_info

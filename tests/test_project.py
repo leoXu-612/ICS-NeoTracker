@@ -26,6 +26,7 @@ from neo_tracker.visualization import annular_theta_time_heatmap
 
 class ProjectPersistenceTests(unittest.TestCase):
     def test_project_content_fingerprint_is_compact_order_independent_and_ignores_preview(self) -> None:
+        task_id = "00000000-0000-4000-8000-000000000001"
         first = NeoTrackerProject(
             name="fingerprint",
             tasks=[
@@ -35,6 +36,7 @@ class ProjectPersistenceTests(unittest.TestCase):
                     preview_frame_index=3,
                     pipeline_config={"z": 1, "nested": {"b": 2, "a": 1}},
                     edit_history=[{"type": "mark_lost", "frame_index": 4}],
+                    task_id=task_id,
                 )
             ],
         )
@@ -47,6 +49,7 @@ class ProjectPersistenceTests(unittest.TestCase):
                     preview_frame_index=99,
                     pipeline_config={"nested": {"a": 1, "b": 2}, "z": 1},
                     edit_history=[{"frame_index": 4, "type": "mark_lost"}],
+                    task_id=task_id,
                 )
             ],
         )
@@ -161,10 +164,13 @@ class ProjectPersistenceTests(unittest.TestCase):
             results_data = task.pop("results")
             edit_history = task.pop("edit_history")
             run_history = task.pop("run_history")
+            analysis_workspace = task.pop("analysis_workspace")
             task["preview_frame_index"] = 0
             task["result_count"] = len(results_data)
             task["edit_history_count"] = len(edit_history)
             task["run_history_count"] = len(run_history)
+            task["analysis_schema_revision"] = analysis_workspace["schema_revision"]
+            task["analysis_definition_count"] = len(analysis_workspace["definitions"])
             add_legacy_record("task", task)
             for result in results_data:
                 add_legacy_record("result", result)
@@ -172,6 +178,8 @@ class ProjectPersistenceTests(unittest.TestCase):
                 add_legacy_record("edit_history", edit)
             for run in run_history:
                 add_legacy_record("run_history", run)
+            for definition in analysis_workspace["definitions"]:
+                add_legacy_record("analysis_definition", definition)
 
         self.assertEqual(cooperative, project_content_fingerprint(project))
         self.assertEqual(cooperative, legacy_digest.hexdigest())
@@ -412,7 +420,7 @@ class ProjectPersistenceTests(unittest.TestCase):
             "notes": "",
         }
         with tempfile.TemporaryDirectory() as tmpdir:
-            for version in (True, 1.9, "1", "2", 0, 3):
+            for version in (True, 1.9, "1", "2", 0, 4):
                 with self.subTest(version=version):
                     path = Path(tmpdir) / f"version-{type(version).__name__}.ntproj"
                     payload = dict(base, name="version-check")
@@ -422,14 +430,14 @@ class ProjectPersistenceTests(unittest.TestCase):
                     )
                     with self.assertRaisesRegex(ValueError, "version"):
                         NeoTrackerProject.load(path)
-            for version in (1, 2):
+            for version in (1, 2, 3):
                 with self.subTest(accepted_version=version):
                     path = Path(tmpdir) / f"accepted-{version}.ntproj"
                     path.write_text(
                         json.dumps({**base, "name": "ok", "version": version}),
                         encoding="utf-8",
                     )
-                    self.assertEqual(NeoTrackerProject.load(path).to_dict()["version"], 2)
+                    self.assertEqual(NeoTrackerProject.load(path).to_dict()["version"], 3)
 
     def test_project_load_rejects_type_confused_preview_frame_index(self) -> None:
         base = {
@@ -665,9 +673,9 @@ class ProjectPersistenceTests(unittest.TestCase):
 
     def test_project_rejects_unsupported_future_version(self) -> None:
         data = NeoTrackerProject(name="future").to_dict()
-        data["version"] = 3
+        data["version"] = 4
 
-        with self.assertRaisesRegex(ValueError, "unsupported Neo-Tracker project version: 3"):
+        with self.assertRaisesRegex(ValueError, "unsupported Neo-Tracker project version: 4"):
             NeoTrackerProject.from_dict(data)
 
     def test_project_accepts_legacy_file_without_explicit_version(self) -> None:
@@ -685,7 +693,7 @@ class ProjectPersistenceTests(unittest.TestCase):
         serialized = project.to_dict()
         loaded = NeoTrackerProject.from_dict(serialized)
 
-        self.assertEqual(serialized["version"], 2)
+        self.assertEqual(serialized["version"], 3)
         self.assertNotIn("pipelines", serialized)
         self.assertEqual(serialized["pipeline_library"], [pipeline.to_config()])
         self.assertEqual(loaded.pipelines, [pipeline.to_config()])
@@ -707,7 +715,7 @@ class ProjectPersistenceTests(unittest.TestCase):
         migrated = loaded.to_dict()
 
         self.assertEqual(loaded.pipelines, [pipeline_config])
-        self.assertEqual(migrated["version"], 2)
+        self.assertEqual(migrated["version"], 3)
         self.assertEqual(migrated["pipeline_library"], [pipeline_config])
         self.assertNotIn("pipelines", migrated)
 

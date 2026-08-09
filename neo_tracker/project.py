@@ -9,12 +9,15 @@ from hashlib import sha256
 from math import isfinite
 from pathlib import Path
 from stat import S_ISREG
-from typing import Any, Callable
+from types import MappingProxyType
+from typing import Any, Callable, Mapping
+from uuid import UUID, uuid4
 
 import numpy as np
 
 from neo_tracker.atomic_io import fsync_parent_directory
 from neo_tracker.core import ObservationCandidate, TrackerResult, TrackingPipeline
+from neo_tracker.kinematics.types import DerivativeConfig, FitRequest
 from neo_tracker.media import MediaIdentity
 
 
@@ -37,13 +40,53 @@ PIPELINE_KEY_LIMIT = 128
 RESULT_STATUS_LIMIT = 256
 OBSERVATION_LABEL_LIMIT = 256
 STATE_KEY_LIMIT = 128
-PROJECT_FORMAT_VERSION = 2
+PROJECT_FORMAT_VERSION = 3
+ANALYSIS_WORKSPACE_SCHEMA_REVISION = 1
+MAX_ANALYSIS_DEFINITIONS_PER_TASK = 128
+MAX_PROJECT_ANALYSIS_DEFINITIONS = 4096
+MAX_ANALYSIS_JSON_DEPTH = 8
+MAX_ANALYSIS_JSON_NODES = 2048
+MAX_ANALYSIS_PARAMETERS = 32
+ANALYSIS_ID_LIMIT = 256
+ANALYSIS_NAME_LIMIT = 256
+ANALYSIS_TEXT_LIMIT = 4096
 TRACKING_OUTCOMES = frozenset({"", "complete", "partial", "canceled", "failed"})
 TRACKING_RUN_MODES = frozenset({"full", "rerun"})
 TRACKING_RUN_HISTORY_LIMIT = 20
 TRACKING_RUN_COMPUTE_BACKEND_LIMIT = 128
 TRACKING_RUN_SOURCE_PATH_LIMIT = 4096
 TRACKING_NOTE_LIMIT = 4096
+
+_PROJECT_FIELDS_V3 = frozenset(
+    {
+        "format",
+        "version",
+        "name",
+        "media_paths",
+        "pipeline_library",
+        "tasks",
+        "notes",
+    }
+)
+_TASK_FIELDS_V3 = frozenset(
+    {
+        "media_path",
+        "pipeline_key",
+        "preview_frame_index",
+        "media_info",
+        "roi",
+        "calibration_rod",
+        "pipeline_config",
+        "results",
+        "edit_history",
+        "tracking_outcome",
+        "tracking_note",
+        "run_history",
+        "task_id",
+        "analysis_workspace",
+    }
+)
+_LEGACY_TASK_FIELDS = _TASK_FIELDS_V3 - {"task_id", "analysis_workspace"}
 
 
 def _bounded_string(value: object, label: str, limit: int, *, allow_empty: bool = True) -> str:
@@ -54,6 +97,141 @@ def _bounded_string(value: object, label: str, limit: int, *, allow_empty: bool 
     if len(value) > limit:
         raise ValueError(f"{label} must not exceed {limit} characters")
     return value
+
+
+def _reject_unknown_fields(value: Mapping[str, object], allowed: set[str] | frozenset[str], label: str) -> None:
+    unknown = sorted(set(value) - set(allowed))
+    if unknown:
+        raise ValueError(f"{label} contains unknown fields: {', '.join(unknown)}")
+
+
+def _canonical_uuid(value: object, label: str) -> str:
+    text = _bounded_string(value, label, 36, allow_empty=False)
+    try:
+        parsed = UUID(text)
+    except (ValueError, AttributeError) as exc:
+        raise ValueError(f"{label} must be a canonical UUID") from exc
+    canonical = str(parsed)
+    if text != canonical:
+        raise ValueError(f"{label} must be a canonical UUID")
+    return canonical
+
+
+def _analysis_text(value: object, label: str, limit: int) -> str:
+    text = _bounded_string(value, label, limit, allow_empty=False)
+    if not text.strip():
+        raise ValueError(f"{label} must not be blank")
+    return text
+
+
+def _analysis_json_copy(
+    value: object,
+    label: str,
+    *,
+    depth: int = 0,
+    budget: list[int] | None = None,
+) -> object:
+    """Detach a small JSON value without NumPy coercion or opaque string fallback."""
+
+    if budget is None:
+        budget = [0]
+    budget[0] += 1
+    if budget[0] > MAX_ANALYSIS_JSON_NODES:
+        raise ValueError(f"{label} exceeds {MAX_ANALYSIS_JSON_NODES} JSON nodes")
+    if depth > MAX_ANALYSIS_JSON_DEPTH:
+        raise ValueError(f"{label} exceeds nesting depth {MAX_ANALYSIS_JSON_DEPTH}")
+    if value is None or isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return _bounded_string(value, label, ANALYSIS_TEXT_LIMIT)
+    if isinstance(value, int) and not isinstance(value, bool):
+        return int(value)
+    if isinstance(value, float):
+        return _finite_float(value, label)
+    if isinstance(value, np.ndarray) or isinstance(value, np.generic):
+        raise TypeError(f"{label} must not contain NumPy values or arrays")
+    if isinstance(value, Mapping):
+        copied: dict[str, object] = {}
+        for key, item in value.items():
+            bounded_key = _bounded_string(key, f"{label} key", ANALYSIS_ID_LIMIT, allow_empty=False)
+            copied[bounded_key] = _analysis_json_copy(
+                item,
+                f"{label}.{bounded_key}",
+                depth=depth + 1,
+                budget=budget,
+            )
+        return copied
+    if isinstance(value, (list, tuple)):
+        return [
+            _analysis_json_copy(
+                item,
+                f"{label}[{index}]",
+                depth=depth + 1,
+                budget=budget,
+            )
+            for index, item in enumerate(value)
+        ]
+    raise TypeError(f"{label} contains unsupported value {type(value).__name__}")
+
+
+def _analysis_mapping(value: object, label: str) -> dict[str, object]:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{label} must be a dictionary")
+    copied = _analysis_json_copy(value, label)
+    assert isinstance(copied, dict)
+    return copied
+
+
+def _freeze_analysis_json(value: object) -> object:
+    if isinstance(value, dict):
+        return MappingProxyType(
+            {key: _freeze_analysis_json(item) for key, item in value.items()}
+        )
+    if isinstance(value, list):
+        return tuple(_freeze_analysis_json(item) for item in value)
+    return value
+
+
+def _normalize_smoothing_config(value: object) -> dict[str, object]:
+    data = _analysis_mapping(value, "analysis smoothing_config")
+    allowed = {
+        "method",
+        "window_length",
+        "polyorder",
+        "uniformity_tolerance",
+        "edge_policy",
+        "gap_policy",
+    }
+    _reject_unknown_fields(data, allowed, "analysis smoothing_config")
+    if data.get("method", "savgol_uniform") != "savgol_uniform":
+        raise ValueError("analysis smoothing_config method must be savgol_uniform")
+    window = data.get("window_length", 11)
+    order = data.get("polyorder", 3)
+    if isinstance(window, bool) or not isinstance(window, int) or window < 3 or window % 2 == 0:
+        raise ValueError("analysis smoothing_config window_length must be an odd integer of at least 3")
+    if isinstance(order, bool) or not isinstance(order, int) or order < 0 or order >= window:
+        raise ValueError("analysis smoothing_config polyorder must be smaller than window_length")
+    tolerance = _finite_float(
+        data.get("uniformity_tolerance", 1e-3),
+        "analysis smoothing_config uniformity_tolerance",
+        minimum=0.0,
+        maximum=1.0,
+    )
+    if tolerance >= 1.0:
+        raise ValueError("analysis smoothing_config uniformity_tolerance must be below 1")
+    edge = data.get("edge_policy", "invalid")
+    if edge not in {"invalid", "one_sided"}:
+        raise ValueError("analysis smoothing_config edge_policy is unsupported")
+    if data.get("gap_policy", "split") != "split":
+        raise ValueError("analysis smoothing_config gap_policy must be split")
+    return {
+        "method": "savgol_uniform",
+        "window_length": int(window),
+        "polyorder": int(order),
+        "uniformity_tolerance": tolerance,
+        "edge_policy": edge,
+        "gap_policy": "split",
+    }
 
 
 def _validate_project_structure(value: object) -> None:
@@ -514,6 +692,250 @@ def tracker_result_from_dict(data: object) -> TrackerResult:
     )
 
 
+@dataclass(frozen=True)
+class AnalysisSourceReference:
+    task_id: str
+    series_id: str
+    source_kind: str
+    source_revision: str
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "task_id", _canonical_uuid(self.task_id, "analysis source task_id"))
+        object.__setattr__(
+            self,
+            "series_id",
+            _analysis_text(self.series_id, "analysis source series_id", ANALYSIS_ID_LIMIT),
+        )
+        object.__setattr__(
+            self,
+            "source_kind",
+            _analysis_text(self.source_kind, "analysis source source_kind", 128),
+        )
+        object.__setattr__(
+            self,
+            "source_revision",
+            _analysis_text(
+                self.source_revision,
+                "analysis source source_revision",
+                ANALYSIS_ID_LIMIT,
+            ),
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "task_id": self.task_id,
+            "series_id": self.series_id,
+            "source_kind": self.source_kind,
+            "source_revision": self.source_revision,
+        }
+
+    @classmethod
+    def from_dict(cls, value: object) -> "AnalysisSourceReference":
+        data = _analysis_mapping(value, "analysis source_series")
+        _reject_unknown_fields(
+            data,
+            {"task_id", "series_id", "source_kind", "source_revision"},
+            "analysis source_series",
+        )
+        return cls(
+            task_id=data.get("task_id"),  # type: ignore[arg-type]
+            series_id=data.get("series_id"),  # type: ignore[arg-type]
+            source_kind=data.get("source_kind"),  # type: ignore[arg-type]
+            source_revision=data.get("source_revision"),  # type: ignore[arg-type]
+        )
+
+
+@dataclass(frozen=True)
+class AnalysisDefinition:
+    analysis_id: str
+    name: str
+    source_series: AnalysisSourceReference
+    analysis_type: str = "kinematics"
+    derivative_config: Mapping[str, object] | None = None
+    smoothing_config: Mapping[str, object] | None = None
+    fit_config: Mapping[str, object] | None = None
+    visible: bool = True
+    selected_range_s: tuple[float, float] | None = None
+    view_state: Mapping[str, object] = field(default_factory=dict)
+    provenance: Mapping[str, object] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "analysis_id",
+            _analysis_text(self.analysis_id, "analysis_id", ANALYSIS_ID_LIMIT),
+        )
+        object.__setattr__(
+            self,
+            "name",
+            _analysis_text(self.name, "analysis name", ANALYSIS_NAME_LIMIT),
+        )
+        if self.analysis_type != "kinematics":
+            raise ValueError(f"unknown analysis_type: {self.analysis_type!r}")
+        if not isinstance(self.source_series, AnalysisSourceReference):
+            raise TypeError("analysis source_series must be an AnalysisSourceReference")
+        if not isinstance(self.visible, bool):
+            raise TypeError("analysis visible must be a boolean")
+
+        derivative: dict[str, object] | None = None
+        if self.derivative_config is not None:
+            derivative = DerivativeConfig.from_dict(self.derivative_config).to_dict()
+        smoothing = (
+            None
+            if self.smoothing_config is None
+            else _normalize_smoothing_config(self.smoothing_config)
+        )
+        fit: dict[str, object] | None = None
+        if self.fit_config is not None:
+            raw_fit = _analysis_mapping(self.fit_config, "analysis fit_config")
+            parameter_names: set[str] = set()
+            for key in ("initial_parameters", "bounds"):
+                parameters = raw_fit.get(key, {})
+                if not isinstance(parameters, dict):
+                    raise ValueError(f"analysis fit_config {key} must be a dictionary")
+                if len(parameters) > MAX_ANALYSIS_PARAMETERS:
+                    raise ValueError(
+                        f"analysis fit_config {key} must not exceed {MAX_ANALYSIS_PARAMETERS} entries"
+                    )
+                parameter_names.update(parameters)
+            if len(parameter_names) > MAX_ANALYSIS_PARAMETERS:
+                raise ValueError(
+                    "analysis fit_config parameters must not exceed "
+                    f"{MAX_ANALYSIS_PARAMETERS} distinct names"
+                )
+            request = FitRequest.from_dict(raw_fit)
+            if request.source_revision != self.source_series.source_revision:
+                raise ValueError("analysis fit_config source_revision must match source_series")
+            fit = request.to_dict()
+
+        selected_range: tuple[float, float] | None = None
+        if self.selected_range_s is not None:
+            if not isinstance(self.selected_range_s, (list, tuple)) or len(self.selected_range_s) != 2:
+                raise ValueError("analysis selected_range_s must contain two values")
+            start = _finite_float(self.selected_range_s[0], "analysis selected range start")
+            end = _finite_float(self.selected_range_s[1], "analysis selected range end")
+            if start >= end:
+                raise ValueError("analysis selected_range_s must be strictly increasing")
+            selected_range = (start, end)
+
+        view_state = _analysis_mapping(self.view_state, "analysis view_state")
+        provenance = _analysis_mapping(self.provenance, "analysis provenance")
+        object.__setattr__(self, "derivative_config", _freeze_analysis_json(derivative))
+        object.__setattr__(self, "smoothing_config", _freeze_analysis_json(smoothing))
+        object.__setattr__(self, "fit_config", _freeze_analysis_json(fit))
+        object.__setattr__(self, "selected_range_s", selected_range)
+        object.__setattr__(self, "view_state", _freeze_analysis_json(view_state))
+        object.__setattr__(self, "provenance", _freeze_analysis_json(provenance))
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "analysis_id": self.analysis_id,
+            "analysis_type": self.analysis_type,
+            "name": self.name,
+            "source_series": self.source_series.to_dict(),
+            "derivative_config": _analysis_json_copy(
+                self.derivative_config, "analysis derivative_config"
+            ),
+            "smoothing_config": _analysis_json_copy(
+                self.smoothing_config, "analysis smoothing_config"
+            ),
+            "fit_config": _analysis_json_copy(self.fit_config, "analysis fit_config"),
+            "visible": self.visible,
+            "selected_range_s": (
+                list(self.selected_range_s) if self.selected_range_s is not None else None
+            ),
+            "view_state": _analysis_json_copy(self.view_state, "analysis view_state"),
+            "provenance": _analysis_json_copy(self.provenance, "analysis provenance"),
+        }
+
+    @classmethod
+    def from_dict(cls, value: object) -> "AnalysisDefinition":
+        data = _analysis_mapping(value, "analysis definition")
+        allowed = {
+            "analysis_id",
+            "analysis_type",
+            "name",
+            "source_series",
+            "derivative_config",
+            "smoothing_config",
+            "fit_config",
+            "visible",
+            "selected_range_s",
+            "view_state",
+            "provenance",
+        }
+        _reject_unknown_fields(data, allowed, "analysis definition")
+        return cls(
+            analysis_id=data.get("analysis_id"),  # type: ignore[arg-type]
+            analysis_type=data.get("analysis_type"),  # type: ignore[arg-type]
+            name=data.get("name"),  # type: ignore[arg-type]
+            source_series=AnalysisSourceReference.from_dict(data.get("source_series")),
+            derivative_config=data.get("derivative_config"),  # type: ignore[arg-type]
+            smoothing_config=data.get("smoothing_config"),  # type: ignore[arg-type]
+            fit_config=data.get("fit_config"),  # type: ignore[arg-type]
+            visible=data.get("visible"),  # type: ignore[arg-type]
+            selected_range_s=data.get("selected_range_s"),  # type: ignore[arg-type]
+            view_state=data.get("view_state", {}),  # type: ignore[arg-type]
+            provenance=data.get("provenance", {}),  # type: ignore[arg-type]
+        )
+
+
+@dataclass(frozen=True)
+class AnalysisWorkspaceSnapshot:
+    definitions: tuple[AnalysisDefinition, ...] = ()
+    schema_revision: int = ANALYSIS_WORKSPACE_SCHEMA_REVISION
+
+    def __post_init__(self) -> None:
+        if (
+            isinstance(self.schema_revision, bool)
+            or not isinstance(self.schema_revision, int)
+            or self.schema_revision != ANALYSIS_WORKSPACE_SCHEMA_REVISION
+        ):
+            raise ValueError(
+                "analysis workspace schema_revision must be "
+                f"{ANALYSIS_WORKSPACE_SCHEMA_REVISION}"
+            )
+        definitions = tuple(self.definitions)
+        if len(definitions) > MAX_ANALYSIS_DEFINITIONS_PER_TASK:
+            raise ValueError(
+                "analysis workspace definitions must not exceed "
+                f"{MAX_ANALYSIS_DEFINITIONS_PER_TASK} entries"
+            )
+        if any(not isinstance(item, AnalysisDefinition) for item in definitions):
+            raise TypeError("analysis workspace definitions must contain AnalysisDefinition values")
+        ids = [item.analysis_id for item in definitions]
+        if len(ids) != len(set(ids)):
+            raise ValueError("analysis workspace analysis_id values must be unique")
+        object.__setattr__(self, "definitions", definitions)
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "schema_revision": self.schema_revision,
+            "definitions": [item.to_dict() for item in self.definitions],
+        }
+
+    @classmethod
+    def from_dict(cls, value: object) -> "AnalysisWorkspaceSnapshot":
+        if not isinstance(value, Mapping):
+            raise ValueError("analysis_workspace must be a dictionary")
+        data = dict(value)
+        _reject_unknown_fields(
+            data,
+            {"schema_revision", "definitions"},
+            "analysis_workspace",
+        )
+        definitions_data = data.get("definitions", [])
+        definitions = _bounded_list(
+            definitions_data,
+            "analysis workspace definitions",
+            MAX_ANALYSIS_DEFINITIONS_PER_TASK,
+        )
+        return cls(
+            schema_revision=data.get("schema_revision"),  # type: ignore[arg-type]
+            definitions=tuple(AnalysisDefinition.from_dict(item) for item in definitions),
+        )
+
+
 @dataclass
 class ProjectTaskSnapshot:
     media_path: str | None
@@ -528,6 +950,16 @@ class ProjectTaskSnapshot:
     tracking_outcome: str = ""
     tracking_note: str = ""
     run_history: list[TrackingRunRecord] = field(default_factory=list)
+    task_id: str = field(default_factory=lambda: str(uuid4()))
+    analysis_workspace: AnalysisWorkspaceSnapshot = field(default_factory=AnalysisWorkspaceSnapshot)
+
+    def __post_init__(self) -> None:
+        self.task_id = _canonical_uuid(self.task_id, "project task task_id")
+        if not isinstance(self.analysis_workspace, AnalysisWorkspaceSnapshot):
+            raise TypeError("project task analysis_workspace must be an AnalysisWorkspaceSnapshot")
+        for definition in self.analysis_workspace.definitions:
+            if definition.source_series.task_id != self.task_id:
+                raise ValueError("analysis source task_id must match the containing project task")
 
     def to_dict(self) -> dict[str, Any]:
         if len(self.results) > MAX_TASK_RESULTS:
@@ -538,6 +970,11 @@ class ProjectTaskSnapshot:
             )
         if len(self.run_history) > TRACKING_RUN_HISTORY_LIMIT:
             raise ValueError(f"project task run_history must not exceed {TRACKING_RUN_HISTORY_LIMIT} entries")
+        if not isinstance(self.analysis_workspace, AnalysisWorkspaceSnapshot):
+            raise TypeError("project task analysis_workspace must be an AnalysisWorkspaceSnapshot")
+        for definition in self.analysis_workspace.definitions:
+            if definition.source_series.task_id != self.task_id:
+                raise ValueError("analysis source task_id must match the containing project task")
         return {
             "media_path": self.media_path,
             "pipeline_key": self.pipeline_key,
@@ -551,12 +988,21 @@ class ProjectTaskSnapshot:
             "tracking_outcome": _tracking_outcome_from_data(self.tracking_outcome),
             "tracking_note": _tracking_note_from_data(self.tracking_note),
             "run_history": [record.to_dict() for record in self.run_history],
+            "task_id": _canonical_uuid(self.task_id, "project task task_id"),
+            "analysis_workspace": self.analysis_workspace.to_dict(),
         }
 
     @classmethod
-    def from_dict(cls, data: object) -> "ProjectTaskSnapshot":
+    def from_dict(
+        cls,
+        data: object,
+        *,
+        strict_v3: bool = False,
+    ) -> "ProjectTaskSnapshot":
         if not isinstance(data, dict):
             raise ValueError("project task must be a dictionary")
+        if strict_v3:
+            _reject_unknown_fields(data, _TASK_FIELDS_V3, "project task")
         result_data = _bounded_list(data.get("results", []), "project task results", MAX_TASK_RESULTS)
         results = [tracker_result_from_dict(item) for item in result_data]
         for previous, current in zip(results, results[1:]):
@@ -578,6 +1024,20 @@ class ProjectTaskSnapshot:
         if len(run_history_data) > TRACKING_RUN_HISTORY_LIMIT:
             raise ValueError(f"project task run_history must not exceed {TRACKING_RUN_HISTORY_LIMIT} entries")
         run_history = [TrackingRunRecord.from_dict(item) for item in run_history_data]
+        if strict_v3 and "task_id" not in data:
+            raise ValueError("project task task_id is required in v3")
+        if strict_v3 and "analysis_workspace" not in data:
+            raise ValueError("project task analysis_workspace is required in v3")
+        task_id = (
+            _canonical_uuid(data.get("task_id"), "project task task_id")
+            if "task_id" in data
+            else str(uuid4())
+        )
+        analysis_workspace = (
+            AnalysisWorkspaceSnapshot.from_dict(data.get("analysis_workspace"))
+            if "analysis_workspace" in data
+            else AnalysisWorkspaceSnapshot()
+        )
         return cls(
             media_path=(
                 _bounded_string(data["media_path"], "project task media_path", PROJECT_MEDIA_PATH_LIMIT)
@@ -602,6 +1062,8 @@ class ProjectTaskSnapshot:
             tracking_outcome=_tracking_outcome_from_data(data.get("tracking_outcome")),
             tracking_note=_tracking_note_from_data(data.get("tracking_note")),
             run_history=run_history,
+            task_id=task_id,
+            analysis_workspace=analysis_workspace,
         )
 
 
@@ -623,6 +1085,12 @@ class NeoTrackerProject:
         total_results = sum(len(task.results) for task in self.tasks)
         if total_results > MAX_PROJECT_RESULTS:
             raise ValueError(f"project results must not exceed {MAX_PROJECT_RESULTS:,} total entries")
+        total_definitions = sum(len(task.analysis_workspace.definitions) for task in self.tasks)
+        if total_definitions > MAX_PROJECT_ANALYSIS_DEFINITIONS:
+            raise ValueError(
+                "project analysis definitions must not exceed "
+                f"{MAX_PROJECT_ANALYSIS_DEFINITIONS:,} total entries"
+            )
         name = _bounded_string(self.name, "project name", PROJECT_NAME_LIMIT)
         notes = _bounded_string(self.notes, "project notes", PROJECT_NOTES_LIMIT)
         media_paths = [
@@ -688,12 +1156,21 @@ class NeoTrackerProject:
         _validate_project_structure(data)
         if data.get("format") != "neo-tracker-project":
             raise ValueError("not a Neo-Tracker project file")
+        version = data.get("version", 1)
+        if version == PROJECT_FORMAT_VERSION:
+            _reject_unknown_fields(data, _PROJECT_FIELDS_V3, "project")
         migrated = cls._migrate_to_current(data)
         tasks_data = _bounded_list(migrated.get("tasks", []), "project tasks", MAX_PROJECT_TASKS)
-        tasks = [ProjectTaskSnapshot.from_dict(item) for item in tasks_data]
+        tasks = [ProjectTaskSnapshot.from_dict(item, strict_v3=True) for item in tasks_data]
         total_results = sum(len(task.results) for task in tasks)
         if total_results > MAX_PROJECT_RESULTS:
             raise ValueError(f"project results must not exceed {MAX_PROJECT_RESULTS:,} total entries")
+        total_definitions = sum(len(task.analysis_workspace.definitions) for task in tasks)
+        if total_definitions > MAX_PROJECT_ANALYSIS_DEFINITIONS:
+            raise ValueError(
+                "project analysis definitions must not exceed "
+                f"{MAX_PROJECT_ANALYSIS_DEFINITIONS:,} total entries"
+            )
         media_paths_data = _bounded_list(
             migrated.get("media_paths", []),
             "project media_paths",
@@ -735,6 +1212,29 @@ class NeoTrackerProject:
             if not isinstance(legacy_pipelines, list) or not all(isinstance(item, dict) for item in legacy_pipelines):
                 raise ValueError("version 1 project pipelines must be a list of configuration dictionaries")
             migrated["pipeline_library"] = [dict(item) for item in legacy_pipelines]
+            version = 2
+            migrated["version"] = version
+        if version == 2:
+            tasks = migrated.get("tasks", [])
+            if not isinstance(tasks, list):
+                raise ValueError("project tasks must be a list")
+            migrated_tasks: list[dict[str, object]] = []
+            for item in tasks:
+                if not isinstance(item, dict):
+                    raise ValueError("project task must be a dictionary")
+                task = {key: value for key, value in item.items() if key in _LEGACY_TASK_FIELDS}
+                task["task_id"] = str(uuid4())
+                task["analysis_workspace"] = {
+                    "schema_revision": ANALYSIS_WORKSPACE_SCHEMA_REVISION,
+                    "definitions": [],
+                }
+                migrated_tasks.append(task)
+            migrated = {
+                key: value
+                for key, value in migrated.items()
+                if key in _PROJECT_FIELDS_V3
+            }
+            migrated["tasks"] = migrated_tasks
             migrated["version"] = PROJECT_FORMAT_VERSION
         return migrated
 
@@ -801,6 +1301,12 @@ def project_content_fingerprint(
     total_results = sum(len(task.results) for task in project.tasks)
     if total_results > MAX_PROJECT_RESULTS:
         raise ValueError(f"project results must not exceed {MAX_PROJECT_RESULTS:,} total entries")
+    total_definitions = sum(len(task.analysis_workspace.definitions) for task in project.tasks)
+    if total_definitions > MAX_PROJECT_ANALYSIS_DEFINITIONS:
+        raise ValueError(
+            "project analysis definitions must not exceed "
+            f"{MAX_PROJECT_ANALYSIS_DEFINITIONS:,} total entries"
+        )
     name = _bounded_string(project.name, "project name", PROJECT_NAME_LIMIT)
     notes = _bounded_string(project.notes, "project notes", PROJECT_NOTES_LIMIT)
     media_paths = [
@@ -868,6 +1374,7 @@ def project_content_fingerprint(
                 f"project task run_history must not exceed {TRACKING_RUN_HISTORY_LIMIT} entries"
             )
         task_record = {
+            "task_id": _canonical_uuid(task.task_id, "project task task_id"),
             "media_path": task.media_path,
             "pipeline_key": task.pipeline_key,
             "preview_frame_index": 0,
@@ -880,6 +1387,8 @@ def project_content_fingerprint(
             "result_count": len(task.results),
             "edit_history_count": len(task.edit_history),
             "run_history_count": len(task.run_history),
+            "analysis_schema_revision": task.analysis_workspace.schema_revision,
+            "analysis_definition_count": len(task.analysis_workspace.definitions),
         }
         add_record("task", task_record)
         cooperate_after_record()
@@ -891,6 +1400,11 @@ def project_content_fingerprint(
             cooperate_after_record()
         for run in task.run_history:
             add_record("run_history", run.to_dict())
+            cooperate_after_record()
+        for definition in task.analysis_workspace.definitions:
+            if definition.source_series.task_id != task.task_id:
+                raise ValueError("analysis source task_id must match the containing project task")
+            add_record("analysis_definition", definition.to_dict())
             cooperate_after_record()
     if cooperate is not None and record_index % _PROJECT_FINGERPRINT_COOPERATE_STRIDE:
         cooperate()

@@ -488,7 +488,7 @@ def _read_project_open_stage(
                     task_value["results"] = []
                     task_value["edit_history"] = []
                     task_value["run_history"] = []
-                    base = ProjectTaskSnapshot.from_dict(task_value)
+                    base = ProjectTaskSnapshot.from_dict(task_value, strict_v3=True)
                     tasks.append(
                         _StreamingTaskSnapshot(
                             base=base,
