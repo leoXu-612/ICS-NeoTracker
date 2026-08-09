@@ -90,7 +90,7 @@ from neo_tracker.analysis import (
     STFTResult,
 )
 from neo_tracker.media import MediaIdentity, MediaInfo, MediaReader, has_media_backend
-from neo_tracker.kinematics import FitResult, SampleSeries
+from neo_tracker.kinematics import FitResult, FitStatus, SampleSeries
 from neo_tracker.observations import ColorBlobObservation, observation_backend_info
 from neo_tracker.presets import PresetDescriptor, default_preset_registry
 from neo_tracker.project import (
@@ -1495,6 +1495,9 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
             return True
         if any(not isinstance(item, SampleSeries) for item in items):
             raise TypeError("physics series must contain SampleSeries values")
+        series_ids = tuple(item.series_id for item in items)
+        if len(set(series_ids)) != len(series_ids):
+            raise ValueError("physics series_id values must be unique")
         revisions = {item.source_revision for item in items}
         if len(revisions) != 1:
             raise ValueError("physics series must share one source revision")
@@ -1567,7 +1570,11 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
     def _physics_fit_state_changed(self, state: AnalysisWorkspaceState) -> None:
         self.fit_panel.apply_state(state)
         source = self._physics_series_by_id.get(state.selected_series_id or "")
-        if source is None or state.fit_result is None:
+        if (
+            source is None
+            or state.fit_result is None
+            or state.fit_result.status is not FitStatus.OK
+        ):
             if source is not None:
                 self.physics_workspace.plot.set_fit_result(source, None)
             return
@@ -1578,7 +1585,7 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         )
 
     def _physics_fit_ready(self, result: object) -> None:
-        if not isinstance(result, FitResult):
+        if not isinstance(result, FitResult) or result.status is not FitStatus.OK:
             return
         state = self.analysis_workspace_controller.state
         fit_id = (

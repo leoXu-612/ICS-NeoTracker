@@ -217,6 +217,9 @@ class PhysicsWorkspace(QFrame):
         items = tuple(series)
         if len(items) > 64:
             raise ValueError("the workspace supports at most 64 attached series")
+        series_ids = tuple(item.series_id for item in items)
+        if len(set(series_ids)) != len(series_ids):
+            raise ValueError("workspace series_id values must be unique")
         revisions = {item.source_revision for item in items}
         if len(revisions) > 1:
             raise ValueError("workspace series must share one source revision")

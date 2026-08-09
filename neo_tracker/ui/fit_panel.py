@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from neo_tracker.kinematics import FitResult, SampleSeries
+from neo_tracker.kinematics import FitResult, FitStatus, SampleSeries
 from neo_tracker.ui.analysis_workspace_controller import AnalysisWorkspaceState, FitDraft
 
 
@@ -146,6 +146,10 @@ class FitPanel(QWidget):
     def set_series(self, series: Sequence[SampleSeries]) -> None:
         self._syncing = True
         items = tuple(series)
+        series_ids = tuple(item.series_id for item in items)
+        if len(set(series_ids)) != len(series_ids):
+            self._syncing = False
+            raise ValueError("fit panel series_id values must be unique")
         self._series = {item.series_id: item for item in items}
         previous = self.series_combo.currentData()
         self.series_combo.blockSignals(True)
@@ -207,6 +211,15 @@ class FitPanel(QWidget):
         self.residual_checkbox.blockSignals(False)
 
     def show_result(self, result: FitResult) -> None:
+        if result.status is not FitStatus.OK:
+            self.clear_result()
+            message = result.message or f"Fit ended with status: {result.status.value}."
+            self.status_label.setText(message)
+            self.summary_label.setText(
+                f"{result.status.value.title()} · no plot or residual layer was created"
+            )
+            self.summary_label.setAccessibleDescription(message)
+            return
         self.parameter_table.setRowCount(len(result.parameter_names))
         for row, name in enumerate(result.parameter_names):
             error = float(result.standard_errors[row])

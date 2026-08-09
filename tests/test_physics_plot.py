@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -9,8 +10,10 @@ from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QWidget
 
-from neo_tracker.kinematics import SampleSeries
+from neo_tracker.kinematics import FitStatus, SampleSeries
 from neo_tracker.ui.physics_plot import PhysicsPlot, decimate_series
+from tests.test_application_kinematics_controller import fit_result
+from neo_tracker.ui.analysis_workspace_controller import FitDraft
 
 
 def make_series(count: int = 100_000) -> SampleSeries:
@@ -92,6 +95,23 @@ class PhysicsPlotWidgetTests(unittest.TestCase):
             self.assertTrue(plot.export_image(path))
             self.assertGreater(path.stat().st_size, 0)
         plot.close()
+
+    def test_duplicate_ids_and_non_ok_fit_never_create_ambiguous_layers(self) -> None:
+        plot = PhysicsPlot()
+        source = make_series(20)
+        with self.assertRaisesRegex(ValueError, "unique"):
+            plot.set_series((source, source))
+
+        plot.set_series((source,))
+        request = FitDraft(source.series_id, "linear", float(source.time_s[0]), float(source.time_s[-1])).to_request(source)
+        unavailable = replace(
+            fit_result(source, request),
+            status=FitStatus.UNAVAILABLE,
+            message="Fit unavailable",
+        )
+        plot.set_fit_result(source, unavailable)
+
+        self.assertIsNone(plot._fit_series)
 
 
 if __name__ == "__main__":

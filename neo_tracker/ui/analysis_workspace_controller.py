@@ -150,6 +150,9 @@ class AnalysisWorkspaceController(QObject):
 
     def set_series(self, owner: object, series: tuple[SampleSeries, ...]) -> None:
         items = tuple(series)
+        series_ids = tuple(item.series_id for item in items)
+        if len(set(series_ids)) != len(series_ids):
+            raise ValueError("analysis workspace series_id values must be unique")
         revisions = {item.source_revision for item in items}
         if len(revisions) > 1:
             raise ValueError("analysis workspace series must share one source revision")
@@ -215,6 +218,7 @@ class AnalysisWorkspaceController(QObject):
             message=f"Running {request.model.value} fit in the background…",
             active_request=request,
             fit_result=None,
+            residual_visible=False,
         )
         return True
 
@@ -230,11 +234,16 @@ class AnalysisWorkspaceController(QObject):
             message=str(message),
             active_request=None,
             fit_result=None,
+            residual_visible=False,
         )
         return changed
 
     def set_residual_visible(self, visible: bool) -> None:
-        self._replace_state(residual_visible=bool(visible))
+        available = bool(
+            self._state.fit_result is not None
+            and self._state.fit_result.status is FitStatus.OK
+        )
+        self._replace_state(residual_visible=bool(visible) and available)
 
     def request_derivative(self, order: int) -> bool:
         source = self._selected_series()
@@ -297,12 +306,13 @@ class AnalysisWorkspaceController(QObject):
 
     def request_export(self) -> bool:
         source = self._selected_series()
-        if source is None:
+        result = self._state.fit_result
+        if source is None or result is None or result.status is not FitStatus.OK:
             return False
         config = MappingProxyType(
             {
                 "formats": ("csv", "npz", "markdown"),
-                "fit_result": self._state.fit_result,
+                "fit_result": result,
             }
         )
         self.operationRequested.emit(
@@ -321,23 +331,31 @@ class AnalysisWorkspaceController(QObject):
     def _fit_ready(self, job: KinematicsFitJob, result: FitResult) -> None:
         if not self._job_is_current(job):
             return
-        status = "complete" if result.status is FitStatus.OK else result.status.value
+        successful = result.status is FitStatus.OK
+        status = "complete" if successful else result.status.value
         message = result.message or (
             f"{result.model.value.title()} fit complete · {result.sample_count:,} samples."
-            if result.status is FitStatus.OK
+            if successful
             else f"Fit ended with status: {result.status.value}."
         )
         self._replace_state(
             status=status,
             message=message,
             active_request=job.task.request,
-            fit_result=result,
+            fit_result=result if successful else None,
+            residual_visible=False,
         )
-        self.fitResultReady.emit(result)
+        if successful:
+            self.fitResultReady.emit(result)
 
     def _fit_failed(self, job: KinematicsFitJob, message: str) -> None:
         if self._job_is_current(job):
-            self._replace_state(status="failed", message=str(message), fit_result=None)
+            self._replace_state(
+                status="failed",
+                message=str(message),
+                fit_result=None,
+                residual_visible=False,
+            )
 
     def _fit_canceled(self, job: KinematicsFitJob) -> None:
         if not self._job_is_current(job):
@@ -347,6 +365,7 @@ class AnalysisWorkspaceController(QObject):
             message=job.cancel_message,
             active_request=None,
             fit_result=None,
+            residual_visible=False,
         )
 
     def _job_is_current(self, job: KinematicsFitJob) -> bool:

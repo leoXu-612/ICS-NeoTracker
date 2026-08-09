@@ -45,6 +45,15 @@ class PhysicsWorkspaceTests(unittest.TestCase):
         self.assertIs(workspace.series_table.model(), workspace.series_model)
         self.assertEqual(workspace.accessibleName(), "Physics analysis workspace")
 
+    def test_workspace_rejects_duplicate_series_ids_without_collapsing_rows(self) -> None:
+        workspace = PhysicsWorkspace()
+        source = make_series()
+
+        with self.assertRaisesRegex(ValueError, "unique"):
+            workspace.set_series((source, source))
+
+        self.assertEqual(workspace.series_combo.count(), 0)
+
     def test_collapse_and_focus_mode_restore_page_and_height(self) -> None:
         workspace = PhysicsWorkspace()
         workspace.tabs.setCurrentIndex(2)
@@ -127,6 +136,16 @@ class MainWindowPhysicsWorkspaceTests(unittest.TestCase):
         self.assertIs(window.workspace_splitter.widget(1), window.physics_workspace)
         self.assertLessEqual(window.minimumSizeHint().height(), 768)
         self.assertGreaterEqual(window.physics_workspace.height(), 38)
+
+    def test_window_rejects_duplicate_series_ids_before_session_attachment(self) -> None:
+        window = self.make_window()
+        source = self.sparse_series()
+        before = window.selection_session.state
+
+        with self.assertRaisesRegex(ValueError, "unique"):
+            window.set_physics_series((source, source))
+
+        self.assertEqual(window.selection_session.state, before)
 
     def test_table_video_and_video_table_share_one_selection_session(self) -> None:
         window = self.make_window()

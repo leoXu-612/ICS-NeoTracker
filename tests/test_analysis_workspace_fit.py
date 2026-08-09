@@ -13,6 +13,7 @@ from neo_tracker.ui.main_window import NeoTrackerWindow
 from tests.test_application_kinematics_controller import (
     BlockingFitOperator,
     RecordingFitOperator,
+    UnavailableFitOperator,
     fit_result,
     make_series,
     pump_until,
@@ -155,6 +156,24 @@ class MainWindowFitIntegrationTests(unittest.TestCase):
         self.assertTrue(operator.canceled.is_set())
         self.assertFalse(window.analysis_workspace_controller.busy)
         self.assertTrue(window._background_tasks.idle)
+
+    def test_unavailable_fit_is_text_only_and_does_not_enable_result_actions(self) -> None:
+        window = self.make_window()
+        window.set_kinematics_fit_operator(UnavailableFitOperator())
+        source = make_series()
+        window.set_physics_series((source,))
+
+        window.fit_panel.run_button.click()
+        pump_until(lambda: not window.analysis_workspace_controller.busy)
+
+        state = window.analysis_workspace_controller.state
+        self.assertEqual(state.status, "unavailable")
+        self.assertIn("unavailable", window.fit_panel.status_label.text().lower())
+        self.assertIsNone(state.fit_result)
+        self.assertIsNone(window.physics_workspace.plot._fit_series)
+        self.assertIsNone(window.selection_session.state.selected_fit_id)
+        self.assertFalse(window.fit_panel.residual_checkbox.isEnabled())
+        self.assertFalse(window.fit_panel.export_button.isEnabled())
 
 
 if __name__ == "__main__":

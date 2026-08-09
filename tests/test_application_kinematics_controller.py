@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 import unittest
+from dataclasses import replace
 from threading import Event
 
 import numpy as np
@@ -100,6 +101,17 @@ class BlockingFitOperator(RecordingFitOperator):
         return fit_result(series, request)
 
 
+class UnavailableFitOperator(RecordingFitOperator):
+    def fit(self, series, request, *, cancellation=None):
+        self.requests.append(request)
+        self.thread = QThread.currentThread()
+        return replace(
+            fit_result(series, request),
+            status=FitStatus.UNAVAILABLE,
+            message="The selected model is unavailable in this engine.",
+        )
+
+
 class AnalysisWorkspaceControllerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -135,6 +147,37 @@ class AnalysisWorkspaceControllerTests(unittest.TestCase):
         self.assertIsNot(operator.thread, QApplication.instance().thread())
         self.assertEqual(controller.state.status, "complete")
         self.assertIs(controller.state.fit_result, completed[0])
+
+    def test_duplicate_series_ids_are_rejected_before_controller_state_changes(self) -> None:
+        controller = AnalysisWorkspaceController(TaskSupervisor())
+        self.addCleanup(controller.close)
+        source = make_series()
+
+        with self.assertRaisesRegex(ValueError, "unique"):
+            controller.set_series(object(), (source, source))
+
+        self.assertEqual(controller.state.series_ids, ())
+
+    def test_unavailable_terminal_result_remains_text_only(self) -> None:
+        operator = UnavailableFitOperator()
+        controller = AnalysisWorkspaceController(TaskSupervisor(), fit_operator=operator)
+        self.addCleanup(controller.close)
+        owner = object()
+        source = make_series()
+        controller.set_series(owner, (source,))
+        delivered: list[FitResult] = []
+        controller.fitResultReady.connect(delivered.append)
+
+        self.assertTrue(controller.run_fit(owner, FitDraft(source.series_id, "linear", 0.0, 1.0)))
+        pump_until(lambda: not controller.busy)
+
+        self.assertEqual(delivered, [])
+        self.assertEqual(controller.state.status, "unavailable")
+        self.assertIn("unavailable", controller.state.message.lower())
+        self.assertIsNone(controller.state.fit_result)
+        controller.set_residual_visible(True)
+        self.assertFalse(controller.state.residual_visible)
+        self.assertFalse(controller.request_export())
 
     def test_source_change_cancels_active_fit_and_rejects_late_result(self) -> None:
         supervisor = TaskSupervisor()

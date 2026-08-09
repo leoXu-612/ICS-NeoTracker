@@ -11,7 +11,7 @@ from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPainterPath, QPen, QPixmap
 from PySide6.QtWidgets import QWidget
 
-from neo_tracker.kinematics import FitResult, ProcessingStep, SampleSeries
+from neo_tracker.kinematics import FitResult, FitStatus, ProcessingStep, SampleSeries
 
 
 @dataclass(frozen=True)
@@ -195,6 +195,9 @@ class PhysicsPlot(QWidget):
         items = tuple(series)
         if len(items) > 8:
             raise ValueError("the physics plot supports at most eight visible series")
+        series_ids = tuple(item.series_id for item in items)
+        if len(set(series_ids)) != len(series_ids):
+            raise ValueError("visible plot series_id values must be unique")
         revisions = {item.source_revision for item in items}
         if len(revisions) > 1:
             raise ValueError("visible plot series must share one source revision")
@@ -229,6 +232,11 @@ class PhysicsPlot(QWidget):
             return
         if result.series_id != source.series_id or result.source_revision != source.source_revision:
             raise ValueError("fit result does not match the source series")
+        if result.status is not FitStatus.OK:
+            self._fit_series = None
+            self._prepare_envelopes()
+            self.update()
+            return
         values = result.residuals if residual else result.predicted
         self._fit_series = SampleSeries(
             series_id=f"fit:{result.model.value}:{'residual' if residual else 'prediction'}",
