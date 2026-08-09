@@ -576,3 +576,53 @@ Codex 已在权威工作区完成：
 5. 运行 `PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen python3 -m unittest discover -s tests -q`，并复核 `artifacts/code-review-ui-2026-07-22/runtime-evidence.json`；不要把 offscreen/synthetic 结果外推为原生 macOS、VoiceOver、Retina 或真实硬件解码保证。
 
 请按 P0-P3 排序报告具体 findings，包含文件、行号、复现/逻辑证据、最小修复与缺失测试；若没有确定缺陷，也请明确列出检查范围和剩余风险。当前 Codex 基线是 364 tests 全通过，但 passing tests 不能替代数据绑定、取消与资源生命周期审计。
+
+## [2026-08-09 20:22 Asia/Taipei] G0 冻结架构基线 — DONE
+
+### Base
+
+- Branch: `refactor/gpt-application-shell`
+- Base SHA: `9ccc14baedaf19ad5160efdc325fb151d49c3199`
+- Head SHA: `9ccc14baedaf19ad5160efdc325fb151d49c3199`（G0 只记录证据，尚未提交）
+
+### Conclusion
+
+- 固定基线与工作清单一致，GPT 专属 worktree 从 clean `main` 创建。
+- `neo_tracker/ui/main_window.py` 当前为 7,311 行、303 个类/方法入口，直接拥有 7 类 Job、7 组主要 worker/thread、Preview session/pending request 与 Review Response pending request。
+- 生命周期职责和目标 Coordinator 已记录于 `artifacts/parallel-gpt-2026-08-09/baseline/architecture-inventory.md`。
+
+### Files Changed
+
+- `artifacts/parallel-gpt-2026-08-09/baseline/**`（新增基线证据）
+- `collab/FROM_CODEX.md`（追加本状态）
+- 未修改产品源码、测试或共享集成文件。
+
+### Tests
+
+- 定向生命周期：199/199，62.558 秒，PASS。
+- 全量：458/458，63.508 秒，PASS。
+- `compileall`：PASS。
+- `pip check`：PASS，`No broken requirements found.`
+
+### Performance
+
+- 10 万结果 5 次 heartbeat：91.43 / 69.25 / 70.85 / 77.16 / 51.15 ms；median 70.85、P95/max 91.43 ms；2/5 超过 75 ms，退出码 1。
+- GUI apply：42.70 / 66.69 / 66.41 / 74.93 / 47.93 ms。
+- fully usable：5527.65 / 4823.05 / 4207.75 / 3965.49 / 3835.96 ms。
+- `payload_equal=True`、`results_exact=True`，前后台 fingerprint 均为 `d9c2dd5992ccbd437da8cf320d4422a3137a6b7ef8ec815999f0947051c250b0`。
+- 原始合法 JSON 与 stderr 分离保存；历史波动明确保留，未宣称跨负载稳定。
+
+### Compatibility
+
+- Public API changes: none。
+- Project format changes: none。
+- User-visible behavior changes: none。
+
+### Remaining Risks
+
+- 基线自身存在 heartbeat 波动；后续关键阶段必须比较完整分布，不能只比较最好值。
+- 原生 macOS/Retina/VoiceOver、真实长时媒体和全进程资源仍不在本次 offscreen G0 证据范围内。
+
+### Next Integration Step
+
+- 进入 G1：只提取 Job/request/result 状态与 `TaskSupervisor`，保留 `BackgroundTaskCoordinator`、窗口兼容属性和现有用户流程。
