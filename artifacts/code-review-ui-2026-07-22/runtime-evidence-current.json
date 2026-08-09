@@ -1,0 +1,1249 @@
+{
+  "video": "/Users/leo.xu/Desktop/Codex/ICS-Project-/ICS-NeoTracker/artifacts/code-review-ui-2026-07-22/synthetic-red-marker.mp4",
+  "minimum_window_size": [
+    981,
+    739
+  ],
+  "screenshots": [
+    {
+      "file": "/Users/leo.xu/Desktop/Codex/ICS-Project-/ICS-NeoTracker/artifacts/code-review-ui-2026-07-22/current-01-media-ready.png",
+      "size": [
+        1440,
+        900
+      ],
+      "status": "Ready",
+      "summary": "Results: none",
+      "sidebar_tab": "Media",
+      "run_button": "Run Tracking",
+      "status_bar": "Added 1 media task to this project.",
+      "results": 0,
+      "thread_active": false,
+      "header_widgets": {
+        "appTitle": {
+          "visible": true,
+          "geometry": [
+            13,
+            9,
+            120,
+            36
+          ],
+          "mapped_position": [
+            27,
+            21
+          ],
+          "size_hint": [
+            120,
+            21
+          ],
+          "minimum_size_hint": [
+            120,
+            21
+          ]
+        },
+        "globalProjectDirtyLabel": {
+          "visible": true,
+          "geometry": [
+            141,
+            9,
+            74,
+            36
+          ],
+          "mapped_position": [
+            155,
+            21
+          ],
+          "size_hint": [
+            74,
+            23
+          ],
+          "minimum_size_hint": [
+            74,
+            23
+          ]
+        },
+        "globalDraftLabel": {
+          "visible": false,
+          "geometry": [
+            0,
+            0,
+            170,
+            480
+          ],
+          "mapped_position": [
+            14,
+            12
+          ],
+          "size_hint": [
+            73,
+            23
+          ],
+          "minimum_size_hint": [
+            73,
+            23
+          ]
+        },
+        "mediaTitle": {
+          "visible": true,
+          "geometry": [
+            223,
+            9,
+            378,
+            36
+          ],
+          "mapped_position": [
+            237,
+            21
+          ],
+          "size_hint": [
+            145,
+            22
+          ],
+          "minimum_size_hint": [
+            145,
+            22
+          ]
+        },
+        "statusChip": {
+          "visible": true,
+          "geometry": [
+            609,
+            9,
+            63,
+            36
+          ],
+          "mapped_position": [
+            623,
+            21
+          ],
+          "size_hint": [
+            63,
+            26
+          ],
+          "minimum_size_hint": [
+            63,
+            26
+          ]
+        },
+        "summaryChip": {
+          "visible": true,
+          "geometry": [
+            680,
+            9,
+            378,
+            36
+          ],
+          "mapped_position": [
+            694,
+            21
+          ],
+          "size_hint": [
+            130,
+            26
+          ],
+          "minimum_size_hint": [
+            130,
+            26
+          ]
+        }
+      }
+    },
+    {
+      "file": "/Users/leo.xu/Desktop/Codex/ICS-Project-/ICS-NeoTracker/artifacts/code-review-ui-2026-07-22/current-01b-media-ready-1024x768.png",
+      "size": [
+        1024,
+        768
+      ],
+      "status": "Ready",
+      "summary": "Results: none",
+      "sidebar_tab": "Media",
+      "run_button": "Run Tracking",
+      "status_bar": "Added 1 media task to this project.",
+      "results": 0,
+      "thread_active": false,
+      "header_widgets": {
+        "appTitle": {
+          "visible": true,
+          "geometry": [
+            13,
+            9,
+            120,
+            36
+          ],
+          "mapped_position": [
+            27,
+            21
+          ],
+          "size_hint": [
+            120,
+            21
+          ],
+          "minimum_size_hint": [
+            120,
+            21
+          ]
+        },
+        "globalProjectDirtyLabel": {
+          "visible": true,
+          "geometry": [
+            141,
+            9,
+            74,
+            36
+          ],
+          "mapped_position": [
+            155,
+            21
+          ],
+          "size_hint": [
+            74,
+            23
+          ],
+          "minimum_size_hint": [
+            74,
+            23
+          ]
+        },
+        "globalDraftLabel": {
+          "visible": false,
+          "geometry": [
+            0,
+            0,
+            170,
+            480
+          ],
+          "mapped_position": [
+            14,
+            12
+          ],
+          "size_hint": [
+            73,
+            23
+          ],
+          "minimum_size_hint": [
+            73,
+            23
+          ]
+        },
+        "mediaTitle": {
+          "visible": true,
+          "geometry": [
+            223,
+            9,
+            170,
+            36
+          ],
+          "mapped_position": [
+            237,
+            21
+          ],
+          "size_hint": [
+            145,
+            22
+          ],
+          "minimum_size_hint": [
+            145,
+            22
+          ]
+        },
+        "statusChip": {
+          "visible": true,
+          "geometry": [
+            401,
+            9,
+            63,
+            36
+          ],
+          "mapped_position": [
+            415,
+            21
+          ],
+          "size_hint": [
+            63,
+            26
+          ],
+          "minimum_size_hint": [
+            63,
+            26
+          ]
+        },
+        "summaryChip": {
+          "visible": true,
+          "geometry": [
+            472,
+            9,
+            170,
+            36
+          ],
+          "mapped_position": [
+            486,
+            21
+          ],
+          "size_hint": [
+            130,
+            26
+          ],
+          "minimum_size_hint": [
+            130,
+            26
+          ]
+        }
+      }
+    },
+    {
+      "file": "/Users/leo.xu/Desktop/Codex/ICS-Project-/ICS-NeoTracker/artifacts/code-review-ui-2026-07-22/current-02-tracking-running.png",
+      "size": [
+        1440,
+        900
+      ],
+      "status": "Tracking 1%",
+      "summary": "Frame 2/180 · Throughput 4.7 fps · 38s left",
+      "sidebar_tab": "Tracking",
+      "run_button": "Cancel",
+      "status_bar": "Tracking frame 2 of 180 · Throughput 4.7 fps · 38s left…",
+      "results": 2,
+      "thread_active": true,
+      "header_widgets": {
+        "appTitle": {
+          "visible": true,
+          "geometry": [
+            13,
+            9,
+            120,
+            36
+          ],
+          "mapped_position": [
+            27,
+            21
+          ],
+          "size_hint": [
+            120,
+            21
+          ],
+          "minimum_size_hint": [
+            120,
+            21
+          ]
+        },
+        "globalProjectDirtyLabel": {
+          "visible": true,
+          "geometry": [
+            141,
+            9,
+            74,
+            36
+          ],
+          "mapped_position": [
+            155,
+            21
+          ],
+          "size_hint": [
+            74,
+            23
+          ],
+          "minimum_size_hint": [
+            74,
+            23
+          ]
+        },
+        "globalDraftLabel": {
+          "visible": false,
+          "geometry": [
+            0,
+            0,
+            170,
+            480
+          ],
+          "mapped_position": [
+            14,
+            12
+          ],
+          "size_hint": [
+            73,
+            23
+          ],
+          "minimum_size_hint": [
+            73,
+            23
+          ]
+        },
+        "mediaTitle": {
+          "visible": true,
+          "geometry": [
+            223,
+            9,
+            380,
+            36
+          ],
+          "mapped_position": [
+            237,
+            21
+          ],
+          "size_hint": [
+            145,
+            22
+          ],
+          "minimum_size_hint": [
+            145,
+            22
+          ]
+        },
+        "statusChip": {
+          "visible": true,
+          "geometry": [
+            611,
+            9,
+            96,
+            36
+          ],
+          "mapped_position": [
+            625,
+            21
+          ],
+          "size_hint": [
+            96,
+            26
+          ],
+          "minimum_size_hint": [
+            96,
+            26
+          ]
+        },
+        "summaryChip": {
+          "visible": true,
+          "geometry": [
+            715,
+            9,
+            379,
+            36
+          ],
+          "mapped_position": [
+            729,
+            21
+          ],
+          "size_hint": [
+            257,
+            26
+          ],
+          "minimum_size_hint": [
+            257,
+            26
+          ]
+        }
+      }
+    },
+    {
+      "file": "/Users/leo.xu/Desktop/Codex/ICS-Project-/ICS-NeoTracker/artifacts/code-review-ui-2026-07-22/current-03-cancel-requested.png",
+      "size": [
+        1440,
+        900
+      ],
+      "status": "Cancelling…",
+      "summary": "Finishing the current frame safely.",
+      "sidebar_tab": "Tracking",
+      "run_button": "Cancelling…",
+      "status_bar": "Cancellation requested · finishing the current frame safely…",
+      "results": 2,
+      "thread_active": true,
+      "header_widgets": {
+        "appTitle": {
+          "visible": true,
+          "geometry": [
+            13,
+            9,
+            120,
+            36
+          ],
+          "mapped_position": [
+            27,
+            21
+          ],
+          "size_hint": [
+            120,
+            21
+          ],
+          "minimum_size_hint": [
+            120,
+            21
+          ]
+        },
+        "globalProjectDirtyLabel": {
+          "visible": true,
+          "geometry": [
+            141,
+            9,
+            74,
+            36
+          ],
+          "mapped_position": [
+            155,
+            21
+          ],
+          "size_hint": [
+            74,
+            23
+          ],
+          "minimum_size_hint": [
+            74,
+            23
+          ]
+        },
+        "globalDraftLabel": {
+          "visible": false,
+          "geometry": [
+            0,
+            0,
+            170,
+            480
+          ],
+          "mapped_position": [
+            14,
+            12
+          ],
+          "size_hint": [
+            73,
+            23
+          ],
+          "minimum_size_hint": [
+            73,
+            23
+          ]
+        },
+        "mediaTitle": {
+          "visible": true,
+          "geometry": [
+            223,
+            9,
+            363,
+            36
+          ],
+          "mapped_position": [
+            237,
+            21
+          ],
+          "size_hint": [
+            145,
+            22
+          ],
+          "minimum_size_hint": [
+            145,
+            22
+          ]
+        },
+        "statusChip": {
+          "visible": true,
+          "geometry": [
+            594,
+            9,
+            97,
+            36
+          ],
+          "mapped_position": [
+            608,
+            21
+          ],
+          "size_hint": [
+            97,
+            26
+          ],
+          "minimum_size_hint": [
+            97,
+            26
+          ]
+        },
+        "summaryChip": {
+          "visible": true,
+          "geometry": [
+            699,
+            9,
+            362,
+            36
+          ],
+          "mapped_position": [
+            713,
+            21
+          ],
+          "size_hint": [
+            208,
+            26
+          ],
+          "minimum_size_hint": [
+            208,
+            26
+          ]
+        }
+      }
+    },
+    {
+      "file": "/Users/leo.xu/Desktop/Codex/ICS-Project-/ICS-NeoTracker/artifacts/code-review-ui-2026-07-22/current-04-canceled-review.png",
+      "size": [
+        1440,
+        900
+      ],
+      "status": "Canceled",
+      "summary": "Results: 2 | avg confidence 0.91 | ok 2",
+      "sidebar_tab": "Review",
+      "run_button": "Run Tracking",
+      "status_bar": "Tracking canceled after 2 frames.",
+      "results": 2,
+      "thread_active": false,
+      "header_widgets": {
+        "appTitle": {
+          "visible": true,
+          "geometry": [
+            13,
+            9,
+            120,
+            36
+          ],
+          "mapped_position": [
+            27,
+            21
+          ],
+          "size_hint": [
+            120,
+            21
+          ],
+          "minimum_size_hint": [
+            120,
+            21
+          ]
+        },
+        "globalProjectDirtyLabel": {
+          "visible": true,
+          "geometry": [
+            141,
+            9,
+            74,
+            36
+          ],
+          "mapped_position": [
+            155,
+            21
+          ],
+          "size_hint": [
+            74,
+            23
+          ],
+          "minimum_size_hint": [
+            74,
+            23
+          ]
+        },
+        "globalDraftLabel": {
+          "visible": false,
+          "geometry": [
+            0,
+            0,
+            170,
+            480
+          ],
+          "mapped_position": [
+            14,
+            12
+          ],
+          "size_hint": [
+            73,
+            23
+          ],
+          "minimum_size_hint": [
+            73,
+            23
+          ]
+        },
+        "mediaTitle": {
+          "visible": true,
+          "geometry": [
+            223,
+            9,
+            370,
+            36
+          ],
+          "mapped_position": [
+            237,
+            21
+          ],
+          "size_hint": [
+            145,
+            22
+          ],
+          "minimum_size_hint": [
+            145,
+            22
+          ]
+        },
+        "statusChip": {
+          "visible": true,
+          "geometry": [
+            601,
+            9,
+            79,
+            36
+          ],
+          "mapped_position": [
+            615,
+            21
+          ],
+          "size_hint": [
+            79,
+            26
+          ],
+          "minimum_size_hint": [
+            79,
+            26
+          ]
+        },
+        "summaryChip": {
+          "visible": true,
+          "geometry": [
+            688,
+            9,
+            370,
+            36
+          ],
+          "mapped_position": [
+            702,
+            21
+          ],
+          "size_hint": [
+            232,
+            26
+          ],
+          "minimum_size_hint": [
+            232,
+            26
+          ]
+        }
+      }
+    },
+    {
+      "file": "/Users/leo.xu/Desktop/Codex/ICS-Project-/ICS-NeoTracker/artifacts/code-review-ui-2026-07-22/current-05-complete-review.png",
+      "size": [
+        1440,
+        900
+      ],
+      "status": "Tracked",
+      "summary": "Results: 180 | avg confidence 0.90 | ok 180",
+      "sidebar_tab": "Review",
+      "run_button": "Run Tracking",
+      "status_bar": "Tracked 180 frames.",
+      "results": 180,
+      "thread_active": false,
+      "header_widgets": {
+        "appTitle": {
+          "visible": true,
+          "geometry": [
+            13,
+            9,
+            120,
+            36
+          ],
+          "mapped_position": [
+            27,
+            21
+          ],
+          "size_hint": [
+            120,
+            21
+          ],
+          "minimum_size_hint": [
+            120,
+            21
+          ]
+        },
+        "globalProjectDirtyLabel": {
+          "visible": true,
+          "geometry": [
+            141,
+            9,
+            74,
+            36
+          ],
+          "mapped_position": [
+            155,
+            21
+          ],
+          "size_hint": [
+            74,
+            23
+          ],
+          "minimum_size_hint": [
+            74,
+            23
+          ]
+        },
+        "globalDraftLabel": {
+          "visible": false,
+          "geometry": [
+            0,
+            0,
+            170,
+            480
+          ],
+          "mapped_position": [
+            14,
+            12
+          ],
+          "size_hint": [
+            73,
+            23
+          ],
+          "minimum_size_hint": [
+            73,
+            23
+          ]
+        },
+        "mediaTitle": {
+          "visible": true,
+          "geometry": [
+            223,
+            9,
+            374,
+            36
+          ],
+          "mapped_position": [
+            237,
+            21
+          ],
+          "size_hint": [
+            145,
+            22
+          ],
+          "minimum_size_hint": [
+            145,
+            22
+          ]
+        },
+        "statusChip": {
+          "visible": true,
+          "geometry": [
+            605,
+            9,
+            71,
+            36
+          ],
+          "mapped_position": [
+            619,
+            21
+          ],
+          "size_hint": [
+            71,
+            26
+          ],
+          "minimum_size_hint": [
+            71,
+            26
+          ]
+        },
+        "summaryChip": {
+          "visible": true,
+          "geometry": [
+            684,
+            9,
+            374,
+            36
+          ],
+          "mapped_position": [
+            698,
+            21
+          ],
+          "size_hint": [
+            259,
+            26
+          ],
+          "minimum_size_hint": [
+            259,
+            26
+          ]
+        }
+      }
+    },
+    {
+      "file": "/Users/leo.xu/Desktop/Codex/ICS-Project-/ICS-NeoTracker/artifacts/code-review-ui-2026-07-22/current-05b-complete-review-1024x768.png",
+      "size": [
+        1024,
+        768
+      ],
+      "status": "Tracked",
+      "summary": "Results: 180 | avg confidence 0.90 | ok 180",
+      "sidebar_tab": "Review",
+      "run_button": "Run Tracking",
+      "status_bar": "Tracked 180 frames.",
+      "results": 180,
+      "thread_active": false,
+      "header_widgets": {
+        "appTitle": {
+          "visible": true,
+          "geometry": [
+            13,
+            9,
+            120,
+            36
+          ],
+          "mapped_position": [
+            27,
+            21
+          ],
+          "size_hint": [
+            120,
+            21
+          ],
+          "minimum_size_hint": [
+            120,
+            21
+          ]
+        },
+        "globalProjectDirtyLabel": {
+          "visible": true,
+          "geometry": [
+            141,
+            9,
+            74,
+            36
+          ],
+          "mapped_position": [
+            155,
+            21
+          ],
+          "size_hint": [
+            74,
+            23
+          ],
+          "minimum_size_hint": [
+            74,
+            23
+          ]
+        },
+        "globalDraftLabel": {
+          "visible": false,
+          "geometry": [
+            0,
+            0,
+            170,
+            480
+          ],
+          "mapped_position": [
+            14,
+            12
+          ],
+          "size_hint": [
+            73,
+            23
+          ],
+          "minimum_size_hint": [
+            73,
+            23
+          ]
+        },
+        "mediaTitle": {
+          "visible": true,
+          "geometry": [
+            223,
+            9,
+            166,
+            36
+          ],
+          "mapped_position": [
+            237,
+            21
+          ],
+          "size_hint": [
+            145,
+            22
+          ],
+          "minimum_size_hint": [
+            145,
+            22
+          ]
+        },
+        "statusChip": {
+          "visible": true,
+          "geometry": [
+            397,
+            9,
+            71,
+            36
+          ],
+          "mapped_position": [
+            411,
+            21
+          ],
+          "size_hint": [
+            71,
+            26
+          ],
+          "minimum_size_hint": [
+            71,
+            26
+          ]
+        },
+        "summaryChip": {
+          "visible": true,
+          "geometry": [
+            476,
+            9,
+            166,
+            36
+          ],
+          "mapped_position": [
+            490,
+            21
+          ],
+          "size_hint": [
+            172,
+            26
+          ],
+          "minimum_size_hint": [
+            172,
+            26
+          ]
+        }
+      }
+    },
+    {
+      "file": "/Users/leo.xu/Desktop/Codex/ICS-Project-/ICS-NeoTracker/artifacts/code-review-ui-2026-07-22/current-06-closing-waits.png",
+      "size": [
+        1440,
+        900
+      ],
+      "status": "Closing…",
+      "summary": "Finishing background operations safely.",
+      "sidebar_tab": "Tracking",
+      "run_button": "Finishing…",
+      "status_bar": "Closing… Finishing background operations safely.",
+      "results": 180,
+      "thread_active": false,
+      "header_widgets": {
+        "appTitle": {
+          "visible": false,
+          "geometry": [
+            13,
+            9,
+            120,
+            36
+          ],
+          "mapped_position": [
+            27,
+            21
+          ],
+          "size_hint": [
+            120,
+            21
+          ],
+          "minimum_size_hint": [
+            120,
+            21
+          ]
+        },
+        "globalProjectDirtyLabel": {
+          "visible": false,
+          "geometry": [
+            141,
+            9,
+            74,
+            36
+          ],
+          "mapped_position": [
+            155,
+            21
+          ],
+          "size_hint": [
+            74,
+            23
+          ],
+          "minimum_size_hint": [
+            74,
+            23
+          ]
+        },
+        "globalDraftLabel": {
+          "visible": false,
+          "geometry": [
+            0,
+            0,
+            170,
+            480
+          ],
+          "mapped_position": [
+            14,
+            12
+          ],
+          "size_hint": [
+            73,
+            23
+          ],
+          "minimum_size_hint": [
+            73,
+            23
+          ]
+        },
+        "mediaTitle": {
+          "visible": false,
+          "geometry": [
+            223,
+            9,
+            375,
+            36
+          ],
+          "mapped_position": [
+            237,
+            21
+          ],
+          "size_hint": [
+            145,
+            22
+          ],
+          "minimum_size_hint": [
+            145,
+            22
+          ]
+        },
+        "statusChip": {
+          "visible": false,
+          "geometry": [
+            606,
+            9,
+            81,
+            36
+          ],
+          "mapped_position": [
+            620,
+            21
+          ],
+          "size_hint": [
+            81,
+            26
+          ],
+          "minimum_size_hint": [
+            81,
+            26
+          ]
+        },
+        "summaryChip": {
+          "visible": false,
+          "geometry": [
+            695,
+            9,
+            375,
+            36
+          ],
+          "mapped_position": [
+            709,
+            21
+          ],
+          "size_hint": [
+            241,
+            26
+          ],
+          "minimum_size_hint": [
+            241,
+            26
+          ]
+        }
+      }
+    }
+  ],
+  "focus_chain": [
+    {
+      "class": "QTableView",
+      "object": "resultsTable",
+      "accessible_name": "Tracking results",
+      "text": ""
+    },
+    {
+      "class": "QComboBox",
+      "object": "reviewDiagnosticModeCombo",
+      "accessible_name": "Review diagnostic plot",
+      "text": ""
+    },
+    {
+      "class": "ConfidencePlot",
+      "object": "",
+      "accessible_name": "Review diagnostic plot",
+      "text": ""
+    },
+    {
+      "class": "QTabBar",
+      "object": "qt_tabwidget_tabbar",
+      "accessible_name": "Review history tabs",
+      "text": ""
+    },
+    {
+      "class": "QComboBox",
+      "object": "runHistoryOutcomeFilter",
+      "accessible_name": "Filter tracking runs by outcome",
+      "text": ""
+    },
+    {
+      "class": "QPushButton",
+      "object": "exportTrackingRunsButton",
+      "accessible_name": "Export visible tracking runs to CSV",
+      "text": "Export CSV"
+    },
+    {
+      "class": "QListWidget",
+      "object": "runHistoryList",
+      "accessible_name": "Tracking run history",
+      "text": ""
+    },
+    {
+      "class": "QPushButton",
+      "object": "runTrackingButton",
+      "accessible_name": "Run video tracking",
+      "text": "Run Tracking"
+    },
+    {
+      "class": "QPushButton",
+      "object": "exportTrackingButton",
+      "accessible_name": "Export current tracking results to CSV",
+      "text": "Export CSV"
+    },
+    {
+      "class": "QPushButton",
+      "object": "",
+      "accessible_name": "Create tracking report",
+      "text": "Report"
+    },
+    {
+      "class": "PreviewCanvas",
+      "object": "previewCanvas",
+      "accessible_name": "Video preview and ROI editor",
+      "text": ""
+    },
+    {
+      "class": "QPushButton",
+      "object": "transportButton",
+      "accessible_name": "Previous video frame",
+      "text": "Previous"
+    },
+    {
+      "class": "QPushButton",
+      "object": "transportButton",
+      "accessible_name": "Play video preview",
+      "text": "Play"
+    },
+    {
+      "class": "QPushButton",
+      "object": "transportButton",
+      "accessible_name": "Next video frame",
+      "text": "Next"
+    },
+    {
+      "class": "QSpinBox",
+      "object": "",
+      "accessible_name": "Preview frame number",
+      "text": "179"
+    },
+    {
+      "class": "QSlider",
+      "object": "frameSlider",
+      "accessible_name": "Preview frame timeline",
+      "text": ""
+    }
+  ],
+  "close_result": {
+    "window_visible": false,
+    "tracking_thread_active": false,
+    "background_idle": true,
+    "close_when_workers_stop": true
+  }
+}
