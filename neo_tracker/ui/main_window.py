@@ -49,6 +49,10 @@ from neo_tracker.application.job_state import (
     ReviewResponseJob,
     TrackingJob,
 )
+from neo_tracker.application.media_import_coordinator import (
+    MediaImportCoordinator,
+    MediaImportRequest,
+)
 from neo_tracker.application.playback_coordinator import PlaybackCoordinator
 from neo_tracker.application.preview_coordinator import PreviewCoordinator, PreviewRequest
 from neo_tracker.application.task_supervisor import TaskSupervisor
@@ -84,7 +88,7 @@ from neo_tracker.ui.analysis_worker import AnalysisWorker
 from neo_tracker.ui.calibration_editor import CalibrationEditor
 from neo_tracker.ui.edit_history_panel import EditHistoryPanel, EditHistorySelection
 from neo_tracker.ui.media_relink_panel import MediaRelinkPanel
-from neo_tracker.ui.media_probe_worker import MediaProbeWorker, probe_media_for_ui
+from neo_tracker.ui.media_probe_worker import probe_media_for_ui
 from neo_tracker.ui.isolated_media import PreviewDecoderSession
 from neo_tracker.ui.playback_controller import PlaybackClock
 from neo_tracker.ui.preview_canvas import PreviewCanvas
@@ -399,9 +403,6 @@ class NeoTrackerWindow(QMainWindow):
         self._analysis_thread: QThread | None = None
         self._analysis_worker: AnalysisWorker | None = None
         self._analysis_job: AnalysisJob | None = None
-        self._media_probe_thread: QThread | None = None
-        self._media_probe_worker: MediaProbeWorker | None = None
-        self._media_probe_job: MediaProbeJob | None = None
         self._project_open_thread: QThread | None = None
         self._project_open_worker: ProjectOpenWorker | None = None
         self._project_open_job: ProjectOpenJob | None = None
@@ -417,6 +418,12 @@ class NeoTrackerWindow(QMainWindow):
         self._response_mode_routing_requested = False
         self._task_supervisor = TaskSupervisor()
         self._background_tasks = self._task_supervisor
+        self._media_import_coordinator = MediaImportCoordinator(self._task_supervisor)
+        self._media_import_coordinator.progressed.connect(self._media_probe_progressed)
+        self._media_import_coordinator.completed.connect(self._media_import_completed)
+        self._media_import_coordinator.failed.connect(self._media_import_failed)
+        self._media_import_coordinator.canceled.connect(self._media_import_canceled)
+        self._media_import_coordinator.idle_reached.connect(self._media_import_idle)
         self._preview_coordinator = PreviewCoordinator(self._task_supervisor)
         self._preview_coordinator.result_ready.connect(self._preview_coordinator_completed)
         self._preview_coordinator.failed.connect(self._preview_coordinator_failed)
@@ -448,6 +455,18 @@ class NeoTrackerWindow(QMainWindow):
     @playback_clock.setter
     def playback_clock(self, value: PlaybackClock) -> None:
         self._playback_coordinator.clock = value
+
+    @property
+    def _media_probe_thread(self) -> QThread | None:
+        return self._media_import_coordinator.thread
+
+    @property
+    def _media_probe_worker(self) -> object | None:
+        return self._media_import_coordinator.worker
+
+    @property
+    def _media_probe_job(self) -> MediaProbeJob | None:
+        return self._media_import_coordinator.job
 
     @property
     def _preview_decode_thread(self) -> QThread | None:
@@ -1899,40 +1918,20 @@ class NeoTrackerWindow(QMainWindow):
         selected_paths = tuple(str(path) for path in paths if str(path))
         if not selected_paths or self._media_probe_thread is not None:
             return False
-        token = self._background_tasks.start("media-probe")
-        if token is None:
+        accepted = self._media_import_coordinator.start(
+            MediaImportRequest(
+                paths=selected_paths,
+                pipeline_key=self.current_task.pipeline_key,
+                media_probe=self.project_controller.media_probe,
+            )
+        )
+        if not accepted:
             return False
-        job = MediaProbeJob(
-            token=token,
-            paths=selected_paths,
-            pipeline_key=self.current_task.pipeline_key,
-        )
-        thread = QThread(self)
-        worker = MediaProbeWorker(
-            selected_paths,
-            media_probe=self.project_controller.media_probe,
-        )
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.progressed.connect(self._media_probe_progressed)
-        worker.completed.connect(self._media_probe_completed)
-        worker.failed.connect(self._media_probe_failed)
-        worker.canceled.connect(self._media_probe_canceled)
-        worker.completed.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        worker.canceled.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(self._media_probe_thread_finished)
-        self._media_probe_job = job
-        self._media_probe_thread = thread
-        self._media_probe_worker = worker
         self._set_media_probe_busy(
             True,
             total=len(selected_paths),
             operation="add",
         )
-        thread.start()
         return True
 
     def _media_probe_progressed(self, completed: int, total: int, filename: str) -> None:
@@ -1944,28 +1943,14 @@ class NeoTrackerWindow(QMainWindow):
         self.media_probe_status_label.setAccessibleDescription(detail)
         self.statusBar().showMessage(detail)
 
-    def _media_probe_completed(self, payload: object) -> None:
-        job = self._media_probe_job
-        if (
-            job is None
-            or job.cancelled
-            or not self._background_tasks.is_current(job.token)
-        ):
+    def _media_import_completed(
+        self,
+        job: MediaProbeJob,
+        validated_results: tuple[tuple[str, MediaInfo], ...],
+    ) -> None:
+        if self._background_tasks.closing:
             return
-        results = tuple(payload) if isinstance(payload, (list, tuple)) else ()
-        if len(results) != len(job.paths):
-            job.failure_detail = "Media inspection returned an incomplete result batch."
-            return
-        validated_results: list[tuple[str, MediaInfo]] = []
-        for expected_path, result in zip(job.paths, results):
-            if not isinstance(result, (list, tuple)) or len(result) != 2:
-                job.failure_detail = "Media inspection returned an invalid result."
-                return
-            path, media_info = result
-            if str(path) != expected_path or not isinstance(media_info, MediaInfo):
-                job.failure_detail = "Media inspection returned an invalid result."
-                return
-            validated_results.append((expected_path, media_info))
+        self._set_media_probe_busy(False)
         self._discard_removed_task_undo()
         self._explicit_empty_project = False
         if not self.tasks:
@@ -1990,31 +1975,40 @@ class NeoTrackerWindow(QMainWindow):
         else:
             self._render_task_actions(self.current_task)
         self._mark_project_changed()
-        job.completed = True
-        summary = f"Added {len(results)} media task{'s' if len(results) != 1 else ''} to this project."
+        result_count = len(validated_results)
+        summary = f"Added {result_count} media task{'s' if result_count != 1 else ''} to this project."
         if unavailable_count:
             summary += f" {unavailable_count} need source attention."
         self.statusBar().showMessage(summary, 8000)
 
-    def _media_probe_failed(self, message: str) -> None:
-        job = self._media_probe_job
-        if job is None or not self._background_tasks.is_current(job.token):
+    def _media_import_failed(self, _job: MediaProbeJob, message: str) -> None:
+        if self._background_tasks.closing:
             return
-        job.failure_detail = str(message) or "Media inspection failed."
+        self._set_media_probe_busy(False)
+        QMessageBox.warning(
+            self,
+            "Add media",
+            f"Could not inspect the selected media:\n{message}",
+        )
 
-    def _media_probe_canceled(self) -> None:
-        job = self._media_probe_job
-        if job is None or not self._background_tasks.is_current(job.token):
+    def _media_import_canceled(self, _job: MediaProbeJob) -> None:
+        if self._background_tasks.closing:
             return
-        job.cancelled = True
+        self._set_media_probe_busy(False)
+        self.statusBar().showMessage(
+            "Media import canceled. No selected files were added.",
+            6000,
+        )
+
+    def _media_import_idle(self) -> None:
+        self._schedule_close_if_workers_stopped()
 
     def _cancel_media_probe(self) -> None:
         worker = self._media_probe_worker
         job = self._media_probe_job
         if worker is None or job is None:
             return
-        job.cancelled = True
-        worker.request_cancel()
+        self._media_import_coordinator.cancel("user")
         self.add_media_button.setEnabled(False)
         self.open_project_button.setEnabled(False)
         self.add_media_button.setText("Cancelling…")
@@ -2084,28 +2078,6 @@ class NeoTrackerWindow(QMainWindow):
         self.open_project_button.setToolTip("Open a saved Neo-Tracker project.")
         self.open_project_button.setAccessibleName("Open project")
         self.media_probe_status_label.hide()
-
-    def _media_probe_thread_finished(self) -> None:
-        job = self._media_probe_job
-        self._media_probe_thread = None
-        self._media_probe_worker = None
-        self._media_probe_job = None
-        if job is not None:
-            self._background_tasks.finish(job.token)
-        if not self._background_tasks.closing:
-            self._set_media_probe_busy(False)
-            if job is not None and job.failure_detail:
-                QMessageBox.warning(
-                    self,
-                    "Add media",
-                    f"Could not inspect the selected media:\n{job.failure_detail}",
-                )
-            elif job is not None and job.cancelled:
-                self.statusBar().showMessage(
-                    "Media import canceled. No selected files were added.",
-                    6000,
-                )
-        self._schedule_close_if_workers_stopped()
 
     def _start_project_open(self, path: str | Path) -> bool:
         project_path = Path(path)
