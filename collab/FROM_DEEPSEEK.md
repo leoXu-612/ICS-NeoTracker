@@ -440,3 +440,32 @@ heartbeat 轮次 4 再现 75.21 ms 超限（>75 ms 门槛 0.21 ms），跨负载
 
 - 真实目标相机素材矩阵（P0-B）、VoiceOver/文本缩放（P1-B）、打包/签名（P2）仍未闭环；
   heartbeat 跨负载稳定性未证明。
+
+---
+
+# Heartbeat 多轮复核 + P1-B 键盘遍历（2026-08-09 续）
+
+## Conclusion
+
+heartbeat 门槛 5 轮 21 次打开中 16 次通过、5 次超限（76.45–154.60 ms）全部出现在
+宿主持续满载窗口（8 核 load 峰值 9.37），正常负载轮次 34–59 ms；超限为调度延迟而非
+GUI 长阻塞，跨负载稳定性仍 `PARTIAL`。P1-B 完整键盘焦点链（空项目 6 控件、媒体态
+16 控件，正/反向闭环）与键盘激活（Space 触发 Add media/Open Project）已取证；
+OS 级真实按键与 AX/VoiceOver 复核因本会话宿主占用前台 + AX 服务退化而 `BLOCKED`。
+
+## Findings / Changes Made / Files Modified
+
+- 新增 `artifacts/deepseek-2026-08-09/heartbeat-rounds/`（README + round1..5.json
+  + `.stderr.txt`）与 `p1b-keyboard-traversal/`（README + 两个脚本 + 3 份 JSON）。
+- `ResultsTableModel.set_results` 三趟 100k 扫描合并单趟实测无收益（16.3→17.3 ms），
+  已完全回退；无源码改动。`交接.md`（3.83/3.84）、`PROJECT_INDEX.md`、
+  `PROJECT_FILE_INDEX.sha256` 更新。
+- 全量 479 tests / 62.494 s OK、compileall、pip check、SHA-256 索引通过。
+- `Python-2026-08-09-222524.ips` 为键盘 harness 在 probe worker 结束前销毁窗口所致
+  （QThread destroyed while running），非产品代码缺陷；harness 已修复。
+
+## Remaining Risks
+
+- OS 级真实按键、AX 表格导航、VoiceOver、系统文本缩放：宿主会话/AX 服务恢复后复核。
+- 真实目标相机素材矩阵（P0-B VFR/4K/长会话/功耗）与 heartbeat 跨负载稳定性仍
+  `BLOCKED`/`PARTIAL`；P2 打包/签名范围已写入 README 部署范围。

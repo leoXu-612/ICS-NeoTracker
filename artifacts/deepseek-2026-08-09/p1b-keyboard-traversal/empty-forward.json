@@ -1,0 +1,89 @@
+{
+  "platform": "offscreen",
+  "window_title": "Neo-Tracker",
+  "steps": [
+    {
+      "class": "QPushButton",
+      "object_name": "addMediaButton",
+      "text": "Add media",
+      "accessible_name": "",
+      "enabled": true,
+      "visible": true,
+      "has_focus": true,
+      "step": 0
+    },
+    {
+      "class": "QPushButton",
+      "object_name": "openProjectButton",
+      "text": "Open Project",
+      "accessible_name": "",
+      "enabled": true,
+      "visible": true,
+      "has_focus": true,
+      "step": 1
+    },
+    {
+      "class": "QPushButton",
+      "object_name": "saveProjectButton",
+      "text": "Save Project",
+      "accessible_name": "",
+      "enabled": true,
+      "visible": true,
+      "has_focus": true,
+      "step": 2
+    },
+    {
+      "class": "QListWidget",
+      "object_name": "taskList",
+      "text": "",
+      "accessible_name": "Media tasks",
+      "enabled": true,
+      "visible": true,
+      "has_focus": true,
+      "step": 3
+    },
+    {
+      "class": "PreviewCanvas",
+      "object_name": "previewCanvas",
+      "text": "No media loaded\nAdd a video or WAV file from the Media tab.",
+      "accessible_name": "Video preview and ROI editor",
+      "enabled": true,
+      "visible": true,
+      "has_focus": true,
+      "step": 4
+    },
+    {
+      "class": "QTabBar",
+      "object_name": "qt_tabwidget_tabbar",
+      "text": "",
+      "accessible_name": "Neo-Tracker workflow section tabs",
+      "enabled": true,
+      "visible": true,
+      "has_focus": true,
+      "step": 5
+    },
+    {
+      "class": "QPushButton",
+      "object_name": "addMediaButton",
+      "text": "Add media",
+      "accessible_name": "",
+      "enabled": true,
+      "visible": true,
+      "has_focus": true,
+      "step": 6
+    }
+  ],
+  "loop_closed": true,
+  "activation": [
+    {
+      "target": "add_media_button",
+      "key": "Space",
+      "dialog_called": true
+    },
+    {
+      "target": "open_project_button",
+      "key": "Space",
+      "dialog_called": true
+    }
+  ]
+}

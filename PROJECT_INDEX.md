@@ -75,7 +75,9 @@ build/                 历史构建产物，不是源码权威来源
 矩阵可执行部分（H.264/HEVC 1080p、取消、来源替换、截断、重开）通过，VFR/4K/
 ≥10 分钟长会话/功耗缺口 `BLOCKED`；heartbeat 多轮复核见
 `artifacts/deepseek-2026-08-09/heartbeat-rounds/`（宿主满载下偶发超限，
-跨负载稳定性 `PARTIAL`）；VoiceOver/文本缩放/完整键盘遍历未闭环。
+跨负载稳定性 `PARTIAL`）；P1-B 键盘遍历（Qt 焦点链正/反向闭环、键盘激活、
+媒体态 16 控件焦点链）见 `artifacts/deepseek-2026-08-09/p1b-keyboard-traversal/`；
+VoiceOver/文本缩放/OS 级真实按键（宿主会话阻塞）未闭环。
 
 ## 常用命令
 
