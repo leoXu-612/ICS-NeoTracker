@@ -348,3 +348,69 @@ fix(trust): bound tracking IPC, lock export/plugin safety, audit UI data protect
 - Red/green: 1 behavioral + 3 import failures -> 479 tests OK in 62.192s;
   compileall and pip check pass
 ```
+
+---
+
+# P0-B — 真实媒体矩阵（可执行部分）
+
+## Conclusion
+
+用工作区唯一真实采集素材（red-dot-tracking.mp4，640×360/20fps/72 帧 H.264）及其
+HEVC/1080p 转码跑通 Full Run（两轮 72/72、digest 一致）、取消（41–44 ms 干净终态）、
+来源运行中替换（fail-closed `TRACKING_SOURCE_CHANGED`）、截断文件（probe fail-closed）、
+重开 ×10（无残留）；**VFR 原采集、4K 原采集、≥10 分钟长会话、功耗/温度证据
+`BLOCKED`（缺素材/权限）**，整体 `PARTIAL`，不得据此建议 DONE。
+
+## Findings / Changes Made / Files Modified
+
+- 新增 `benchmarks/benchmark_real_media_matrix.py`（stdout=JSON、stderr=警告分离，
+  `json.tool` 通过）；证据 `benchmark-p0b-round{1,2}.json` + `.stderr.txt`、
+  `p0b-real-media-matrix.md`、`media-matrix/` 夹具（hevc/1080p 转码、截断、替换基底）。
+- 首次运行曾因 `os.replace` 把合成素材移走（脚本缺陷）；已用 `git restore` 恢复原始
+  文件并把替换改为 `shutil.copyfile`（不再破坏素材），两轮重跑正常。
+
+## Testing / Performance and Runtime Evidence
+
+- Full Run：real 0.224/0.224 s、HEVC 0.210/0.223 s、1080p 0.411/0.435 s；child RSS
+  峰值 96–107 / 113–121 / 277–297 MB；两轮 (frame_index, filtered_state) digest 相同。
+- Cancel：0.15 s 时请求，41–44 ms 到终态（completed cancelled=True）、无残留。
+- Source replacement：0.4 s 替换后运行失败 `TRACKING_SOURCE_CHANGED: … content
+  identity no longer matches`，42 结果被丢弃语义恢复旧态。
+- Truncated：`Could not open media file`（moov 被截断）；提前 EOF 行为由单测覆盖。
+
+## Remaining Risks
+
+- 1080p/HEVC 是真实内容转码，不构成原采集分辨率/编码器稳定性结论；VFR/4K/长会话
+  `BLOCKED`，需用户提供目标相机素材。`powermetrics` 需 root，功耗/温度未测。
+
+---
+
+# P1-B — 原生 macOS UI 与无障碍（真实窗口证据）
+
+## Conclusion
+
+原生 Cocoa 启动（无 offscreen）取到真实窗口证据：Neo-Tracker 窗口在 1280×808 /
+1024×768 / 1440×900 逻辑尺寸下截图（Retina 2×），AX 名称/描述完整、Tab 焦点可前进、
+`AXPress` 可激活按钮、关闭按钮优雅退出无残留；**但记录到一次未归因的
+PySide6/Shiboken QThread-QObject 生命周期 SIGSEGV（.ips 已存证），VoiceOver/系统文本
+缩放/完整焦点遍历/动态 compositor 未闭环，整体 `PARTIAL`**。
+
+## Findings / Files Modified
+
+- 证据 `p1b-native-ui.md` + 3 张原生截图 + `python-2026-08-09-205230-crash.ips`。
+- 崩溃堆栈：`Shiboken::Object::clearReferences/destroy → QObjectWrapper 析构 →
+  sendPostedEvents → QThread`，EXC_BAD_ACCESS（指针认证失败），pid 20566（父进程为
+  ChatGPT/Codex host）；受控实例 20530 未崩溃并完成全部交互；无法确认其 argv，
+  **未归因、需复现**，不得与 2026-07-16 QThread 报告混为一因。
+
+## Testing / Performance and Runtime Evidence
+
+- AX resize applied=(1024,768)/(1440,900)；截图物理像素 ≈ 逻辑 ×2（Retina）+ 阴影。
+- Tab×2：焦点 Add media（AXButton）→ “No media loaded …”（AXStaticText）。
+- `AXPress` Add media result=0；应用日志出现 NSOpenPanel 运行时消息；Escape 后继续。
+- 关闭按钮退出，无残留 neo_tracker/helper 进程。
+
+## Remaining Risks
+
+- 崩溃归因未闭环（需复现最小化）；VoiceOver、系统文本缩放、全键盘遍历、动态
+  compositor、4K 外接显示器证据缺失；部署/签名（P2）未做。

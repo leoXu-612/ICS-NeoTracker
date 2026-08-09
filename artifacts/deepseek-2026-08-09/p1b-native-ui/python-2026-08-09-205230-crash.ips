@@ -1,0 +1,455 @@
+{"app_name":"Python","timestamp":"2026-08-09 20:52:30.00 +0800","app_version":"3.12.6","slice_uuid":"316615be-7fa5-3689-b1ae-f2a621f7658e","build_version":"3.12.6","platform":1,"bundleID":"org.python.python","share_with_app_devs":1,"is_first_party":0,"bug_type":"309","os_version":"macOS 15.7.7 (24G720)","roots_installed":0,"name":"Python","incident_id":"30BD4B57-8EBD-4FA6-AE35-AE4C0C450B56"}
+{
+  "uptime" : 460000,
+  "procRole" : "Unspecified",
+  "version" : 2,
+  "userID" : 501,
+  "deployVersion" : 210,
+  "modelCode" : "Mac15,13",
+  "coalitionID" : 53525,
+  "osVersion" : {
+    "train" : "macOS 15.7.7",
+    "build" : "24G720",
+    "releaseType" : "User"
+  },
+  "captureTime" : "2026-08-09 20:52:19.2296 +0800",
+  "codeSigningMonitor" : 1,
+  "incident" : "30BD4B57-8EBD-4FA6-AE35-AE4C0C450B56",
+  "pid" : 20566,
+  "translated" : false,
+  "cpuType" : "ARM-64",
+  "roots_installed" : 0,
+  "bug_type" : "309",
+  "procLaunch" : "2026-08-09 20:52:18.7766 +0800",
+  "procStartAbsTime" : 11135328535658,
+  "procExitAbsTime" : 11135337948254,
+  "procName" : "Python",
+  "procPath" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/Resources\/Python.app\/Contents\/MacOS\/Python",
+  "bundleInfo" : {"CFBundleShortVersionString":"3.12.6","CFBundleVersion":"3.12.6","CFBundleIdentifier":"org.python.python"},
+  "storeInfo" : {"deviceIdentifierForVendor":"3D40AC05-F36F-559B-ABA0-29746426ED87","thirdParty":true},
+  "parentProc" : "codex",
+  "parentPid" : 1394,
+  "coalitionName" : "com.openai.codex",
+  "crashReporterKey" : "9138B798-C56E-8558-3E6F-9E5F518569E1",
+  "appleIntelligenceStatus" : {"state":"unavailable","reasons":["countryBillingIneligible","regionIneligible"]},
+  "responsiblePid" : 1349,
+  "responsibleProc" : "ChatGPT",
+  "codeSigningID" : "org.python.python",
+  "codeSigningTeamID" : "BMM5U3QVKW",
+  "codeSigningFlags" : 570491393,
+  "codeSigningValidationCategory" : 6,
+  "codeSigningTrustLevel" : 4294967295,
+  "codeSigningAuxiliaryInfo" : 0,
+  "instructionByteStream" : {"beforePC":"D+z\/l+ADE6qohgCU9le9qfRPAan9ewKp\/YMAkQgQQPkUDUD59AMAtA==","atPC":"lQpA+fUBALTzAwCqAwAAFLUCQPk1AQC0oBZA+QgAQPmI\/\/83CAUA8Q=="},
+  "bootSessionUUID" : "27687F5E-F5DD-42E5-BA67-2BA34E56499A",
+  "wakeTime" : 17168,
+  "sleepWakeUUID" : "A5B1FC12-2B36-4199-BB8D-BFA67DD91058",
+  "sip" : "enabled",
+  "vmRegionInfo" : "0x10 is not in any region.  Bytes before following region: 4378427376\n      REGION TYPE                    START - END         [ VSIZE] PRT\/MAX SHRMOD  REGION DETAIL\n      UNUSED SPACE AT START\n--->  \n      __TEXT                      104f98000-104f9c000    [   16K] r-x\/r-x SM=COW  \/Library\/Frameworks\/Python.framework\/Versions\/3.12\/Resources\/Python.app\/Contents\/MacOS\/Python",
+  "exception" : {"codes":"0x0000000000000001, 0x0002000000000010","rawCodes":[1,562949953421328],"type":"EXC_BAD_ACCESS","signal":"SIGSEGV","subtype":"KERN_INVALID_ADDRESS at 0x0002000000000010 -> 0x0000000000000010 (possible pointer authentication failure)"},
+  "termination" : {"flags":0,"code":11,"namespace":"SIGNAL","indicator":"Segmentation fault: 11","byProc":"exc handler","byPid":20566},
+  "vmregioninfo" : "0x10 is not in any region.  Bytes before following region: 4378427376\n      REGION TYPE                    START - END         [ VSIZE] PRT\/MAX SHRMOD  REGION DETAIL\n      UNUSED SPACE AT START\n--->  \n      __TEXT                      104f98000-104f9c000    [   16K] r-x\/r-x SM=COW  \/Library\/Frameworks\/Python.framework\/Versions\/3.12\/Resources\/Python.app\/Contents\/MacOS\/Python",
+  "extMods" : {"caller":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"system":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"targeted":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"warnings":0},
+  "faultingThread" : 3,
+  "threads" : [{"id":9058803,"threadState":{"x":[{"value":316},{"value":0},{"value":2816},{"value":0},{"value":0},{"value":160},{"value":0},{"value":5000000},{"value":6088443752},{"value":0},{"value":768},{"value":3298534884098},{"value":3298534884098},{"value":768},{"value":0},{"value":3298534884096},{"value":305},{"value":8744719624},{"value":0},{"value":4403331968,"symbolLocation":76976,"symbol":"_PyRuntime"},{"value":4403331920,"symbolLocation":76928,"symbol":"_PyRuntime"},{"value":8727585696,"symbolLocation":224,"symbol":"_main_thread"},{"value":5000000},{"value":0},{"value":2816},{"value":2817},{"value":3072},{"value":9},{"value":383304}],"flavor":"ARM_THREAD_STATE64","lr":{"value":6882459804},"cpsr":{"value":1610616832},"fp":{"value":6088443872},"sp":{"value":6088443728},"esr":{"value":1442840704,"description":" Address size fault"},"pc":{"value":6882202572},"far":{"value":0}},"queue":"com.apple.main-thread","frames":[{"imageOffset":17356,"symbol":"__psynch_cvwait","symbolLocation":8,"imageIndex":36},{"imageOffset":28828,"symbol":"_pthread_cond_wait","symbolLocation":984,"imageIndex":37},{"imageOffset":2096768,"symbol":"take_gil","symbolLocation":512,"imageIndex":1},{"imageOffset":2099420,"symbol":"PyEval_RestoreThread","symbolLocation":24,"imageIndex":1},{"imageOffset":2216504,"symbol":"Sbk_QCoreApplicationFunc_processEvents(_object*, _object*, _object*)","symbolLocation":556,"imageIndex":15},{"imageOffset":989052,"symbol":"cfunction_call","symbolLocation":72,"imageIndex":1},{"imageOffset":535972,"symbol":"_PyObject_MakeTpCall","symbolLocation":128,"imageIndex":1},{"imageOffset":1865292,"symbol":"_PyEval_EvalFrameDefault","symbolLocation":47324,"imageIndex":1},{"imageOffset":552444,"symbol":"method_vectorcall","symbolLocation":180,"imageIndex":1},{"imageOffset":1872764,"symbol":"_PyEval_EvalFrameDefault","symbolLocation":54796,"imageIndex":1},{"imageOffset":535336,"symbol":"_PyObject_FastCallDictTstate","symbolLocation":96,"imageIndex":1},{"imageOffset":1170836,"symbol":"slot_tp_call","symbolLocation":208,"imageIndex":1},{"imageOffset":535972,"symbol":"_PyObject_MakeTpCall","symbolLocation":128,"imageIndex":1},{"imageOffset":1865292,"symbol":"_PyEval_EvalFrameDefault","symbolLocation":47324,"imageIndex":1},{"imageOffset":552444,"symbol":"method_vectorcall","symbolLocation":180,"imageIndex":1},{"imageOffset":1872764,"symbol":"_PyEval_EvalFrameDefault","symbolLocation":54796,"imageIndex":1},{"imageOffset":535336,"symbol":"_PyObject_FastCallDictTstate","symbolLocation":96,"imageIndex":1},{"imageOffset":1170836,"symbol":"slot_tp_call","symbolLocation":208,"imageIndex":1},{"imageOffset":535972,"symbol":"_PyObject_MakeTpCall","symbolLocation":128,"imageIndex":1},{"imageOffset":1865292,"symbol":"_PyEval_EvalFrameDefault","symbolLocation":47324,"imageIndex":1},{"imageOffset":552444,"symbol":"method_vectorcall","symbolLocation":180,"imageIndex":1},{"imageOffset":1872764,"symbol":"_PyEval_EvalFrameDefault","symbolLocation":54796,"imageIndex":1},{"imageOffset":535336,"symbol":"_PyObject_FastCallDictTstate","symbolLocation":96,"imageIndex":1},{"imageOffset":1170836,"symbol":"slot_tp_call","symbolLocation":208,"imageIndex":1},{"imageOffset":535972,"symbol":"_PyObject_MakeTpCall","symbolLocation":128,"imageIndex":1},{"imageOffset":1865292,"symbol":"_PyEval_EvalFrameDefault","symbolLocation":47324,"imageIndex":1},{"imageOffset":552444,"symbol":"method_vectorcall","symbolLocation":180,"imageIndex":1},{"imageOffset":1872764,"symbol":"_PyEval_EvalFrameDefault","symbolLocation":54796,"imageIndex":1},{"imageOffset":535336,"symbol":"_PyObject_FastCallDictTstate","symbolLocation":96,"imageIndex":1},{"imageOffset":1170836,"symbol":"slot_tp_call","symbolLocation":208,"imageIndex":1},{"imageOffset":535972,"symbol":"_PyObject_MakeTpCall","symbolLocation":128,"imageIndex":1},{"imageOffset":1865292,"symbol":"_PyEval_EvalFrameDefault","symbolLocation":47324,"imageIndex":1},{"imageOffset":535448,"symbol":"_PyObject_FastCallDictTstate","symbolLocation":208,"imageIndex":1},{"imageOffset":1177412,"symbol":"slot_tp_init","symbolLocation":208,"imageIndex":1},{"imageOffset":1131172,"symbol":"type_call","symbolLocation":148,"imageIndex":1},{"imageOffset":535972,"symbol":"_PyObject_MakeTpCall","symbolLocation":128,"imageIndex":1},{"imageOffset":1865292,"symbol":"_PyEval_EvalFrameDefault","symbolLocation":47324,"imageIndex":1},{"imageOffset":1817044,"symbol":"PyEval_EvalCode","symbolLocation":304,"imageIndex":1},{"imageOffset":1799228,"symbol":"builtin_exec","symbolLocation":472,"imageIndex":1},{"imageOffset":986644,"symbol":"cfunction_vectorcall_FASTCALL_KEYWORDS","symbolLocation":92,"imageIndex":1},{"imageOffset":1864944,"symbol":"_PyEval_EvalFrameDefault","symbolLocation":46976,"imageIndex":1},{"imageOffset":2527396,"symbol":"pymain_run_module","symbolLocation":280,"imageIndex":1},{"imageOffset":2524328,"symbol":"Py_RunMain","symbolLocation":648,"imageIndex":1},{"imageOffset":2526544,"symbol":"pymain_main","symbolLocation":500,"imageIndex":1},{"imageOffset":2526828,"symbol":"Py_BytesMain","symbolLocation":40,"imageIndex":1},{"imageOffset":27544,"symbol":"start","symbolLocation":6076,"imageIndex":38}]},{"id":9058804,"frames":[{"imageOffset":7020,"symbol":"start_wqthread","symbolLocation":0,"imageIndex":37}],"threadState":{"x":[{"value":6089011200},{"value":6147},{"value":6088474624},{"value":0},{"value":409604},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":0},"cpsr":{"value":4096},"fp":{"value":0},"sp":{"value":6089011200},"esr":{"value":1442840704,"description":" Address size fault"},"pc":{"value":6882437996},"far":{"value":0}}},{"id":9058805,"frames":[{"imageOffset":7020,"symbol":"start_wqthread","symbolLocation":0,"imageIndex":37}],"threadState":{"x":[{"value":6089584640},{"value":4867},{"value":6089048064},{"value":0},{"value":409604},{"value":18446744073709551615},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":0},"cpsr":{"value":4096},"fp":{"value":0},"sp":{"value":6089584640},"esr":{"value":1442840704,"description":" Address size fault"},"pc":{"value":6882437996},"far":{"value":0}}},{"triggered":true,"id":9058811,"name":"QThread","threadState":{"x":[{"value":4531691712},{"value":0},{"value":2560},{"value":4403331968,"symbolLocation":76976,"symbol":"_PyRuntime"},{"value":3298534884096},{"value":4256},{"value":0},{"value":5000000},{"value":5383798080},{"value":0},{"value":3298534884096},{"value":3298534884098},{"value":0},{"value":0},{"value":256},{"value":3298534884096},{"value":8},{"value":5653248560},{"value":0},{"value":4531691712},{"value":562949953421312},{"value":5383798896},{"value":5383573248},{"value":5383800448},{"value":5383798896},{"value":52},{"value":1},{"value":1},{"value":1}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4388330460},"cpsr":{"value":536875008},"fp":{"value":6090157056},"sp":{"value":6090157024},"esr":{"value":2449473540,"description":"(Data Abort) byte read Translation fault"},"pc":{"value":4388331116,"matchesCrashFrame":1},"far":{"value":562949953421328}},"frames":[{"imageOffset":89708,"symbol":"Shiboken::Object::clearReferences(SbkObject*)","symbolLocation":28,"imageIndex":14},{"imageOffset":89052,"symbol":"Shiboken::Object::destroy(SbkObject*, void*)","symbolLocation":72,"imageIndex":14},{"imageOffset":1224972,"symbol":"QObjectWrapper::~QObjectWrapper()","symbolLocation":64,"imageIndex":15},{"imageOffset":962736,"symbol":"QObject::event(QEvent*)","symbolLocation":724,"imageIndex":17},{"imageOffset":1222620,"symbol":"QObjectWrapper::event(QEvent*)","symbolLocation":176,"imageIndex":15},{"imageOffset":647836,"symbol":"QCoreApplicationPrivate::notify_helper(QObject*, QEvent*)","symbolLocation":504,"imageIndex":17},{"imageOffset":2147200,"symbol":"QCoreApplicationWrapper::notify(QObject*, QEvent*)","symbolLocation":188,"imageIndex":15},{"imageOffset":649384,"symbol":"QCoreApplication::sendEvent(QObject*, QEvent*)","symbolLocation":172,"imageIndex":17},{"imageOffset":651384,"symbol":"QCoreApplicationPrivate::sendPostedEvents(QObject*, int, QThreadData*)","symbolLocation":524,"imageIndex":17},{"imageOffset":2416424,"imageIndex":17},{"imageOffset":2411528,"imageIndex":17},{"imageOffset":27592,"symbol":"_pthread_start","symbolLocation":136,"imageIndex":37},{"imageOffset":7040,"symbol":"thread_start","symbolLocation":8,"imageIndex":37}]}],
+  "usedImages" : [
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4378427392,
+    "CFBundleShortVersionString" : "3.12.6",
+    "CFBundleIdentifier" : "org.python.python",
+    "size" : 16384,
+    "uuid" : "316615be-7fa5-3689-b1ae-f2a621f7658e",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/Resources\/Python.app\/Contents\/MacOS\/Python",
+    "name" : "Python",
+    "CFBundleVersion" : "3.12.6"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4397694976,
+    "CFBundleShortVersionString" : "3.12.6, (c) 2001-2023 Python Software Foundation.",
+    "CFBundleIdentifier" : "org.python.python",
+    "size" : 4112384,
+    "uuid" : "b92ef958-0ba2-3c8f-a277-37e1976a666a",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/Python",
+    "name" : "Python",
+    "CFBundleVersion" : "3.12.6"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4381212672,
+    "size" : 49152,
+    "uuid" : "ceeaa7a5-0ff8-3a7e-8877-141c1a6ea0d2",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/math.cpython-312-darwin.so",
+    "name" : "math.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4381114368,
+    "size" : 16384,
+    "uuid" : "1a604a13-293e-32e3-8b5d-1700b2ad786c",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/_heapq.cpython-312-darwin.so",
+    "name" : "_heapq.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4383866880,
+    "size" : 16384,
+    "uuid" : "f51a563f-a29f-348f-8866-930ac21ccb78",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/_opcode.cpython-312-darwin.so",
+    "name" : "_opcode.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4380950528,
+    "size" : 32768,
+    "uuid" : "b1c89847-8798-3166-93d3-b44c0c656050",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/zlib.cpython-312-darwin.so",
+    "name" : "zlib.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4385161216,
+    "size" : 16384,
+    "uuid" : "2b9d438d-5621-38e9-b892-584b1897d70d",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/_bz2.cpython-312-darwin.so",
+    "name" : "_bz2.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4385800192,
+    "size" : 196608,
+    "uuid" : "be4f22f4-88a8-3e3b-a257-fb7c9069c6ca",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/_lzma.cpython-312-darwin.so",
+    "name" : "_lzma.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4384997376,
+    "size" : 32768,
+    "uuid" : "d599ce7b-da97-3011-8cec-58bd59b2b122",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/binascii.cpython-312-darwin.so",
+    "name" : "binascii.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4385472512,
+    "size" : 32768,
+    "uuid" : "a96e1683-48e2-3e54-a0ac-380405102c1c",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/_struct.cpython-312-darwin.so",
+    "name" : "_struct.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4385587200,
+    "size" : 16384,
+    "uuid" : "4b666869-a496-314d-a69b-109997d723b9",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/_bisect.cpython-312-darwin.so",
+    "name" : "_bisect.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4385669120,
+    "size" : 16384,
+    "uuid" : "f81789d4-a96d-3f78-b747-b40538ab8159",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/_random.cpython-312-darwin.so",
+    "name" : "_random.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4386078720,
+    "size" : 32768,
+    "uuid" : "e0d61392-9468-3f72-ac99-f2131abffe96",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/_sha2.cpython-312-darwin.so",
+    "name" : "_sha2.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4385095680,
+    "size" : 16384,
+    "uuid" : "5f2828d1-0633-3e4c-acf5-8619ac427257",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/site-packages\/shiboken6\/Shiboken.abi3.so",
+    "name" : "Shiboken.abi3.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4388241408,
+    "size" : 327680,
+    "uuid" : "70bf5098-abd0-34ec-b1b4-de440bf5f474",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/site-packages\/shiboken6\/libshiboken6.abi3.6.11.dylib",
+    "name" : "libshiboken6.abi3.6.11.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4389797888,
+    "size" : 3571712,
+    "uuid" : "afb2410f-dc02-37b2-9901-e91fd85d340a",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/site-packages\/PySide6\/QtCore.abi3.so",
+    "name" : "QtCore.abi3.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4395712512,
+    "size" : 229376,
+    "uuid" : "c18423e5-7b89-3a09-8f16-2ee361085276",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/site-packages\/PySide6\/libpyside6.abi3.6.11.dylib",
+    "name" : "libpyside6.abi3.6.11.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4418142208,
+    "CFBundleShortVersionString" : "6.11",
+    "CFBundleIdentifier" : "org.qt-project.QtCore",
+    "size" : 5160960,
+    "uuid" : "ebea1591-a251-3c70-86c0-c3d0b7901b4b",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/site-packages\/PySide6\/Qt\/lib\/QtCore.framework\/Versions\/A\/QtCore",
+    "name" : "QtCore",
+    "CFBundleVersion" : "6.11.1"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4408885248,
+    "size" : 2818048,
+    "uuid" : "dffcfe34-636c-3ffa-9819-e57e65dcaa2b",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/site-packages\/numpy\/_core\/_multiarray_umath.cpython-312-darwin.so",
+    "name" : "_multiarray_umath.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4387848192,
+    "size" : 81920,
+    "uuid" : "622c4570-408b-34e4-bedf-5347243d7531",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/_datetime.cpython-312-darwin.so",
+    "name" : "_datetime.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4385243136,
+    "size" : 16384,
+    "uuid" : "68690d8c-2f87-3e08-aea7-02d641954949",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/_contextvars.cpython-312-darwin.so",
+    "name" : "_contextvars.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4387487744,
+    "size" : 98304,
+    "uuid" : "49be3e86-75d3-36a3-b5cf-82b156d8ad6e",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/_pickle.cpython-312-darwin.so",
+    "name" : "_pickle.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4388028416,
+    "size" : 81920,
+    "uuid" : "25fa962f-9446-31ac-9409-45414a5acec6",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/_ctypes.cpython-312-darwin.so",
+    "name" : "_ctypes.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4397154304,
+    "size" : 98304,
+    "uuid" : "4efbaa80-8331-36c0-8b01-a5d9d4087e0b",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/site-packages\/numpy\/linalg\/_umath_linalg.cpython-312-darwin.so",
+    "name" : "_umath_linalg.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4387667968,
+    "size" : 32768,
+    "uuid" : "acf7245c-8f5d-399c-b57a-1c21c3b0a0ca",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/_json.cpython-312-darwin.so",
+    "name" : "_json.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4397514752,
+    "size" : 32768,
+    "uuid" : "14488257-fae2-30e4-82b5-39f1542cac76",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/_csv.cpython-312-darwin.so",
+    "name" : "_csv.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4397318144,
+    "size" : 32768,
+    "uuid" : "ff05f9b1-f7c7-330d-be4f-79dafb351f89",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/_hashlib.cpython-312-darwin.so",
+    "name" : "_hashlib.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4424220672,
+    "size" : 2473984,
+    "uuid" : "cce49bff-0046-30d8-b967-7fb1bd6501f9",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/libcrypto.3.dylib",
+    "name" : "libcrypto.3.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4417634304,
+    "size" : 32768,
+    "uuid" : "cd72dabe-738e-38d3-b939-f1672478f17b",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/_blake2.cpython-312-darwin.so",
+    "name" : "_blake2.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4408672256,
+    "size" : 65536,
+    "uuid" : "0ba46438-4810-3037-b19b-1beee27988f1",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/_socket.cpython-312-darwin.so",
+    "name" : "_socket.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4417929216,
+    "size" : 32768,
+    "uuid" : "4154f2fe-955d-3554-b44c-95acff2f04bb",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/select.cpython-312-darwin.so",
+    "name" : "select.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4417732608,
+    "size" : 49152,
+    "uuid" : "82a27bac-e8c7-378a-a109-bc509cc21b97",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/array.cpython-312-darwin.so",
+    "name" : "array.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4387766272,
+    "size" : 16384,
+    "uuid" : "b55aecf9-8780-3500-958a-573f1fb91f13",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/_multiprocessing.cpython-312-darwin.so",
+    "name" : "_multiprocessing.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4397432832,
+    "size" : 16384,
+    "uuid" : "b5ff5c16-1f91-347b-9f09-ed0c9c777fda",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/fcntl.cpython-312-darwin.so",
+    "name" : "fcntl.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4397613056,
+    "size" : 16384,
+    "uuid" : "8a85d497-be51-3a0b-b6ea-82c27290a3fc",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/_posixsubprocess.cpython-312-darwin.so",
+    "name" : "_posixsubprocess.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64",
+    "base" : 4418027520,
+    "size" : 16384,
+    "uuid" : "5aebf733-da81-3c4d-b370-7c213e649de7",
+    "path" : "\/Library\/Frameworks\/Python.framework\/Versions\/3.12\/lib\/python3.12\/lib-dynload\/_uuid.cpython-312-darwin.so",
+    "name" : "_uuid.cpython-312-darwin.so"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6882185216,
+    "size" : 243188,
+    "uuid" : "f865e038-8aea-3fb1-a04f-731060311916",
+    "path" : "\/usr\/lib\/system\/libsystem_kernel.dylib",
+    "name" : "libsystem_kernel.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6882430976,
+    "size" : 51832,
+    "uuid" : "2886f4f3-500b-36c8-a20c-c457eb754e3d",
+    "path" : "\/usr\/lib\/system\/libsystem_pthread.dylib",
+    "name" : "libsystem_pthread.dylib"
+  },
+  {
+    "source" : "P",
+    "arch" : "arm64e",
+    "base" : 6878625792,
+    "size" : 636284,
+    "uuid" : "70dbd61b-24cf-3e2b-aed9-1d345967d2d4",
+    "path" : "\/usr\/lib\/dyld",
+    "name" : "dyld"
+  },
+  {
+    "size" : 0,
+    "source" : "A",
+    "base" : 0,
+    "uuid" : "00000000-0000-0000-0000-000000000000"
+  }
+],
+  "sharedCache" : {
+  "base" : 6877790208,
+  "size" : 5039865856,
+  "uuid" : "f75ce6c3-8d70-3692-9993-825c3a021d47"
+},
+  "legacyInfo" : {
+  "threadTriggered" : {
+    "name" : "QThread"
+  }
+},
+  "logWritingSignature" : "331d576ec192230d71d580f540b8296564db6d34",
+  "trialInfo" : {
+  "rollouts" : [
+    {
+      "rolloutId" : "642da32dea3b2418c750f848",
+      "factorPackIds" : {
+
+      },
+      "deploymentId" : 240000011
+    },
+    {
+      "rolloutId" : "5fb4245a1bbfe8005e33a1e1",
+      "factorPackIds" : {
+
+      },
+      "deploymentId" : 240000021
+    }
+  ],
+  "experiments" : [
+
+  ]
+}
+}

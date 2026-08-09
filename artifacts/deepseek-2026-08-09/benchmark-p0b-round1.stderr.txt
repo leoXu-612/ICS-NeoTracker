@@ -1,0 +1,4 @@
+[mov,mp4,m4a,3gp,3g2,mj2 @ 0x1177d50e0] moov atom not found
+OpenCV: Couldn't read video stream from file "artifacts/deepseek-2026-08-09/media-matrix/truncated.mp4"
+[mov,mp4,m4a,3gp,3g2,mj2 @ 0x1177d6ba0] moov atom not found
+OpenCV: Couldn't read video stream from file "artifacts/deepseek-2026-08-09/media-matrix/truncated.mp4"
