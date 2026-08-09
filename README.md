@@ -339,6 +339,19 @@ neo-tracker
 
 如果窗口提示没有 OpenCV backend，说明当前 Python 环境没有安装 `cv2`，需要安装 media extra 或 `opencv-python`。
 
+## Deployment scope
+
+当前交付范围是**源码安装的内部 Python 工具**，不是签名/notarized 的分发式 macOS App：
+
+- 运行方式：`python3 -m neo_tracker` 或 `neo-tracker` 入口脚本（需要本机 Python 3.12
+  环境与 pip 安装的依赖，见上）。
+- 未提供：`.app` 打包、代码签名（codesign）、notarization、自动更新或回滚通道；
+  Gatekeeper/Quarantine 未处理。
+- 平台证据：macOS 15.7.7 Apple Silicon 原生窗口验证（Retina 2×）；其他 macOS 版本、
+  Intel、Linux 未做部署验证。
+- 若未来改为分发式 App，需先补齐签名/notarization 与干净环境安装/升级/回滚矩阵
+  （见 FORDEEPSEEK.md P2）。
+
 ## Test
 
 ```bash

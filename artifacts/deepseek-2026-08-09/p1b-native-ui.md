@@ -37,16 +37,16 @@
   `NSOpenPanel` 运行时消息（原生文件对话框实例化），按 Escape 关闭后应用继续运行。
 - 应用在 resize/focus/press/close 全程稳定；点击关闭按钮优雅退出，无残留进程。
 
-### 崩溃记录（需归因）
+### 崩溃记录（已归因：工具宿主环境产物，非本应用）
 
-- `p1b-native-ui/python-2026-08-09-205230-crash.ips`：20:52:19 一个
-  `org.python.python` 进程（pid 20566，父进程为 ChatGPT/Codex host）SIGSEGV
-  （EXC_BAD_ACCESS，指针认证失败），故障线程为 QThread，堆栈为
+- 交互期间观察到 PySide6/Shiboken QThread-QObject 生命周期 SIGSEGV（堆栈
   `Shiboken::Object::clearReferences/destroy → QObjectWrapper 析构 →
-  sendPostedEvents → _pthread_start` ——PySide6/Shiboken QObject 生命周期竞态。
-- 受控测试实例（pid 20530）未崩溃并完成全部交互；无法从 .ips 确认 20566 的命令行，
-  统一日志无对应条目。按工单“新鲜 .ips 必须按堆栈归因、不得混为一因”的规则，此项
-  标记为**未归因、需复现**；与既有 2026-07-16 QThread 生命周期类报告同族但堆栈不同。
+  sendPostedEvents → QThread`，EXC_BAD_ACCESS）。
+- **归因实验**：全部 10 个 `Python-*.ips` 的 `parentPid=1394`（ChatGPT/Codex 应用宿主
+  进程）；纯 `sleep 45`（不启动本应用、无 AX 交互）对照运行 45 秒即新增 5 个同父进程
+  同类崩溃；受控本应用实例（pid 20530/21405/21449/21495/21725）全部存活并优雅退出。
+  结论：该崩溃由 Codex 宿主自身的 Python+PySide6 子进程产生，**与 ICS-NeoTracker 无关**，
+  不作为本应用原生崩溃归因；本应用在此会话中无新崩溃。
 
 ## 缺口（如实记录）
 

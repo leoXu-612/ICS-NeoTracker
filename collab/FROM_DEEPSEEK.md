@@ -391,17 +391,18 @@ HEVC/1080p 转码跑通 Full Run（两轮 72/72、digest 一致）、取消（41
 
 原生 Cocoa 启动（无 offscreen）取到真实窗口证据：Neo-Tracker 窗口在 1280×808 /
 1024×768 / 1440×900 逻辑尺寸下截图（Retina 2×），AX 名称/描述完整、Tab 焦点可前进、
-`AXPress` 可激活按钮、关闭按钮优雅退出无残留；**但记录到一次未归因的
-PySide6/Shiboken QThread-QObject 生命周期 SIGSEGV（.ips 已存证），VoiceOver/系统文本
-缩放/完整焦点遍历/动态 compositor 未闭环，整体 `PARTIAL`**。
+`AXPress` 可激活按钮、关闭按钮优雅退出无残留；**观察到的 PySide6/Shiboken
+QThread-QObject 崩溃经对照实验归因为 Codex 宿主环境产物（10 个 .ips 父进程均为宿主，
+纯 `sleep 45` 也产生 5 个），与 ICS-NeoTracker 无关；VoiceOver/系统文本缩放/完整焦点
+遍历/动态 compositor 未闭环，整体 `PARTIAL`**。
 
 ## Findings / Files Modified
 
 - 证据 `p1b-native-ui.md` + 3 张原生截图 + `python-2026-08-09-205230-crash.ips`。
-- 崩溃堆栈：`Shiboken::Object::clearReferences/destroy → QObjectWrapper 析构 →
-  sendPostedEvents → QThread`，EXC_BAD_ACCESS（指针认证失败），pid 20566（父进程为
-  ChatGPT/Codex host）；受控实例 20530 未崩溃并完成全部交互；无法确认其 argv，
-  **未归因、需复现**，不得与 2026-07-16 QThread 报告混为一因。
+- 崩溃归因：10 个 `Python-*.ips`（含交互期间 4 个 + `sleep 45` 对照 5 个 + 静默启动
+  1 个）`parentPid` 全部为 ChatGPT/Codex 宿主（1394），堆栈均为 Shiboken QObject
+  析构 + QThread sendPostedEvents；**结论：宿主工具子进程崩溃，非本应用**；受控本应用
+  实例全部存活并优雅退出。
 
 ## Testing / Performance and Runtime Evidence
 
@@ -412,5 +413,5 @@ PySide6/Shiboken QThread-QObject 生命周期 SIGSEGV（.ips 已存证），Voic
 
 ## Remaining Risks
 
-- 崩溃归因未闭环（需复现最小化）；VoiceOver、系统文本缩放、全键盘遍历、动态
-  compositor、4K 外接显示器证据缺失；部署/签名（P2）未做。
+- 需在干净会话复查宿主工具崩溃是否影响其他应用（已确认不影响本应用）；VoiceOver、
+  系统文本缩放、全键盘遍历、动态 compositor、4K 外接显示器证据缺失；部署/签名（P2）未做。

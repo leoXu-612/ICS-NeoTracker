@@ -2,7 +2,7 @@
 97a4ddf1fd7c859b7c610a97bd3e7cb2b376f74effeb5b4a5d19b0bb7337b04b  ./FORDEEPSEEK.md
 a68e9c529565944c873530a399fdaab7906e80221369865486544ca46d20d36b  ./MIGRATION_RECORD.md
 83f4931c01faaee2e0aa4e53bb364c48efad2ab59c3909758ed2af0436f722f4  ./PROJECT_INDEX.md
-73888349aa10c6aace4ce08ccc2118d3ea1d9adc288ed6873a3ac1ce94f1506b  ./README.md
+6899f33c5a99de508940db05cf9a58c83867bbc9999bb1149b8c96fbe56eee00  ./README.md
 2cff680330304f0dd6a811106f707df5f94e562f3b0bfc4213d638991881f746  ./artifacts/code-review-ui-2026-07-22/01-media-ready.png
 2b98f252469573d4cab7bc2802788e5f4c1993689ff553e3eb018cdef1fda35f  ./artifacts/code-review-ui-2026-07-22/01b-media-ready-1024x768.png
 6f8b2f8beb7dcefa6cbafbf8a2586135ea9f07961906ea2d64f6c9411974fee7  ./artifacts/code-review-ui-2026-07-22/02-tracking-running.png
@@ -64,7 +64,7 @@ f0dabf1ef597a0cef0c12168373808ac41b6b3b2852af2188fa7858aa2961203  ./artifacts/de
 4449a034aea457785cad92bffe9ee540c0410f75e04d3e1915918f6304f60f1d  ./artifacts/deepseek-2026-08-09/p1a2-project-json-integrity.md
 e6460096498f601838bc20dadfae128ae903b0c5b190bb2c351dd233cc24ba36  ./artifacts/deepseek-2026-08-09/p1a3-media-reader-version-guard.md
 82a476738c187ca793d14bee586f9644d0508bb2c620b0d9cad67382bcbf5711  ./artifacts/deepseek-2026-08-09/p1a4-ipc-export-plugin-ui-safety.md
-d5d3ee613ee5c7d52a53b48a8a4ae17a9a2414b30c56413b2e0a89b02f1c0153  ./artifacts/deepseek-2026-08-09/p1b-native-ui.md
+99bf627b71f6a0a23067da460b3987635494848845326cc4ca942f16e4bad86b  ./artifacts/deepseek-2026-08-09/p1b-native-ui.md
 930b79608b6a80764c0ff79d946b5ae8a1abd5ae48bf13e9084469ecc5298833  ./artifacts/deepseek-2026-08-09/p1b-native-ui/nt-native-1024x768.png
 45383d5442b1fda422903ac5f5447fe5ab029acbfdee962e79802ffec6e87fc7  ./artifacts/deepseek-2026-08-09/p1b-native-ui/nt-native-1280x808.png
 4e8cf7fe829419738ea5b0208754401f7cee57667d626d3b1a0e0d28cc841b47  ./artifacts/deepseek-2026-08-09/p1b-native-ui/nt-native-1440x900.png
@@ -346,7 +346,7 @@ e4d5b7c0cc91b2fa84387e180918fb5c7b2f507bb31d0a60b5c3a8346917d4ad  ./build/lib/ne
 df3162e19e40006ea4fd3e031d13bc2fe9f2d07d524e9c1f84f7d7b9e1aa56ce  ./build/lib/neo_tracker/visualization.py
 5a429f7d4b2b1311d85b2b1f7c20cd3f1b97cc4775c4c45136a3fc3308b21331  ./collab/FROM_CLAUDE.md
 ec4f6317dcf8def9817e5f6954dbfb8dee85f5e114353e0011d7d558b2169b11  ./collab/FROM_CODEX.md
-d9fa00d571b89d365ff9c3bfe2a6b64ac2456f3b35eba2b0d42c4697c83f2fc7  ./collab/FROM_DEEPSEEK.md
+46dd05f7ed9f161510fdb3bfadab210d8c8f4392c7f10df1b1508cd799b59a87  ./collab/FROM_DEEPSEEK.md
 b546e574e3ba1349d1d89b0f86e008526fb436b3f4c40c86f0d53b312645c0ee  ./collab/PROTOCOL.md
 b2e3eb5572fd7bcf4527a5107f067bb60e3b1dd693aba655756c1a1f6c835dbf  ./neo_tracker.egg-info/PKG-INFO
 15207053b832b7e102da57708dc767daece44dc6f1a8dd40174ce2d9815243b6  ./neo_tracker.egg-info/SOURCES.txt
@@ -433,4 +433,4 @@ c17661815cd19899305810d7038acd1db5c2c566ecbaf15b6eda1331db65e546  ./tests/test_t
 832fa5aedb68e50e5d6b70eed4695678c35d6c6eb0b7b4ad2db75d67e39e6280  ./tests/test_tracking_pipeline.py
 d3c3292de09a9e0581d1b5a8aae9de409d3a13b2fed8a6b01d422519aaacc635  ./tests/test_tracking_worker.py
 7b925aacf926451c08ab243336d276e53c53df9952100c571e78ac5b6b2cbb61  ./tests/test_ui_main_window.py
-aa983174211879588a75dcd1f09038a8693ef567376841eefd6ddab97a2df533  ./交接.md
+6712bdf393e8cb45b62ecf6dcd9228a3429a563920976c85f4f1d8aacbd8947c  ./交接.md
