@@ -50,6 +50,18 @@ PreviewCanvas(视频预览和 ROI 编辑器) → workflow section tabs(QTabBar) 
   均可键盘聚焦；空项目时仅保留最小可聚焦集（Add/Open/Save/task list/preview/tabs），
   状态相关控件正确加入/退出焦点链。
 
+## 证据 3：来源漂移状态（失败态）焦点链（`focus_chain_drift.py` →
+`drift-forward.json`）
+
+- 媒体加载后将 `media_identity_requires_review=True` 进入来源漂移状态：
+  `drift_state_entered=True`。
+- **危险操作保护**：`run_tracking_button` 在漂移态禁用
+  （`run_tracking_enabled_in_drift=False`）且 Run Tracking/Report 退出焦点链。
+- `Review Source…`（Choose replacement media / Relink）可键盘聚焦
+  （`relink_reachable=True`）；焦点链 14 控件闭环。
+- 至此 P1-B 要求的空/加载/完成/取消/失败（来源漂移）状态的键盘可达性均有
+  证据；剩余仅 VoiceOver、系统文本缩放与 OS 级真实按键（宿主会话受限）。
+
 ## 崩溃记录（harness 生命周期，非产品缺陷）
 
 - `Python-2026-08-09-222524.ips`：脚本首次运行在 media probe worker 结束前
