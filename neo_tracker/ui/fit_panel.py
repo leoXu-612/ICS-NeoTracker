@@ -32,6 +32,7 @@ class FitPanel(QWidget):
     cancelRequested = Signal()
     residualToggled = Signal(bool)
     exportRequested = Signal()
+    draftChanged = Signal()
 
     _MODELS = {
         "Linear": "linear",
@@ -44,6 +45,8 @@ class FitPanel(QWidget):
         super().__init__(parent)
         self._series: dict[str, SampleSeries] = {}
         self._busy = False
+        self._engine_available = True
+        self._syncing = False
         self.setAccessibleName("Physics model fit")
         self.setAccessibleDescription(
             "Choose a physical series, model, and true-time range. Fits run in the background."
@@ -56,17 +59,21 @@ class FitPanel(QWidget):
         self.series_combo = QComboBox()
         self.series_combo.setAccessibleName("Fit physical series")
         self.series_combo.currentIndexChanged.connect(self._series_changed)
+        self.series_combo.currentIndexChanged.connect(self._emit_draft_changed)
         form.addRow("Series", self.series_combo)
         self.model_combo = QComboBox()
         self.model_combo.setAccessibleName("Fit model")
         for display, value in self._MODELS.items():
             self.model_combo.addItem(display, value)
         self.model_combo.currentTextChanged.connect(self._model_changed)
+        self.model_combo.currentTextChanged.connect(self._emit_draft_changed)
         form.addRow("Model", self.model_combo)
 
         range_row = QHBoxLayout()
         self.range_start_spin = self._range_spin("Fit range start in true seconds")
         self.range_end_spin = self._range_spin("Fit range end in true seconds")
+        self.range_start_spin.valueChanged.connect(self._emit_draft_changed)
+        self.range_end_spin.valueChanged.connect(self._emit_draft_changed)
         range_row.addWidget(self.range_start_spin)
         range_row.addWidget(QLabel("to"))
         range_row.addWidget(self.range_end_spin)
@@ -78,11 +85,13 @@ class FitPanel(QWidget):
         self.initial_parameters_edit.setToolTip(
             'Named JSON values, for example {"omega": 6.28, "amplitude": 0.2}.'
         )
+        self.initial_parameters_edit.textChanged.connect(self._emit_draft_changed)
         form.addRow(self.initial_parameters_label, self.initial_parameters_edit)
         self.bounds_label = QLabel("Bounds")
         self.bounds_edit = QLineEdit("{}")
         self.bounds_edit.setAccessibleName("Nonlinear parameter bounds JSON")
         self.bounds_edit.setToolTip('Named JSON pairs, for example {"omega": [0.1, 20.0]}.')
+        self.bounds_edit.textChanged.connect(self._emit_draft_changed)
         form.addRow(self.bounds_label, self.bounds_edit)
         root.addLayout(form)
 
@@ -135,6 +144,7 @@ class FitPanel(QWidget):
         self._update_controls()
 
     def set_series(self, series: Sequence[SampleSeries]) -> None:
+        self._syncing = True
         items = tuple(series)
         self._series = {item.series_id: item for item in items}
         previous = self.series_combo.currentData()
@@ -154,6 +164,7 @@ class FitPanel(QWidget):
             else "No physical series is available."
         )
         self._update_controls()
+        self._syncing = False
 
     def draft(self) -> FitDraft:
         series_id = self.series_combo.currentData()
@@ -184,6 +195,7 @@ class FitPanel(QWidget):
         self._update_controls()
 
     def apply_state(self, state: AnalysisWorkspaceState) -> None:
+        self._engine_available = state.status != "unavailable"
         self.set_busy(state.status == "running")
         self.status_label.setText(state.message)
         if state.fit_result is not None:
@@ -260,8 +272,12 @@ class FitPanel(QWidget):
         ):
             widget.setVisible(nonlinear)
 
+    def _emit_draft_changed(self, *_args: object) -> None:
+        if not self._syncing:
+            self.draftChanged.emit()
+
     def _update_controls(self) -> None:
-        available = bool(self._series) and not self._busy
+        available = bool(self._series) and self._engine_available and not self._busy
         self.series_combo.setEnabled(available)
         self.model_combo.setEnabled(available)
         self.range_start_spin.setEnabled(available)

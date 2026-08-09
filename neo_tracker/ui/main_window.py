@@ -90,7 +90,7 @@ from neo_tracker.analysis import (
     STFTResult,
 )
 from neo_tracker.media import MediaIdentity, MediaInfo, MediaReader, has_media_backend
-from neo_tracker.kinematics import SampleSeries
+from neo_tracker.kinematics import FitResult, SampleSeries
 from neo_tracker.observations import ColorBlobObservation, observation_backend_info
 from neo_tracker.presets import PresetDescriptor, default_preset_registry
 from neo_tracker.project import (
@@ -99,6 +99,11 @@ from neo_tracker.project import (
     project_content_fingerprint,
 )
 from neo_tracker.ui.analysis_controller import AnalysisController, AnalysisRun, AnalysisSource
+from neo_tracker.ui.analysis_workspace_controller import (
+    AnalysisWorkspaceController,
+    AnalysisWorkspaceState,
+    FitDraft,
+)
 from neo_tracker.ui.analysis_worker import AnalysisWorker
 from neo_tracker.ui.calibration_editor import CalibrationEditor
 from neo_tracker.ui.edit_history_panel import EditHistoryPanel, EditHistorySelection
@@ -146,6 +151,7 @@ from neo_tracker.ui.review_response import (
 )
 from neo_tracker.ui.review_response_worker import ReviewResponseWorker
 from neo_tracker.ui.results_table_model import ResultsTableModel
+from neo_tracker.ui.fit_panel import FitPanel
 from neo_tracker.ui.action_registry import ActionRegistry
 from neo_tracker.ui.selection_session import (
     SelectionEvent,
@@ -424,7 +430,10 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         )
         self._applying_selection_revision: int | None = None
         self._physics_series_owner_token: int | None = None
+        self._physics_series_by_id: dict[str, SampleSeries] = {}
         self.physics_workspace = PhysicsWorkspace()
+        self.fit_panel = FitPanel()
+        self.physics_workspace.set_fit_widget(self.fit_panel)
         self.physics_workspace.sampleActivated.connect(self._physics_sample_activated)
         self.physics_workspace.plotSampleActivated.connect(
             self._physics_plot_sample_activated
@@ -433,6 +442,11 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self.physics_workspace.layoutStateChanged.connect(
             self._physics_workspace_layout_changed
         )
+        self.fit_panel.runRequested.connect(self._run_physics_fit)
+        self.fit_panel.cancelRequested.connect(self._cancel_physics_fit)
+        self.fit_panel.residualToggled.connect(self._physics_residual_toggled)
+        self.fit_panel.exportRequested.connect(self._export_physics_analysis)
+        self.fit_panel.draftChanged.connect(self._physics_fit_draft_changed)
         self.validate_json_button = QPushButton("Validate")
         self.apply_json_button = QPushButton("Apply JSON")
         self.reset_json_button = QPushButton("Reset View")
@@ -444,6 +458,18 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self._response_mode_routing_requested = False
         self._task_supervisor = TaskSupervisor()
         self._background_tasks = self._task_supervisor
+        self.analysis_workspace_controller = AnalysisWorkspaceController(
+            self._task_supervisor
+        )
+        self.analysis_workspace_controller.stateChanged.connect(
+            self._physics_fit_state_changed
+        )
+        self.analysis_workspace_controller.fitResultReady.connect(
+            self._physics_fit_ready
+        )
+        self.analysis_workspace_controller.idleReached.connect(
+            self._schedule_close_if_workers_stopped
+        )
         self._media_import_coordinator = MediaImportCoordinator(self._task_supervisor)
         self._media_import_coordinator.progressed.connect(self._media_probe_progressed)
         self._media_import_coordinator.completed.connect(self._media_import_completed)
@@ -1441,7 +1467,10 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
     def _reset_physics_context(self) -> None:
         task = self.current_task
         self._physics_series_owner_token = id(task)
+        self._physics_series_by_id = {}
         self.physics_workspace.set_series(())
+        self.fit_panel.set_series(())
+        self.analysis_workspace_controller.set_series(task, ())
         self.selection_session.activate_context(
             self._physics_task_id(task),
             self._physics_result_identity(task),
@@ -1471,6 +1500,7 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
             raise ValueError("physics series must share one source revision")
         source_revision = next(iter(revisions))
         self._physics_series_owner_token = id(task)
+        self._physics_series_by_id = {item.series_id: item for item in items}
         self.selection_session.activate_context(
             self._physics_task_id(task),
             result_identity or self._physics_result_identity(task),
@@ -1481,12 +1511,19 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
             if not outcome.accepted:
                 return False
         self.physics_workspace.set_series(items)
+        self.fit_panel.set_series(items)
+        self.analysis_workspace_controller.set_series(task, items)
         self.selection_session.select_frame(
             int(task.preview_frame_index),
             origin=SelectionOrigin.VIDEO,
             expected_source_revision=source_revision,
         )
         return True
+
+    def set_kinematics_fit_operator(self, operator: object | None) -> None:
+        """Inject the engine protocol without importing an engine implementation."""
+
+        self.analysis_workspace_controller.set_fit_operator(operator)  # type: ignore[arg-type]
 
     def _physics_sample_activated(self, series_id: str, sample_index: int) -> None:
         state = self.selection_session.state
@@ -1504,6 +1541,63 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
             int(sample_index),
             origin=SelectionOrigin.PLOT,
             expected_source_revision=state.source_revision,
+        )
+
+    def _run_physics_fit(self, draft_object: object) -> None:
+        if not isinstance(draft_object, FitDraft):
+            return
+        if self._background_tasks.closing:
+            return
+        if not self.analysis_workspace_controller.run_fit(
+            self.current_task,
+            draft_object,
+        ):
+            self.fit_panel.apply_state(self.analysis_workspace_controller.state)
+
+    def _cancel_physics_fit(self) -> None:
+        self.analysis_workspace_controller.cancel("Fit canceled by user.")
+
+    def _physics_fit_draft_changed(self) -> None:
+        state = self.analysis_workspace_controller.state
+        if state.fit_result is not None or self.analysis_workspace_controller.busy:
+            self.analysis_workspace_controller.invalidate(
+                "Series, model, or true-time range changed. Run the fit again."
+            )
+
+    def _physics_fit_state_changed(self, state: AnalysisWorkspaceState) -> None:
+        self.fit_panel.apply_state(state)
+        source = self._physics_series_by_id.get(state.selected_series_id or "")
+        if source is None or state.fit_result is None:
+            if source is not None:
+                self.physics_workspace.plot.set_fit_result(source, None)
+            return
+        self.physics_workspace.plot.set_fit_result(
+            source,
+            state.fit_result,
+            residual=state.residual_visible,
+        )
+
+    def _physics_fit_ready(self, result: object) -> None:
+        if not isinstance(result, FitResult):
+            return
+        state = self.analysis_workspace_controller.state
+        fit_id = (
+            f"fit:{state.source_revision}:{result.model.value}:"
+            f"{result.range_start_s:.12g}:{result.range_end_s:.12g}"
+        )
+        self.selection_session.select_fit(
+            fit_id,
+            origin=SelectionOrigin.FIT,
+            expected_source_revision=result.source_revision,
+        )
+
+    def _physics_residual_toggled(self, visible: bool) -> None:
+        self.analysis_workspace_controller.set_residual_visible(bool(visible))
+
+    def _export_physics_analysis(self) -> None:
+        self.statusBar().showMessage(
+            "Physics export is provided by the kinematics engine and will be connected during integration.",
+            7000,
         )
 
     def _selection_session_changed(self, event: SelectionEvent) -> None:
@@ -6921,6 +7015,8 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
             self._set_tracking_busy(False)
         if self._analysis_thread is None:
             self._set_analysis_busy(False)
+        if not self.analysis_workspace_controller.busy:
+            self.fit_panel.apply_state(self.analysis_workspace_controller.state)
         if self._media_probe_thread is None and self._project_open_thread is None:
             self._set_media_probe_busy(False)
         self._render_task(refresh_project_state=False)
@@ -6948,6 +7044,10 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
                 self._cancel_tracking()
             if "analysis" in active_kinds:
                 self._cancel_analysis("Closing Neo-Tracker; signal processing was canceled.", state="canceled")
+            if "kinematics-fit" in active_kinds:
+                self.analysis_workspace_controller.cancel(
+                    "Closing Neo-Tracker; the active fit was canceled."
+                )
             if "media-probe" in active_kinds:
                 self._cancel_media_probe()
             if "project-open" in active_kinds:
@@ -6968,6 +7068,7 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
             task.close_reader()
         self._retired_project_tasks.clear()
         self._analysis_coordinator.close()
+        self.analysis_workspace_controller.close()
         self._review_response_coordinator.close()
         self._preview_coordinator.close()
         self._playback_coordinator.close()

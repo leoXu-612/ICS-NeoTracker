@@ -1,12 +1,22 @@
 from __future__ import annotations
 
 import unittest
+import time
 
+from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QApplication, QWidget
 
+from neo_tracker.media import MediaInfo
 from neo_tracker.ui.analysis_workspace_controller import FitDraft
 from neo_tracker.ui.fit_panel import FitPanel
-from tests.test_application_kinematics_controller import fit_result, make_series
+from neo_tracker.ui.main_window import NeoTrackerWindow
+from tests.test_application_kinematics_controller import (
+    BlockingFitOperator,
+    RecordingFitOperator,
+    fit_result,
+    make_series,
+    pump_until,
+)
 
 
 class FitPanelTests(unittest.TestCase):
@@ -73,6 +83,78 @@ class FitPanelTests(unittest.TestCase):
         self.assertTrue(panel.cancel_button.isEnabled())
         self.assertFalse(panel.series_combo.isEnabled())
         self.assertIn("running", panel.status_label.text().lower())
+
+
+class MainWindowFitIntegrationTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.app = QApplication.instance() or QApplication([])
+        cls.gui_anchor = QWidget()
+
+    def make_window(self) -> NeoTrackerWindow:
+        window = NeoTrackerWindow()
+
+        def close_cleanly() -> None:
+            if window.analysis_workspace_controller.busy:
+                window.analysis_workspace_controller.cancel("Test cleanup.")
+                pump_until(lambda: not window.analysis_workspace_controller.busy)
+            window._discard_unapplied_drafts(show_status=False)
+            window._set_project_clean()
+            window.close()
+            QCoreApplication.processEvents()
+
+        self.addCleanup(close_cleanly)
+        return window
+
+    def test_engine_protocol_fit_updates_panel_plot_and_selection(self) -> None:
+        window = self.make_window()
+        operator = RecordingFitOperator()
+        window.set_kinematics_fit_operator(operator)
+        source = make_series()
+        window.current_task.media_info = MediaInfo(
+            fps=30.0,
+            frame_count=len(source),
+            width=640,
+            height=360,
+            duration_s=1.0,
+            available=True,
+        )
+        window.set_physics_series((source,))
+        self.assertTrue(window.fit_panel.run_button.isEnabled())
+
+        window.fit_panel.run_button.click()
+        pump_until(lambda: not window.analysis_workspace_controller.busy)
+
+        self.assertEqual(window.fit_panel.parameter_table.rowCount(), 2)
+        self.assertIsNotNone(window.physics_workspace.plot._fit_series)
+        self.assertIsNotNone(window.selection_session.state.selected_fit_id)
+        self.assertEqual(window.analysis_workspace_controller.state.status, "complete")
+
+        window.fit_panel.range_end_spin.setValue(0.8)
+        QCoreApplication.processEvents()
+        self.assertEqual(window.analysis_workspace_controller.state.status, "dirty")
+        self.assertIsNone(window.physics_workspace.plot._fit_series)
+
+    def test_close_cancels_active_fit_and_reaches_idle(self) -> None:
+        window = self.make_window()
+        operator = BlockingFitOperator()
+        window.set_kinematics_fit_operator(operator)
+        source = make_series()
+        window.set_physics_series((source,))
+        window.fit_panel.run_button.click()
+        pump_until(operator.entered.is_set)
+        window._set_project_clean()
+
+        window.close()
+        deadline = time.monotonic() + 2.0
+        while window.analysis_workspace_controller.busy and time.monotonic() < deadline:
+            QCoreApplication.processEvents()
+            time.sleep(0.001)
+        QCoreApplication.processEvents()
+
+        self.assertTrue(operator.canceled.is_set())
+        self.assertFalse(window.analysis_workspace_controller.busy)
+        self.assertTrue(window._background_tasks.idle)
 
 
 if __name__ == "__main__":
