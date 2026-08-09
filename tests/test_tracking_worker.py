@@ -1153,6 +1153,71 @@ class TrackingWorkerTests(unittest.TestCase):
         self.assertEqual(events[1][1][1], 7)
         self.assertTrue(reader.closed)
 
+    def test_isolated_results_batch_count_is_bounded(self) -> None:
+        producer = color_marker_preset()
+        TrackingWorker(
+            pipeline=producer,
+            reader_factory=_SpawnProcessingReader,
+            frame_count=17,
+            fps=25.0,
+            process_isolation=False,
+        ).run()
+        batch = list(producer.results)
+        self.assertEqual(len(batch), 17)
+
+        worker = TrackingWorker(
+            pipeline=color_marker_preset(),
+            reader_factory=_SpawnProcessingReader,
+            frame_count=1,
+            fps=25.0,
+            process_isolation=True,
+            checkpoint_frames=16,
+        )
+        with self.assertRaisesRegex(RuntimeError, "batch"):
+            worker._accept_isolated_results(batch)
+
+    def test_isolated_message_encode_rejects_oversized_payload(self) -> None:
+        from neo_tracker.ui.tracking_worker import (
+            TRACKING_IPC_MAX_MESSAGE_BYTES,
+            _encode_isolated_message,
+        )
+
+        self.assertGreater(TRACKING_IPC_MAX_MESSAGE_BYTES, 0)
+        with self.assertRaisesRegex(RuntimeError, "IPC message exceeded"):
+            _encode_isolated_message({"payload": b"x" * 8192}, limit=4096)
+
+    def test_isolated_receive_rejects_oversized_frame(self) -> None:
+        from multiprocessing import get_context
+
+        from neo_tracker.ui.tracking_worker import _receive_isolated_message
+
+        context = get_context("spawn")
+        receive, send = context.Pipe(duplex=False)
+        try:
+            send.send_bytes(actual_pickle_dumps({"kind": "progress", "value": 1}))
+            message = _receive_isolated_message(receive, limit=4096)
+            self.assertEqual(message["value"], 1)
+            send.send_bytes(actual_pickle_dumps({"kind": "results", "payload": b"x" * 8192}))
+            with self.assertRaises(OSError):
+                _receive_isolated_message(receive, limit=4096)
+        finally:
+            receive.close()
+            send.close()
+
+    def test_isolated_terminal_validation_rejects_malformed(self) -> None:
+        from neo_tracker.ui.tracking_worker import _validate_isolated_terminal
+
+        good = _validate_isolated_terminal(("terminal", 5, False, True, "note", "", {}))
+        self.assertEqual(good[1], 5)
+        for bad in (
+            ("terminal", 5),
+            ("terminal", 5, False, True, "note", "", "not-a-dict"),
+            "junk",
+            None,
+        ):
+            with self.assertRaises(ValueError):
+                _validate_isolated_terminal(bad)
+
 
 if __name__ == "__main__":
     unittest.main()

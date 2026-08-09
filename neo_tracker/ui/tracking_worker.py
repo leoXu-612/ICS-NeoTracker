@@ -28,6 +28,43 @@ DEFAULT_TRACKING_KILL_GRACE_S = 0.25
 DEFAULT_TRACKING_RESULT_CHECKPOINT_FRAMES = 16
 _PROCESS_POLL_INTERVAL_S = 0.02
 TRACKING_SOURCE_CHANGED_PREFIX = "TRACKING_SOURCE_CHANGED: "
+# Child-to-parent messages carry at most the debug-history retention cap (64 MiB)
+# plus one full-frame heavy response; 128 MiB keeps every legitimate run below
+# the bound while preventing an unbounded pickup from a runaway child.
+TRACKING_IPC_MAX_MESSAGE_BYTES = 128 * 1024 * 1024
+
+
+def _encode_isolated_message(
+    message: object,
+    limit: int = TRACKING_IPC_MAX_MESSAGE_BYTES,
+) -> bytes:
+    """Serialize one child message and fail closed when it exceeds the IPC limit."""
+
+    payload = pickle_dumps(message)
+    if len(payload) > limit:
+        raise RuntimeError(
+            f"isolated tracking IPC message exceeded the {limit}-byte limit"
+        )
+    return payload
+
+
+def _receive_isolated_message(connection: Connection, limit: int) -> object:
+    """Read one bounded child message; an oversized frame raises OSError."""
+
+    payload = connection.recv_bytes(maxlength=limit)
+    return pickle_loads(payload)
+
+
+def _validate_isolated_terminal(message: object) -> tuple[object, ...]:
+    """Return a terminal tuple with the exact shape both sides agree on."""
+
+    if (
+        not isinstance(message, tuple)
+        or len(message) != 7
+        or not isinstance(message[6], dict)
+    ):
+        raise ValueError("isolated tracking returned a malformed terminal result")
+    return message
 
 
 def _media_identity_failure(
@@ -350,24 +387,32 @@ def _isolated_tracking_process(
         _prepare_pipeline(pipeline, prefix)
     except Exception as exc:
         try:
-            connection.send(
-                (
-                    "terminal",
-                    completed,
-                    False,
-                    False,
-                    "",
-                    f"could not reconstruct isolated tracking input: {exc}",
-                    {},
+            connection.send_bytes(
+                _encode_isolated_message(
+                    (
+                        "terminal",
+                        completed,
+                        False,
+                        False,
+                        "",
+                        f"could not reconstruct isolated tracking input: {exc}",
+                        {},
+                    )
                 )
             )
+        except Exception:
+            pass
         finally:
             connection.close()
         return
 
     def send(message: tuple[object, ...]) -> bool:
         try:
-            connection.send(message)
+            payload = _encode_isolated_message(message)
+        except Exception as exc:
+            raise RuntimeError(f"isolated tracking IPC encode failed: {exc}") from exc
+        try:
+            connection.send_bytes(payload)
             return True
         except (BrokenPipeError, EOFError, OSError):
             cancel_requested.set()
@@ -619,6 +664,11 @@ class TrackingWorker(QObject):
         return True
 
     def _accept_isolated_results(self, results: list[TrackerResult]) -> None:
+        if not isinstance(results, list) or len(results) > self.checkpoint_frames:
+            raise RuntimeError(
+                "isolated tracking returned an oversized result batch "
+                f"(limit {self.checkpoint_frames})"
+            )
         append_result = getattr(self.pipeline, "_append_result", None)
         if not callable(append_result):
             raise RuntimeError("isolated tracking requires the built-in result retention contract")
@@ -737,7 +787,10 @@ class TrackingWorker(QObject):
                 received = False
                 try:
                     if receive_connection.poll(_PROCESS_POLL_INTERVAL_S):
-                        message = receive_connection.recv()
+                        message = _receive_isolated_message(
+                            receive_connection,
+                            limit=TRACKING_IPC_MAX_MESSAGE_BYTES,
+                        )
                         received = True
                         kind = message[0]
                         if kind == "results":
@@ -756,6 +809,11 @@ class TrackingWorker(QObject):
                             raise RuntimeError(f"unknown isolated tracking message {kind!r}")
                 except EOFError:
                     pipe_eof = True
+                except OSError as exc:
+                    pipe_eof = True
+                    process_cancel.set()
+                    if cancel_started_at is None:
+                        cancel_started_at = perf_counter()
 
                 if (
                     cancel_started_at is not None
@@ -807,6 +865,11 @@ class TrackingWorker(QObject):
                 process.close()
 
         if terminal is not None:
+            try:
+                terminal = _validate_isolated_terminal(terminal)
+            except ValueError as exc:
+                self.failed.emit(str(exc), completed)
+                return
             (
                 _kind,
                 terminal_completed,

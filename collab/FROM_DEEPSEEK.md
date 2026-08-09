@@ -273,3 +273,78 @@ fix(trust): bind MediaReader to its opened source version and fail closed on rep
 - Red/green: 5 failing TOCTOU tests -> 26 targeted OK; full suite 464 OK in
   72.181s; compileall and pip check pass; per-read stat ~1.7 us
 ```
+
+---
+
+# P1-A4（第四提交）— helper IPC 有界化 + 保存/导出/插件/UI 数据保护审计
+
+## Conclusion
+
+P1-A 第 3–6 项全部闭环：tracking 子→父 IPC 改为 128 MiB 有界信封并限制结果批次数量与
+终态形状（红 4 → 绿 4）；保存/导出、插件配置、UI 数据保护审计未发现新再现缺陷，补齐
+保存/导出 10 项与插件 config-diff 3 子项回归矩阵；全量 479 tests（62.192 s）、
+compileall、pip check 全过。
+
+## Findings
+
+- P1-A3（MEDIUM，已修复）：`tracking_worker` 子→父消息裸 `recv()` 无长度上限，且
+  `_accept_isolated_results` 不限制批次数量（17>16 被接受）。修复：`recv_bytes`
+  maxlength 128 MiB、`_encode_isolated_message` 超限即 fail-closed、批次
+  `len ≤ checkpoint_frames`、`_validate_isolated_terminal` 形状校验。
+- P1-A4（LOW，审计）：保存/导出原子模式（temp→fsync→replace→cleanup）已统一；
+  CSV 表头/单元格公式转义、NPZ 无 pickle 均覆盖；未发现新缺陷，补齐此前零覆盖的
+  失败路径回归矩阵。
+- P1-A5（LOW，审计）：pipeline config 白名单分派无任意代码实例化；未知模块类型经
+  config-diff 检查使项目载入 fail-closed（非静默降级）；第三方适配器隔离失败测试既有。
+- P1-A6（LOW，审计）：Open/Save/Tracking/Close/Discard/Relink 均有 token 门控、
+  失败恢复、原子应用与 revision 守卫；既有 143 项 UI 测试覆盖，未发现新缺口。
+
+## Changes Made / Files Modified
+
+- `neo_tracker/ui/tracking_worker.py`（IPC 有界信封/批次上限/终态校验）。
+- `tests/test_tracking_worker.py`（+4）、`tests/test_atomic_export.py`（新 10）、
+  `tests/test_project_controller.py`（+1，3 子项）。
+- `artifacts/deepseek-2026-08-09/p1a4-ipc-export-plugin-ui-safety.md`（新增证据）。
+- `交接.md`（3.80）、`PROJECT_INDEX.md`、`PROJECT_FILE_INDEX.sha256`、本文件。
+
+## Testing
+
+```bash
+# 红：1 行为失败 + 3 ImportError；绿：tracking_worker 30 / atomic_export 10 /
+# project_controller 19 定向全过
+PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen python3 -m unittest discover -s tests -q
+# Ran 479 tests in 62.192s OK
+PYTHONDONTWRITEBYTECODE=1 python3 -m compileall -q neo_tracker tests benchmarks  # 0
+python3 -m pip check   # No broken requirements found.
+pgrep -fl "neo_tracker|isolated_media|benchmark_project"  # 无残留
+```
+
+## Performance and Runtime Evidence
+
+- IPC 上限 128 MiB 覆盖 64 MiB debug-history + 48 MiB 帧字节上限；正常检查点远低于
+  上限，吞吐语义不变；全量 479 / 62.192 s OK。
+- 本批不涉及 project-open UI 路径；heartbeat 波动仍 `PARTIAL`（历史超限记录保留）。
+
+## Remaining Risks
+
+- Rerun prefix 的 spawn 参数 pickle 由 100,000-result 项目上限约束，无独立字节上限
+  （性能/内存成本点，非信任缺口）。
+- 保存/导出失败路径为模拟 ENOSPC/权限测试；真实磁盘满实机矩阵建议 P0-B 补跑。
+
+## Suggested Commit Message
+
+```text
+fix(trust): bound tracking IPC, lock export/plugin safety, audit UI data protection
+
+- tracking child->parent messages use a 128 MiB capped send_bytes/recv_bytes
+  envelope; oversized payloads fail closed instead of unbounded pickup
+- isolated result batches are capped at checkpoint_frames; terminal results
+  are shape-validated before unpacking
+- save/export safety matrix: atomic publish preserves existing targets and
+  cleans temp files on write/fsync/replace failure; CSV formula cells and
+  headers escaped; NPZ export failure cleanup
+- unknown pipeline module types in task snapshots fail project load closed
+  via config-diff (observation/state/motion locked by tests)
+- Red/green: 1 behavioral + 3 import failures -> 479 tests OK in 62.192s;
+  compileall and pip check pass
+```

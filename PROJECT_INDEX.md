@@ -62,8 +62,8 @@ neo_tracker/
   ui/confidence_plot.py 可切换、完整目标可点击且按显示像素保留端点/选中/极值/语义点的紧凑 Review 诊断图组件
   ui/review_response.py ROI-local 响应按需完整展开、历史响应图恢复与全局有界 LRU
   ui/review_response_worker.py QThread 后台历史响应图重算与取消
-  ui/tracking_worker.py QThread 监控与 spawn 解码/追踪子进程、单次 child-input 序列化、异常 EOF 有界失败、严格一帧预取、16 帧结果 checkpoint、0.35 s 取消宽限后的有界 terminate/kill、运行前后来源复核、插件隔离 fail-closed、终态性能样本
-tests/                 464 项 unittest 回归测试（含 media 依赖守卫、sampled identity 审查、ROI 上限与载入 fail-closed、WAV 通道/解码预检、NPZ 原子导出、`.ntproj` 重复键/类型混淆拒绝、MediaReader TOCTOU/symlink/VFR）
+  ui/tracking_worker.py QThread 监控与 spawn 解码/追踪子进程、单次 child-input 序列化、128 MiB 有界 IPC 信封与批次/终态校验、异常 EOF 有界失败、严格一帧预取、16 帧结果 checkpoint、0.35 s 取消宽限后的有界 terminate/kill、运行前后来源复核、插件隔离 fail-closed、终态性能样本
+tests/                 479 项 unittest 回归测试（含 media 依赖守卫、sampled identity 审查、ROI 上限与载入 fail-closed、WAV 通道/解码预检、NPZ 原子导出、`.ntproj` 重复键/类型混淆拒绝、MediaReader TOCTOU/symlink/VFR、tracking IPC 有界信封/批次上限、保存/导出失败清理与 CSV 公式转义、pipeline 配置 fail-closed）
 benchmarks/            可重复的 tracking input/compute、严格一帧预取、持久 Preview decoder session、进度 cadence、Add/Open/Save GUI heartbeat、100,000-result 项目流式打开与 Review 增量编辑、Color/Template/Edge/Annular/ROI/Review/Signal/WAV 工作集和语义对照基准
 assets/                App 图标与封面资产
 artifacts/             UI 审查截图、实验视频与可复现性能记录

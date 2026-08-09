@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import unittest
 from dataclasses import replace
 
@@ -111,6 +112,28 @@ class ProjectTaskControllerTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, r"project pipeline \$\.roi is invalid"):
             self.controller.task_from_snapshot(snapshot)
+
+    def test_snapshot_unknown_pipeline_module_fails_closed_via_config_diff(self) -> None:
+        cases = {
+            "$.observation_model.type": "evil_observation",
+            "$.state_model.type": "evil_state",
+            "$.motion_model.type": "evil_motion",
+        }
+        for path, unknown_type in cases.items():
+            with self.subTest(path=path):
+                config = self.registry["color_marker"].factory().to_config()
+                module_key = path.rsplit(".", 1)[0][2:]
+                config[module_key] = {"type": unknown_type}
+                snapshot = ProjectTaskSnapshot(
+                    media_path=None,
+                    pipeline_key="color_marker",
+                    pipeline_config=config,
+                )
+                with self.assertRaisesRegex(
+                    ValueError,
+                    rf"project pipeline {re.escape(path)} did not apply exactly",
+                ):
+                    self.controller.task_from_snapshot(snapshot)
 
     def test_invalid_snapshot_roi_fails_closed_and_invalid_calibration_ignored(self) -> None:
         snapshot = ProjectTaskSnapshot(
