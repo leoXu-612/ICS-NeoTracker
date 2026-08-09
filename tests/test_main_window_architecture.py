@@ -220,6 +220,57 @@ class MainWindowArchitectureTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertNotIn("PySide6.QtWidgets", coordinator_source)
 
+    def test_analysis_and_review_response_lifecycles_are_application_owned(self) -> None:
+        root = Path(__file__).parents[1]
+        source_path = root / "neo_tracker" / "ui" / "main_window.py"
+        tree = ast.parse(source_path.read_text(encoding="utf-8"))
+        window_class = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.ClassDef) and node.name == "NeoTrackerWindow"
+        )
+        constructor = next(
+            node
+            for node in window_class.body
+            if isinstance(node, ast.FunctionDef) and node.name == "__init__"
+        )
+        assigned_attributes = {
+            target.attr
+            for node in ast.walk(constructor)
+            if isinstance(node, (ast.Assign, ast.AnnAssign))
+            for target in (
+                node.targets if isinstance(node, ast.Assign) else [node.target]
+            )
+            if isinstance(target, ast.Attribute)
+            and isinstance(target.value, ast.Name)
+            and target.value.id == "self"
+        }
+        constructed_names = {
+            node.func.id
+            for node in ast.walk(window_class)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+        }
+        forbidden_state = {
+            "_analysis_thread",
+            "_analysis_worker",
+            "_analysis_job",
+            "_review_response_thread",
+            "_review_response_worker",
+            "_review_response_job",
+            "_pending_review_response",
+        }
+
+        self.assertTrue(forbidden_state.isdisjoint(assigned_attributes))
+        self.assertNotIn("AnalysisWorker", constructed_names)
+        self.assertNotIn("ReviewResponseWorker", constructed_names)
+        self.assertIn("AnalysisCoordinator", constructed_names)
+        self.assertIn("ReviewResponseCoordinator", constructed_names)
+        for name in ("analysis_coordinator.py", "review_response_coordinator.py"):
+            coordinator_source = (
+                root / "neo_tracker" / "application" / name
+            ).read_text(encoding="utf-8")
+            self.assertNotIn("PySide6.QtWidgets", coordinator_source)
+
 
 if __name__ == "__main__":
     unittest.main()

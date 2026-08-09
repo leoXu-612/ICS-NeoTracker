@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from neo_tracker.ui.isolated_media import PreviewDecoderSession
     from neo_tracker.ui.preview_decode_worker import PreviewDecodeRequest, PreviewDecodeResult
     from neo_tracker.ui.project_controller import DesktopTask
+    from neo_tracker.ui.review_response import ReviewResponseRequest
 
 
 @dataclass
@@ -62,6 +63,8 @@ class AnalysisJob:
     cancelled: bool = False
     cancel_message: str = "Processing canceled."
     cancel_state: str = "canceled"
+    completed: bool = False
+    failure_detail: str = ""
 
 
 @dataclass

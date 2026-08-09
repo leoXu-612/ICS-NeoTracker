@@ -49,6 +49,10 @@ from neo_tracker.application.job_state import (
     ReviewResponseJob,
     TrackingJob,
 )
+from neo_tracker.application.analysis_coordinator import (
+    AnalysisCoordinator,
+    AnalysisRequest,
+)
 from neo_tracker.application.media_import_coordinator import (
     MediaImportCoordinator,
     MediaImportRequest,
@@ -59,6 +63,9 @@ from neo_tracker.application.project_io_coordinator import (
     ProjectIOCoordinator,
     ProjectOpenRequest,
     ProjectSaveRequest,
+)
+from neo_tracker.application.review_response_coordinator import (
+    ReviewResponseCoordinator,
 )
 from neo_tracker.application.task_supervisor import TaskSupervisor
 from neo_tracker.application.tracking_coordinator import (
@@ -402,15 +409,8 @@ class NeoTrackerWindow(QMainWindow):
         self.json_status_label = QLabel("Synced")
         self.json_validation_message = QLabel()
         self._syncing_advanced_config = False
-        self._analysis_thread: QThread | None = None
-        self._analysis_worker: AnalysisWorker | None = None
-        self._analysis_job: AnalysisJob | None = None
         self.project_loader = NeoTrackerProject.load
         self.project_saver = save_project
-        self._review_response_thread: QThread | None = None
-        self._review_response_worker: ReviewResponseWorker | None = None
-        self._review_response_job: ReviewResponseJob | None = None
-        self._pending_review_response: ReviewResponseRequest | None = None
         self._response_mode_routing_requested = False
         self._task_supervisor = TaskSupervisor()
         self._background_tasks = self._task_supervisor
@@ -440,7 +440,24 @@ class NeoTrackerWindow(QMainWindow):
         self._preview_coordinator.result_ready.connect(self._preview_coordinator_completed)
         self._preview_coordinator.failed.connect(self._preview_coordinator_failed)
         self._preview_coordinator.idle_reached.connect(self._preview_coordinator_idle)
-        self._review_responses = ReviewResponseService(max_entries=4)
+        self._analysis_coordinator = AnalysisCoordinator(self._task_supervisor)
+        self._analysis_coordinator.started.connect(self._analysis_started)
+        self._analysis_coordinator.stage_changed.connect(self._analysis_stage_changed)
+        self._analysis_coordinator.result_ready.connect(self._analysis_completed)
+        self._analysis_coordinator.failed.connect(self._analysis_failed)
+        self._analysis_coordinator.finished.connect(self._analysis_thread_finished)
+        self._analysis_coordinator.idle_reached.connect(self._analysis_idle)
+        self._review_response_coordinator = ReviewResponseCoordinator(
+            self._task_supervisor,
+            service=ReviewResponseService(max_entries=4),
+        )
+        self._review_response_coordinator.response_ready.connect(
+            self._review_response_completed
+        )
+        self._review_response_coordinator.failed.connect(self._review_response_failed)
+        self._review_response_coordinator.idle_reached.connect(
+            self._review_response_idle
+        )
 
         self._build_ui()
         self._apply_style()
@@ -515,6 +532,38 @@ class NeoTrackerWindow(QMainWindow):
     @property
     def _tracking_job(self) -> TrackingJob | None:
         return self._tracking_coordinator.job
+
+    @property
+    def _analysis_thread(self) -> QThread | None:
+        return self._analysis_coordinator.thread
+
+    @property
+    def _analysis_worker(self) -> object | None:
+        return self._analysis_coordinator.worker
+
+    @property
+    def _analysis_job(self) -> AnalysisJob | None:
+        return self._analysis_coordinator.job
+
+    @property
+    def _review_response_thread(self) -> QThread | None:
+        return self._review_response_coordinator.thread
+
+    @property
+    def _review_response_worker(self) -> object | None:
+        return self._review_response_coordinator.worker
+
+    @property
+    def _review_response_job(self) -> ReviewResponseJob | None:
+        return self._review_response_coordinator.job
+
+    @property
+    def _pending_review_response(self) -> ReviewResponseRequest | None:
+        return self._review_response_coordinator.pending_request
+
+    @property
+    def _review_responses(self) -> ReviewResponseService:
+        return self._review_response_coordinator.service
 
     @property
     def _preview_decode_thread(self) -> QThread | None:
@@ -4467,60 +4516,10 @@ class NeoTrackerWindow(QMainWindow):
         first: ReviewResponseRequest,
         second: ReviewResponseRequest,
     ) -> bool:
-        return bool(
-            first.owner is second.owner
-            and first.pipeline_token == second.pipeline_token
-            and first.result is second.result
-        )
+        return ReviewResponseCoordinator.same_request(first, second)
 
     def _queue_review_response(self, request: ReviewResponseRequest) -> None:
-        if self._background_tasks.closing:
-            self._pending_review_response = None
-            return
-        job = self._review_response_job
-        if self._review_response_thread is not None and job is not None:
-            if self._same_review_response_request(job.request, request) and not job.cancelled:
-                return
-            pending = self._pending_review_response
-            if pending is None or not self._same_review_response_request(pending, request):
-                self._pending_review_response = request
-            self._cancel_active_review_response()
-            return
-        self._start_review_response(request)
-
-    def _start_review_response(self, request: ReviewResponseRequest) -> None:
-        if self._review_response_thread is not None:
-            return
-        token = self._background_tasks.start("review-response")
-        if token is None:
-            return
-        thread = QThread(self)
-        worker = ReviewResponseWorker(request)
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.completed.connect(self._review_response_completed)
-        worker.failed.connect(self._review_response_failed)
-        worker.canceled.connect(self._review_response_cancelled)
-        worker.completed.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        worker.canceled.connect(thread.quit)
-        worker.completed.connect(worker.deleteLater)
-        worker.failed.connect(worker.deleteLater)
-        worker.canceled.connect(worker.deleteLater)
-        thread.finished.connect(self._review_response_thread_finished)
-        thread.finished.connect(thread.deleteLater)
-        self._review_response_job = ReviewResponseJob(token=token, request=request)
-        self._review_response_thread = thread
-        self._review_response_worker = worker
-        thread.start()
-
-    def _cancel_active_review_response(self) -> None:
-        job = self._review_response_job
-        worker = self._review_response_worker
-        if job is None or worker is None or job.cancelled:
-            return
-        job.cancelled = True
-        worker.request_cancel()
+        self._review_response_coordinator.queue(request)
 
     def _cancel_review_response_requests(
         self,
@@ -4529,88 +4528,41 @@ class NeoTrackerWindow(QMainWindow):
         first_frame: int | None = None,
         clear_pending: bool,
     ) -> None:
-        threshold = int(first_frame) if first_frame is not None else None
-
-        def matches(request: ReviewResponseRequest) -> bool:
-            return bool(
-                (owner is None or request.owner is owner)
-                and (threshold is None or request.result.frame_index >= threshold)
-            )
-
-        if self._review_response_job is not None and matches(self._review_response_job.request):
-            self._cancel_active_review_response()
-        if clear_pending and self._pending_review_response is not None and matches(self._pending_review_response):
-            self._pending_review_response = None
+        self._review_response_coordinator.cancel_requests(
+            owner=owner,
+            first_frame=first_frame,
+            clear_pending=clear_pending,
+        )
 
     def _invalidate_review_responses(
         self,
         owner: object | None = None,
         first_frame: int | None = None,
     ) -> None:
-        if owner is None:
-            self._review_responses.clear()
-        else:
-            self._review_responses.invalidate(owner, first_frame)
-        self._cancel_review_response_requests(
-            owner=owner,
-            first_frame=first_frame,
-            clear_pending=True,
-        )
+        self._review_response_coordinator.invalidate(owner, first_frame)
 
-    def _review_response_completed(self, response_object: object) -> None:
-        job = self._review_response_job
-        if (
-            job is None
-            or not self._background_tasks.is_current(job.token)
-            or job.cancelled
-            or not isinstance(response_object, ReviewResponse)
-        ):
-            return
-        if not self._review_response_request_is_valid(job.request):
-            job.cancelled = True
-            return
-        self._review_responses.commit(job.request, response_object, fresh_for_lookup=True)
-        job.completed = True
+    def _review_response_completed(
+        self,
+        request: ReviewResponseRequest,
+        _response: ReviewResponse,
+    ) -> None:
+        if self._review_response_request_is_current(request):
+            self._render_preview()
 
-    def _review_response_failed(self, message: str) -> None:
-        job = self._review_response_job
-        if job is not None and self._background_tasks.is_current(job.token) and not job.cancelled:
-            job.failure_detail = f"Could not recompute the response map: {message}"
+    def _review_response_failed(
+        self,
+        request: ReviewResponseRequest,
+        message: str,
+    ) -> None:
+        if self._review_response_request_is_current(request):
+            self._set_response_status("Response: unavailable", "unavailable", message)
 
-    def _review_response_cancelled(self) -> None:
-        job = self._review_response_job
-        if job is not None and self._background_tasks.is_current(job.token):
-            job.cancelled = True
-
-    def _review_response_thread_finished(self) -> None:
-        job = self._review_response_job
-        pending = self._pending_review_response
-        self._review_response_worker = None
-        self._review_response_thread = None
-        self._review_response_job = None
-        self._pending_review_response = None
-        if job is not None:
-            self._background_tasks.finish(job.token)
-
+    def _review_response_idle(self) -> None:
         if self._background_tasks.closing:
             self._schedule_close_if_workers_stopped()
-            return
-        if pending is not None and self._review_response_request_is_current(pending):
-            self._start_review_response(pending)
-            return
-        if job is not None and job.completed and self._review_response_request_is_current(job.request):
-            self._render_preview()
-        elif job is not None and job.failure_detail and self._review_response_request_is_current(job.request):
-            self._set_response_status("Response: unavailable", "unavailable", job.failure_detail)
 
     def _review_response_request_is_valid(self, request: ReviewResponseRequest) -> bool:
-        pipeline = getattr(request.owner, "pipeline", None)
-        results = getattr(pipeline, "results", ())
-        return bool(
-            pipeline is not None
-            and id(pipeline) == request.pipeline_token
-            and any(result is request.result for result in results)
-        )
+        return self._review_response_coordinator.request_is_valid(request)
 
     def _review_response_request_is_current(self, request: ReviewResponseRequest) -> bool:
         return bool(
@@ -6645,37 +6597,19 @@ class NeoTrackerWindow(QMainWindow):
             self._show_analysis_failure(str(exc))
             return
 
-        token = self._background_tasks.start("analysis")
-        if token is None:
-            return
+        self._analysis_coordinator.start(
+            AnalysisRequest(
+                owner=task,
+                source=source,
+                config=config,
+                series_loader=series_loader,
+            )
+        )
+
+    def _analysis_started(self, job: AnalysisJob) -> None:
         self.analysis_controller.clear()
         self._set_analysis_export_enabled(False)
-        thread = QThread(self)
-        worker = AnalysisWorker(
-            source=source,
-            config=config,
-            owner_token=id(task),
-            series_loader=series_loader,
-        )
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.completed.connect(self._analysis_completed)
-        worker.failed.connect(self._analysis_failed)
-        worker.canceled.connect(self._analysis_cancelled)
-        worker.stage_changed.connect(self._analysis_stage_changed)
-        worker.completed.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        worker.canceled.connect(thread.quit)
-        worker.completed.connect(worker.deleteLater)
-        worker.failed.connect(worker.deleteLater)
-        worker.canceled.connect(worker.deleteLater)
-        thread.finished.connect(self._analysis_thread_finished)
-        thread.finished.connect(thread.deleteLater)
-        self._analysis_job = AnalysisJob(token=token, task=task, source=source, config=config)
-        self._analysis_thread = thread
-        self._analysis_worker = worker
-        self._set_analysis_busy(True, source)
-        thread.start()
+        self._set_analysis_busy(True, job.source)
 
     def _set_analysis_busy(self, busy: bool, source: AnalysisSource | None = None) -> None:
         self._set_analysis_export_enabled(False if busy else self.analysis_controller.has_result)
@@ -6690,7 +6624,9 @@ class NeoTrackerWindow(QMainWindow):
             self.correct_point_button.setEnabled(False)
             self.mark_lost_button.setEnabled(False)
             self.rerun_after_button.setEnabled(False)
-            self._analysis_stage_changed("loading")
+            job = self._analysis_job
+            if job is not None:
+                self._analysis_stage_changed(job, "loading")
             return
         source = self._current_analysis_source()
         self.run_analysis_button.setText("Run processing")
@@ -6700,11 +6636,9 @@ class NeoTrackerWindow(QMainWindow):
         self.run_analysis_button.setEnabled(source.available)
         self._render_tracking_status(self.current_task)
 
-    def _analysis_stage_changed(self, stage: str) -> None:
-        job = self._analysis_job
+    def _analysis_stage_changed(self, job: AnalysisJob, stage: str) -> None:
         if (
-            job is None
-            or not self._background_tasks.is_current(job.token)
+            not self._background_tasks.is_current(job.token)
             or job.cancelled
         ):
             return
@@ -6734,14 +6668,8 @@ class NeoTrackerWindow(QMainWindow):
         self._set_analysis_status(label, "running", detail)
 
     def _cancel_analysis(self, message: str, *, state: str) -> None:
-        job = self._analysis_job
-        worker = self._analysis_worker
-        if job is None or worker is None or job.cancelled:
+        if not self._analysis_coordinator.cancel(message, state=state):
             return
-        job.cancelled = True
-        job.cancel_message = message
-        job.cancel_state = state
-        worker.request_cancel()
         self.analysis_controller.clear()
         self._set_analysis_export_enabled(False)
         self.run_analysis_button.setText("Cancelling…")
@@ -6750,15 +6678,7 @@ class NeoTrackerWindow(QMainWindow):
         self.analysis_result_view.setPlainText(detail)
         self._set_analysis_status("Cancelling…", "running", detail)
 
-    def _analysis_completed(self, run_object: object) -> None:
-        job = self._analysis_job
-        if (
-            job is None
-            or not self._background_tasks.is_current(job.token)
-            or job.cancelled
-            or not isinstance(run_object, AnalysisRun)
-        ):
-            return
+    def _analysis_completed(self, job: AnalysisJob, run_object: AnalysisRun) -> None:
         source = self._current_analysis_source()
         context_matches = bool(
             job.task is self.current_task
@@ -6767,9 +6687,10 @@ class NeoTrackerWindow(QMainWindow):
             and run_object.config == self._analysis_config()
         )
         if not context_matches:
-            job.cancelled = True
-            job.cancel_message = "Task, source, or settings changed before processing finished. Run processing again."
-            job.cancel_state = "dirty" if source.available else "empty"
+            self._analysis_coordinator.cancel(
+                AnalysisCoordinator.STALE_MESSAGE,
+                state="dirty" if source.available else "empty",
+            )
             return
         self.analysis_controller.accept_run(run_object)
         self.analysis_result_view.setPlainText(run_object.summary)
@@ -6779,9 +6700,8 @@ class NeoTrackerWindow(QMainWindow):
         self._set_analysis_status(label, "complete", detail)
         self._set_analysis_finishing()
 
-    def _analysis_failed(self, message: str) -> None:
-        job = self._analysis_job
-        if job is None or not self._background_tasks.is_current(job.token) or job.cancelled:
+    def _analysis_failed(self, job: AnalysisJob, message: str) -> None:
+        if job.cancelled:
             return
         self._show_analysis_failure(message)
         self._set_analysis_finishing()
@@ -6799,25 +6719,8 @@ class NeoTrackerWindow(QMainWindow):
         self.analysis_result_view.setPlainText(detail)
         self._set_analysis_status("Failed", "failed", detail)
 
-    def _analysis_cancelled(self) -> None:
-        job = self._analysis_job
-        if (
-            job is not None
-            and self._background_tasks.is_current(job.token)
-            and not job.cancelled
-        ):
-            job.cancelled = True
-            job.cancel_message = "Processing canceled."
-            job.cancel_state = "canceled"
-
-    def _analysis_thread_finished(self) -> None:
-        job = self._analysis_job
-        self._analysis_worker = None
-        self._analysis_thread = None
-        self._analysis_job = None
-        if job is not None:
-            self._background_tasks.finish(job.token)
-        if job is not None and job.cancelled:
+    def _analysis_thread_finished(self, job: AnalysisJob) -> None:
+        if job.cancelled:
             self.analysis_controller.clear()
             self._set_analysis_export_enabled(False)
             labels = {
@@ -6833,6 +6736,8 @@ class NeoTrackerWindow(QMainWindow):
             )
         if not self._background_tasks.closing:
             self._set_analysis_busy(False)
+
+    def _analysis_idle(self) -> None:
         self._schedule_close_if_workers_stopped()
 
     def _export_analysis_csv(self) -> None:
@@ -6930,9 +6835,10 @@ class NeoTrackerWindow(QMainWindow):
         for task in self._retired_project_tasks:
             task.close_reader()
         self._retired_project_tasks.clear()
+        self._analysis_coordinator.close()
+        self._review_response_coordinator.close()
         self._preview_coordinator.close()
         self._playback_coordinator.close()
-        self._review_responses.clear()
         super().closeEvent(event)
 
     @staticmethod
