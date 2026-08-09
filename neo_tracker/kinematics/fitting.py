@@ -195,9 +195,12 @@ def _initial_sinusoidal(
         maximum_omega = minimum_omega * 2.0
     candidates = np.linspace(minimum_omega, maximum_omega, 256, dtype=np.float64)
     best_error = math.inf
-    best = np.array([max(float(np.ptp(observed)) * 0.5, 1e-9), candidates[0], 0.0, float(np.mean(observed))])
-    observed_sum = float(np.sum(observed))
-    observed_energy = float(np.dot(observed, observed))
+    observed_origin = float(np.mean(observed))
+    centered_observed = observed - observed_origin
+    best = np.array(
+        [max(float(np.ptp(observed)) * 0.5, 1e-9), candidates[0], 0.0, observed_origin]
+    )
+    observed_sum = float(np.sum(centered_observed))
     sample_count = float(len(observed))
     for omega in candidates:
         check_cancelled(cancellation, phase="sinusoidal initial estimate")
@@ -212,23 +215,31 @@ def _initial_sinusoidal(
             dtype=np.float64,
         )
         right_hand_side = np.array(
-            [np.dot(sine, observed), np.dot(cosine, observed), observed_sum],
+            [
+                np.dot(sine, centered_observed),
+                np.dot(cosine, centered_observed),
+                observed_sum,
+            ],
             dtype=np.float64,
         )
         if np.linalg.matrix_rank(normal) != 3:
             continue
         coefficients = np.linalg.solve(normal, right_hand_side)
-        error = float(
-            observed_energy
-            - 2.0 * np.dot(coefficients, right_hand_side)
-            + coefficients @ normal @ coefficients
+        fitted = (
+            coefficients[0] * sine
+            + coefficients[1] * cosine
+            + coefficients[2]
         )
-        error = max(0.0, error)
+        residual = centered_observed - fitted
+        error = float(np.dot(residual, residual))
         if error < best_error:
-            sine_coefficient, cosine_coefficient, offset = coefficients
+            sine_coefficient, cosine_coefficient, relative_offset = coefficients
             amplitude = math.hypot(float(sine_coefficient), float(cosine_coefficient))
             phase = math.atan2(float(cosine_coefficient), float(sine_coefficient))
-            best = np.array([amplitude, omega, phase, float(offset)], dtype=np.float64)
+            best = np.array(
+                [amplitude, omega, phase, observed_origin + float(relative_offset)],
+                dtype=np.float64,
+            )
             best_error = error
     return best
 
@@ -329,14 +340,34 @@ def nonlinear_fit(
     if np.any(initial < lower) or np.any(initial > upper):
         raise ValueError("nonlinear initial parameters fall outside safe or requested bounds")
 
+    optimization_initial = np.array(initial, copy=True)
+    optimization_lower = np.array(lower, copy=True)
+    optimization_upper = np.array(upper, copy=True)
+    observed_origin = 0.0
+    objective_observed = observed
+    if request.model is FitModel.SINUSOIDAL:
+        offset_index = names.index("offset")
+        observed_origin = float(np.mean(observed))
+        objective_observed = observed - observed_origin
+        optimization_initial[offset_index] -= observed_origin
+        optimization_lower[offset_index] -= observed_origin
+        optimization_upper[offset_index] -= observed_origin
+
     def objective(parameters: np.ndarray) -> np.ndarray:
         check_cancelled(cancellation, phase=f"{request.model.value} fit")
-        return evaluate_model(request.model, parameters, time_s) - observed
+        if request.model is FitModel.SINUSOIDAL:
+            amplitude, omega, phase, relative_offset = parameters
+            return (
+                amplitude * np.sin(omega * time_s + phase)
+                + relative_offset
+                - objective_observed
+            )
+        return evaluate_model(request.model, parameters, time_s) - objective_observed
 
     optimization = least_squares(
         objective,
-        initial,
-        bounds=(lower, upper),
+        optimization_initial,
+        bounds=(optimization_lower, optimization_upper),
         max_nfev=max_evaluations,
         method="trf",
     )
@@ -344,7 +375,9 @@ def nonlinear_fit(
     if not bool(optimization.success):
         message = str(getattr(optimization, "message", "nonlinear fit did not converge"))
         raise ValueError(f"{request.model.value} fit did not converge: {message}")
-    raw_parameters = np.asarray(optimization.x, dtype=np.float64)
+    raw_parameters = np.array(optimization.x, dtype=np.float64, copy=True)
+    if request.model is FitModel.SINUSOIDAL:
+        raw_parameters[names.index("offset")] += observed_origin
     if not np.isfinite(raw_parameters).all():
         raise ValueError("nonlinear optimizer produced non-finite parameters")
     predicted = np.full(len(series), np.nan, dtype=np.float64)
@@ -355,8 +388,7 @@ def nonlinear_fit(
     if sample_count > parameter_count and jacobian.shape == (sample_count, parameter_count):
         rank = int(np.linalg.matrix_rank(jacobian))
         if rank == parameter_count:
-            raw_prediction = evaluate_model(request.model, raw_parameters, time_s)
-            raw_residual = observed - raw_prediction
+            raw_residual = np.asarray(optimization.fun, dtype=np.float64)
             sigma_squared = float(np.dot(raw_residual, raw_residual)) / (
                 sample_count - parameter_count
             )

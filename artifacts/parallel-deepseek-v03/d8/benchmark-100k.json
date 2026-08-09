@@ -4,85 +4,86 @@
   "sample_count": 100000,
   "method": "snapshot+series+derivatives+fits+exports",
   "iterations": 5,
+  "timing_scope": "hot series-build+first-derivative+linear-fit pipeline; excludes the one-time live-result snapshot and exports reported under stage_timing_ms",
   "timing_ms": {
-    "median": 74.9566670274362,
-    "p95": 75.56086672120728,
-    "max": 75.62800002051517
+    "median": 75.9394170017913,
+    "p95": 76.86660421895795,
+    "max": 76.96962502086535
   },
   "stage_timing_ms": {
     "snapshot": {
-      "median": 542.7191250491887,
-      "p95": 542.7191250491887,
-      "max": 542.7191250491887
+      "median": 525.2660830155946,
+      "p95": 525.2660830155946,
+      "max": 525.2660830155946
     },
     "series_build": {
-      "median": 69.29245899664238,
-      "p95": 72.28244179859757,
-      "max": 72.34591699671
+      "median": 72.16904201777652,
+      "p95": 72.6920000044629,
+      "max": 72.80937500763685
     },
     "derivatives": {
-      "median": 2.042209031060338,
-      "p95": 2.310616010800004,
-      "max": 2.369416004512459
+      "median": 2.2909590043127537,
+      "p95": 4.2907163966447115,
+      "max": 4.69933298882097
     },
     "fits": {
-      "median": 6.293291982728988,
-      "p95": 6.607882981188595,
-      "max": 6.6194579703733325
+      "median": 7.641333038918674,
+      "p95": 7.894125592429191,
+      "max": 7.923208991996944
     },
     "csv_export": {
-      "median": 588.9782500453293,
-      "p95": 588.9782500453293,
-      "max": 588.9782500453293
+      "median": 641.0187919973396,
+      "p95": 641.0187919973396,
+      "max": 641.0187919973396
     },
     "npz_export": {
-      "median": 139.29383299546316,
-      "p95": 139.29383299546316,
-      "max": 139.29383299546316
+      "median": 145.20837500458583,
+      "p95": 145.20837500458583,
+      "max": 145.20837500458583
     },
     "markdown_export": {
-      "median": 0.7520829676650465,
-      "p95": 0.7520829676650465,
-      "max": 0.7520829676650465
+      "median": 0.6627499824389815,
+      "p95": 0.6627499824389815,
+      "max": 0.6627499824389815
     }
   },
-  "peak_rss_mb": 275.78125,
+  "peak_rss_mb": 272.046875,
   "rss_stage_mb": {
-    "live_tracker_results": 141.859375,
-    "immutable_snapshot": 197.109375,
-    "final_series": 224.609375
+    "live_tracker_results": 145.15625,
+    "immutable_snapshot": 199.640625,
+    "final_series": 242.875
   },
   "rss_repeat_mb": [
-    275.25,
-    275.296875,
-    275.296875,
-    275.296875,
-    275.296875
+    249.875,
+    254.109375,
+    254.109375,
+    254.109375,
+    257.640625
   ],
-  "rss_repeat_growth_mb": 0.046875,
+  "rss_repeat_growth_mb": 7.765625,
   "result_digest": "87b78f03d212bad467226add0d78aec448fd557efa7f07cbdb0011c132606cfc",
-  "accuracy_error": 2.2737367544343885e-9,
+  "accuracy_error": 2.2737367544343885e-09,
   "accuracy": {
     "linear_slope_abs": 1.7763568394002505e-15,
-    "linear_acceleration_max_abs": 2.2737367544343885e-9,
+    "linear_acceleration_max_abs": 2.2737367544343885e-09,
     "quadratic_parameter_max_abs": 1.1641532182693481e-10
   },
-  "cancellation_latency_ms": 2.7827080339193344,
+  "cancellation_latency_ms": 2.8528329567052424,
   "cancellation": {
     "series": {
-      "latency_ms": 2.7827080339193344,
+      "latency_ms": 2.8528329567052424,
       "terminal": "KinematicsCancelled"
     },
     "derivative": {
-      "latency_ms": 0.21016597747802734,
+      "latency_ms": 0.21887494949623942,
       "terminal": "KinematicsCancelled"
     },
     "fit": {
-      "latency_ms": 0.32533396733924747,
+      "latency_ms": 0.31070795375853777,
       "terminal": "cancelled"
     },
     "export": {
-      "latency_ms": 0.02020795363932848,
+      "latency_ms": 0.020415987819433212,
       "terminal": "KinematicsCancelled"
     }
   },

@@ -4,24 +4,25 @@
   "sample_count": 100000,
   "method": "centered_lstsq+scipy_least_squares_optional",
   "iterations": 5,
+  "timing_scope": "hot linear+quadratic fit pair; excludes nonlinear fits and the separately reported sinusoid initial guess",
   "timing_ms": {
-    "median": 5.740292021073401,
-    "p95": 6.080949981696904,
-    "max": 6.165249971672893
+    "median": 6.840666988864541,
+    "p95": 7.013566978275776,
+    "max": 7.016541960183531
   },
   "sinusoid_guess": {
     "sample_count": 100000,
     "frequency_candidates": 256,
     "timing_ms": {
-      "median": 160.90295801404864,
-      "p95": 161.24930857331492,
-      "max": 161.28779196878895
+      "median": 185.68212498212233,
+      "p95": 197.8127372218296,
+      "max": 199.1605830262415
     },
-    "cancellation_latency_ms": 0.8953330107033253,
+    "cancellation_latency_ms": 1.3042089994996786,
     "cancellation_terminal": "KinematicsCancelled"
   },
-  "peak_rss_mb": 124.28125,
-  "result_digest": "b17261e11020940578c5c4d71f6d6fbda1cf056dc627f80fd5a8d3be867c908f",
+  "peak_rss_mb": 134.390625,
+  "result_digest": "2d869222a708377862de3fe6a9fa196f8287f01db90694edf70c45ce4650432f",
   "accuracy_error": 1.1641532182693481e-10,
   "accuracy": {
     "linear_parameter_max_abs": 6.366462912410498e-12,
@@ -30,7 +31,7 @@
     "sinusoidal_no_initial_max_abs": 1.687538997430238e-14
   },
   "nonlinear_available": true,
-  "cancellation_latency_ms": 0.8953330107033253,
+  "cancellation_latency_ms": 1.3042089994996786,
   "gates": {
     "linear_accuracy": true,
     "quadratic_accuracy": true,

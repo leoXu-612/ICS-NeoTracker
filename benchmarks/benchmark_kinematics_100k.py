@@ -226,6 +226,10 @@ def benchmark(sample_count: int, iterations: int) -> dict[str, object]:
         "sample_count": count,
         "method": "snapshot+series+derivatives+fits+exports",
         "iterations": rounds,
+        "timing_scope": (
+            "hot series-build+first-derivative+linear-fit pipeline; excludes the one-time "
+            "live-result snapshot and exports reported under stage_timing_ms"
+        ),
         "timing_ms": pipeline_timing,
         "stage_timing_ms": {
             "snapshot": {"median": snapshot_ms, "p95": snapshot_ms, "max": snapshot_ms},

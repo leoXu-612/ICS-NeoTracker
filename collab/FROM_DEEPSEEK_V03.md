@@ -27,7 +27,9 @@
 - 100k quadratic parameter max absolute error: `1.1641532182693481e-10`.
 - Exponential with no supplied initial parameters: `2.233768725545815e-13`.
 - Sinusoidal with no supplied initial parameters: `1.687538997430238e-14`.
-- High-DC R², positive/negative exponential rate, missing gaps, VFR, tiny-dt, overflow, stale, unavailable, failed, and cancelled terminals have dedicated tests.
+- No-initial `1e9 + 2 sin(1.7t + 0.4)` recovery: RMSE `1.1921e-08`.
+- No-initial `1e12 + 2 sin(1.7t + 0.4)` recovery: RMSE `1.4183e-05`.
+- High-DC R² and sinusoid fitting, positive/negative exponential rate, missing gaps, VFR, tiny-dt, overflow, stale, unavailable, failed, and cancelled terminals have dedicated tests.
 
 ### Files Changed
 - Engine: `series.py`, `derivatives.py`, `smoothing.py`, `fitting.py`, `residuals.py`, `models.py`, `units.py`, `export.py`, `runtime.py`.
@@ -38,8 +40,8 @@
 
 ### Tests
 - Baseline before implementation: 544 tests, 70.092 s, OK.
-- Kinematics targeted: 65 tests, 0.771 s, OK.
-- Full branch: 588 tests, 63.116 s, OK (0 FAIL, 0 ERROR).
+- Kinematics targeted: 66 tests, 0.824 s, OK.
+- Full branch: 589 tests, 62.188 s, OK (0 FAIL, 0 ERROR).
 - `python3 -m compileall -q neo_tracker tests benchmarks`: exit 0.
 - `python3 -m pip check`: no broken requirements.
 
@@ -47,12 +49,13 @@
 - Base series build 100k: median `97.292 ms`, P95 `99.173 ms`, max `99.513 ms`.
 - VFR first+second derivative 100k: median `1.887 ms`, P95 `1.949 ms`, max `1.958 ms`.
 - SavGol first+second derivative 100k: median `4.067 ms`, P95 `4.618 ms`, max `4.732 ms`.
-- Linear+quadratic fits 100k: median `5.740 ms`, P95 `6.081 ms`, max `6.165 ms`.
-- 256-frequency sinusoid guess 100k: median `160.903 ms`; cancellation `0.895 ms`.
-- End-to-end compute pipeline 100k: median `74.957 ms`, P95 `75.561 ms`, max `75.628 ms`.
-- CSV 100k: `588.978 ms`; NPZ 100k: `139.294 ms`.
-- End-to-end peak RSS: `275.781 MiB`; 5-repeat RSS growth: `0.047 MiB`.
-- Maximum end-to-end cancellation latency: `2.783 ms`.
+- Linear+quadratic fits 100k: median `6.841 ms`, P95 `7.014 ms`, max `7.017 ms`.
+- 256-frequency sinusoid guess 100k: median `185.682 ms`; cancellation `1.304 ms`.
+- End-to-end hot compute pipeline 100k: median `75.939 ms`, P95 `76.867 ms`, max `76.970 ms`.
+- End-to-end `timing_ms` excludes the one-time snapshot and exports; their times are reported separately under `stage_timing_ms`.
+- CSV 100k: `641.019 ms`; NPZ 100k: `145.208 ms`.
+- End-to-end peak RSS: `272.047 MiB`; 5-repeat RSS growth: `7.766 MiB`.
+- Maximum end-to-end cancellation latency: `2.853 ms`.
 
 ### Public API Compatibility
 - `KinematicsEngineRuntime` satisfies contract `SeriesBuilder`, `DerivativeOperator`, and `FitOperator` protocols without Qt/UI dependencies.

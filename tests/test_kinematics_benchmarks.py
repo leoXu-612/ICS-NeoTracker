@@ -71,6 +71,11 @@ class KinematicsBenchmarkContractTests(unittest.TestCase):
                 self.assertIsInstance(payload["timing_ms"]["median"], float)
                 self.assertIsInstance(payload["timing_ms"]["p95"], float)
                 self.assertIsInstance(payload["timing_ms"]["max"], float)
+                if script == "benchmark_kinematics_100k.py":
+                    self.assertIn("hot", payload["timing_scope"])
+                    self.assertIn("excludes", payload["timing_scope"])
+                    self.assertIn("snapshot", payload["timing_scope"])
+                    self.assertIn("exports", payload["timing_scope"])
 
 
 if __name__ == "__main__":

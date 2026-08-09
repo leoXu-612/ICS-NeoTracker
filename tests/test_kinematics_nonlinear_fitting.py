@@ -121,6 +121,43 @@ class NonlinearFitTests(unittest.TestCase):
                 np.testing.assert_allclose(result.parameters, expected, rtol=2e-7, atol=2e-7)
                 self.assertLess(result.rmse, 1e-9)
 
+    @unittest.skipUnless(fitting._load_least_squares() is not None, "SciPy is unavailable")
+    def test_builtin_sinusoidal_guess_is_stable_with_large_dc_offset(self) -> None:
+        time_s = np.linspace(0.0, 12.0, 2_000, dtype=np.float64)
+        for offset in (1e9, 1e12):
+            with self.subTest(offset=offset):
+                values = offset + 2.0 * np.sin(1.7 * time_s + 0.4)
+                source = SampleSeries(
+                    series_id=f"high-dc:{offset:g}",
+                    name="High DC sinusoid",
+                    frame_indices=np.arange(len(time_s), dtype=np.int64),
+                    time_s=time_s,
+                    values=values,
+                    valid_mask=np.ones(len(time_s), dtype=bool),
+                    unit="m",
+                    source_kind="synthetic",
+                    source_revision="high-dc-v1",
+                )
+                result = fit_series(
+                    source,
+                    FitRequest(
+                        source.series_id,
+                        "sinusoidal",
+                        float(time_s[0]),
+                        float(time_s[-1]),
+                        source.source_revision,
+                    ),
+                )
+                self.assertIs(result.status, FitStatus.OK)
+                np.testing.assert_allclose(
+                    result.parameters[:3],
+                    [2.0, 1.7, 0.4],
+                    rtol=2e-4,
+                    atol=2e-4,
+                )
+                self.assertAlmostEqual(result.parameters[3], offset, delta=1e-3)
+                self.assertLess(result.rmse, 2e-4)
+
     def test_nonconvergence_has_a_stable_failed_terminal_state(self) -> None:
         class FailedOptimization:
             success = False

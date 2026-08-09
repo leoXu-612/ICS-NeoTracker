@@ -153,6 +153,10 @@ def benchmark(sample_count: int, iterations: int, sinusoid_guess_samples: int) -
         "sample_count": count,
         "method": "centered_lstsq+scipy_least_squares_optional",
         "iterations": max(1, int(iterations)),
+        "timing_scope": (
+            "hot linear+quadratic fit pair; excludes nonlinear fits and the separately "
+            "reported sinusoid initial guess"
+        ),
         "timing_ms": timing,
         "sinusoid_guess": {
             "sample_count": guess_count,
