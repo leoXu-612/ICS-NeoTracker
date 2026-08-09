@@ -31,7 +31,7 @@ neo_tracker/
   states.py           状态模型
   motion.py           运动先验
   filters.py          追踪滤波器
-  media.py            视频与音频媒体层、精确 seek 落点验证/重开顺序恢复、完整/有界采样 source identity，以及 metadata/digest 同文件版本 stat guard
+  media.py            视频与音频媒体层、精确 seek 落点验证/重开顺序恢复、完整/有界采样 source identity、metadata/digest 同文件版本 stat guard，以及 MediaReader 打开后/逐读取/重开前后的来源版本守卫（TOCTOU fail-closed）
   atomic_io.py        同目录临时文件、flush/fsync、原子替换与失败回滚的通用持久化边界
   csv_utils.py        电子表格公式注入防护与统一 CSV 单元格净化
   analysis.py         有界分块 WAV PCM 解码、一次式 tracking source metadata 发现、低复制/cancel-aware dense-sparse 选中序列、FFT/STFT 与信号分析
@@ -63,7 +63,7 @@ neo_tracker/
   ui/review_response.py ROI-local 响应按需完整展开、历史响应图恢复与全局有界 LRU
   ui/review_response_worker.py QThread 后台历史响应图重算与取消
   ui/tracking_worker.py QThread 监控与 spawn 解码/追踪子进程、单次 child-input 序列化、异常 EOF 有界失败、严格一帧预取、16 帧结果 checkpoint、0.35 s 取消宽限后的有界 terminate/kill、运行前后来源复核、插件隔离 fail-closed、终态性能样本
-tests/                 458 项 unittest 回归测试（含 media 依赖守卫、sampled identity 审查、ROI 上限与载入 fail-closed、WAV 通道/解码预检、NPZ 原子导出、`.ntproj` 重复键/类型混淆拒绝）
+tests/                 464 项 unittest 回归测试（含 media 依赖守卫、sampled identity 审查、ROI 上限与载入 fail-closed、WAV 通道/解码预检、NPZ 原子导出、`.ntproj` 重复键/类型混淆拒绝、MediaReader TOCTOU/symlink/VFR）
 benchmarks/            可重复的 tracking input/compute、严格一帧预取、持久 Preview decoder session、进度 cadence、Add/Open/Save GUI heartbeat、100,000-result 项目流式打开与 Review 增量编辑、Color/Template/Edge/Annular/ROI/Review/Signal/WAV 工作集和语义对照基准
 assets/                App 图标与封面资产
 artifacts/             UI 审查截图、实验视频与可复现性能记录

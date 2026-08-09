@@ -196,3 +196,80 @@ fix(trust): reject duplicate JSON keys and type-confused .ntproj version/index f
 - Benchmark 4x5: rounds 1/3/4 pass; round 2 has one 88.62 ms over-limit
   with elevated batch time; PARTIAL retained, evidence kept as valid JSON
 ```
+
+---
+
+# P1-A3（第三提交）— MediaReader 来源版本守卫（TOCTOU）
+
+## Conclusion
+
+P1-A 第 2 项（媒体信任边界）中 MediaReader 打开后不再校验来源版本的 TOCTOU 缺口已关闭：
+构造后、每次读取与每次重开前后均复验 dev/ino/size/mtime/ctime，来源被替换/重写/换类型时
+fail-closed 抛错；红 5 项 → 定向 26 OK、全量 464（72.181 s）、compileall、pip check
+全过，无残留进程。
+
+## Findings
+
+- A（MEDIUM，已修复）：`MediaReader.__init__` 曾丢弃构造期文件版本，`_read_frame` 与
+  `_reopen_capture` 无任何守卫。复现：打开后 `os.replace` 替换来源，读取仍返回旧 fd 帧；
+  seek 失败触发重开时会静默打开新文件并返回其帧，跟踪子进程可能混入新旧来源。影响：
+  运行结果与项目 source identity 不一致且无错误。修复：`self._source_version` 保存 +
+  `_verify_source_unchanged()` 在打开后/每次读取/重开前后调用，不一致即释放并抛错。
+- B（LOW，测试固化）：symlink 指向常规文件允许（`S_ISREG` 检查解析后目标），目标被替换
+  时经解析 inode 变化被守卫捕获；指向 FIFO/设备的拒绝、悬空 symlink 报不存在。
+- C（LOW，测试固化）：VFR/错误 frame count——报告长度超过实际可解码帧时抛
+  `EndOfMediaError`，不重复末帧；seek 落点验证/重开顺序恢复保留。
+
+## Changes Made / Files Modified
+
+- `neo_tracker/media.py`：MediaReader 来源版本守卫（构造后复验、逐读取复验、重开前后复验）。
+- `tests/test_media.py`：+6 项测试（5 项 TOCTOU + 1 项 VFR 表征）。
+- `artifacts/deepseek-2026-08-09/p1a3-media-reader-version-guard.md`（新增证据）。
+- `交接.md`（3.79）、`PROJECT_INDEX.md`、`PROJECT_FILE_INDEX.sha256`、本文件。
+
+## Testing
+
+```bash
+# 红：旧实现 5 项失败（RuntimeError not raised）；绿：定向 26 OK
+PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen python3 -m unittest tests.test_media -q
+# 全量：Ran 464 tests in 72.181s OK
+PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen \
+  python3 -m unittest discover -s tests -q
+PYTHONDONTWRITEBYTECODE=1 python3 -m compileall -q neo_tracker tests benchmarks  # 0
+python3 -m pip check   # No broken requirements found.
+pgrep -fl "neo_tracker|isolated_media|benchmark_project"  # 无残留
+PYTHONPATH=. QT_QPA_PLATFORM=offscreen \
+  python3 benchmarks/benchmark_project_open_ui.py \
+  --results 100000 --repeat-background 3 --max-heartbeat-ms 75 \
+  > artifacts/deepseek-2026-08-09/benchmark-p1a3-round1.json \
+  2> artifacts/deepseek-2026-08-09/benchmark-p1a3-round1.stderr.txt
+# round1 exit=0；round2 同命令 exit=0；json.tool 通过
+```
+
+## Performance and Runtime Evidence
+
+- 每次读取新增一次 `stat`：实测约 1.7 µs/次（200,000 次采样），相对解码 ms 级可忽略。
+- project-open 基准两轮 × 3 次：逐值 46.62/64.04/48.71 ms 与 59.75/58.46/51.35 ms，
+  max 64.04/59.75，0 次超 75 ms，退出码 0；`results_exact=True`、
+  `payload_equal=True`、fingerprint `d9c2dd5992cc…` 一致。
+- 历史 heartbeat 超限记录（P1-A2 第 2 轮 88.62 ms、更早 153.45 ms）保留，整体 `PARTIAL`。
+
+## Remaining Risks
+
+- stat 守卫不承诺检测刻意保留 inode/size/mtime 且无 ctime 变化的篡改（仅根权限级）。
+- 大文件 sampled identity 仍是采样；真实 H.264/HEVC、CFR/VFR 来源替换矩阵需 P0-B 素材。
+
+## Suggested Commit Message
+
+```text
+fix(trust): bind MediaReader to its opened source version and fail closed on replacement
+
+- MediaReader stores dev/ino/size/mtime_ns/ctime_ns at construction and
+  re-verifies after VideoCapture open, before every frame read, and both
+  before and after reopen; a replaced/rewritten/non-regular source raises
+  RuntimeError instead of mixing frames or silently switching sources
+- Symlink-to-regular-file stays accepted; retargeted symlinks are detected
+  through the resolved inode; VFR/truncated sources raise EndOfMediaError
+- Red/green: 5 failing TOCTOU tests -> 26 targeted OK; full suite 464 OK in
+  72.181s; compileall and pip check pass; per-read stat ~1.7 us
+```

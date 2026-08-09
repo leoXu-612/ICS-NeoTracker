@@ -714,6 +714,396 @@ class MediaLayerTests(unittest.TestCase):
             media._CV2 = old_cv2
             media._CV2_IMPORT_ERROR = old_error
 
+    def test_media_reader_rejects_source_replaced_between_open_and_read(self) -> None:
+        class ReplacingCapture:
+            def __init__(self) -> None:
+                self.position = 0
+
+            def isOpened(self) -> bool:
+                return True
+
+            def get(self, prop: int) -> float:
+                return {1: float(self.position), 2: 30.0, 3: 20.0, 4: 8.0, 5: 6.0}.get(prop, 0.0)
+
+            def set(self, prop: int, value: float) -> bool:
+                if prop == 1:
+                    self.position = int(value)
+                return True
+
+            def grab(self) -> bool:
+                self.position += 1
+                return True
+
+            def read(self) -> tuple[bool, np.ndarray]:
+                frame = np.full((2, 3, 3), self.position, dtype=np.uint8)
+                self.position += 1
+                return True, frame
+
+            def release(self) -> None:
+                return None
+
+        class FakeCV2:
+            CAP_PROP_POS_FRAMES = 1
+            CAP_PROP_FPS = 2
+            CAP_PROP_FRAME_COUNT = 3
+            CAP_PROP_FRAME_WIDTH = 4
+            CAP_PROP_FRAME_HEIGHT = 5
+            COLOR_BGR2RGB = 6
+
+            def VideoCapture(self, _path: str) -> ReplacingCapture:
+                return ReplacingCapture()
+
+            @staticmethod
+            def cvtColor(frame: np.ndarray, _code: int) -> np.ndarray:
+                return frame
+
+        old_cv2 = media._CV2
+        old_error = media._CV2_IMPORT_ERROR
+        try:
+            media._CV2 = FakeCV2()
+            media._CV2_IMPORT_ERROR = None
+            with tempfile.TemporaryDirectory() as tmpdir:
+                root = Path(tmpdir)
+                path = root / "clip.mp4"
+                path.write_bytes(b"original payload")
+                replacement = root / "replacement.mp4"
+                replacement.write_bytes(b"a completely different payload")
+                with media.MediaReader(str(path)) as reader:
+                    os.replace(replacement, path)
+                    with self.assertRaisesRegex(RuntimeError, "changed"):
+                        reader.read_frame(0)
+        finally:
+            media._CV2 = old_cv2
+            media._CV2_IMPORT_ERROR = old_error
+
+    def test_media_reader_rejects_source_rewritten_in_place_between_reads(self) -> None:
+        class RewriteCapture:
+            def __init__(self) -> None:
+                self.position = 0
+
+            def isOpened(self) -> bool:
+                return True
+
+            def get(self, prop: int) -> float:
+                return {1: float(self.position), 2: 30.0, 3: 20.0, 4: 8.0, 5: 6.0}.get(prop, 0.0)
+
+            def set(self, prop: int, value: float) -> bool:
+                if prop == 1:
+                    self.position = int(value)
+                return True
+
+            def grab(self) -> bool:
+                self.position += 1
+                return True
+
+            def read(self) -> tuple[bool, np.ndarray]:
+                frame = np.full((2, 3, 3), self.position, dtype=np.uint8)
+                self.position += 1
+                return True, frame
+
+            def release(self) -> None:
+                return None
+
+        class FakeCV2:
+            CAP_PROP_POS_FRAMES = 1
+            CAP_PROP_FPS = 2
+            CAP_PROP_FRAME_COUNT = 3
+            CAP_PROP_FRAME_WIDTH = 4
+            CAP_PROP_FRAME_HEIGHT = 5
+            COLOR_BGR2RGB = 6
+
+            def VideoCapture(self, _path: str) -> RewriteCapture:
+                return RewriteCapture()
+
+            @staticmethod
+            def cvtColor(frame: np.ndarray, _code: int) -> np.ndarray:
+                return frame
+
+        old_cv2 = media._CV2
+        old_error = media._CV2_IMPORT_ERROR
+        try:
+            media._CV2 = FakeCV2()
+            media._CV2_IMPORT_ERROR = None
+            with tempfile.TemporaryDirectory() as tmpdir:
+                path = Path(tmpdir) / "clip.mp4"
+                path.write_bytes(b"original payload")
+                with media.MediaReader(str(path)) as reader:
+                    path.write_bytes(b"rewritten in place with a longer body")
+                    with self.assertRaisesRegex(RuntimeError, "changed"):
+                        reader.read_frame(0)
+        finally:
+            media._CV2 = old_cv2
+            media._CV2_IMPORT_ERROR = old_error
+
+    def test_media_reader_reopen_after_source_replacement_fails_closed(self) -> None:
+        class RejectingCapture:
+            def __init__(self) -> None:
+                self.position = 0
+                self.grab_calls = 0
+
+            def isOpened(self) -> bool:
+                return True
+
+            def get(self, prop: int) -> float:
+                return {1: float(self.position), 2: 30.0, 3: 40.0, 4: 8.0, 5: 6.0}.get(prop, 0.0)
+
+            def set(self, _prop: int, _value: float) -> bool:
+                return False
+
+            def grab(self) -> bool:
+                self.grab_calls += 1
+                if self.position >= 40:
+                    return False
+                self.position += 1
+                return True
+
+            def read(self) -> tuple[bool, np.ndarray]:
+                frame = np.full((2, 3, 3), self.position, dtype=np.uint8)
+                self.position += 1
+                return True, frame
+
+            def release(self) -> None:
+                return None
+
+        class FakeCV2:
+            CAP_PROP_POS_FRAMES = 1
+            CAP_PROP_FPS = 2
+            CAP_PROP_FRAME_COUNT = 3
+            CAP_PROP_FRAME_WIDTH = 4
+            CAP_PROP_FRAME_HEIGHT = 5
+            COLOR_BGR2RGB = 6
+
+            def __init__(self) -> None:
+                self.captures: list[RejectingCapture] = []
+
+            def VideoCapture(self, _path: str) -> RejectingCapture:
+                capture = RejectingCapture()
+                self.captures.append(capture)
+                return capture
+
+            @staticmethod
+            def cvtColor(frame: np.ndarray, _code: int) -> np.ndarray:
+                return frame
+
+        old_cv2 = media._CV2
+        old_error = media._CV2_IMPORT_ERROR
+        try:
+            media._CV2 = FakeCV2()
+            media._CV2_IMPORT_ERROR = None
+            with tempfile.TemporaryDirectory() as tmpdir:
+                root = Path(tmpdir)
+                path = root / "clip.mp4"
+                path.write_bytes(b"original payload")
+                replacement = root / "replacement.mp4"
+                replacement.write_bytes(b"a completely different payload")
+                with media.MediaReader(str(path)) as reader:
+                    os.replace(replacement, path)
+                    with self.assertRaisesRegex(RuntimeError, "changed"):
+                        reader.read_frame(20)
+        finally:
+            media._CV2 = old_cv2
+            media._CV2_IMPORT_ERROR = old_error
+
+    def test_media_reader_rejects_source_change_during_capture_open(self) -> None:
+        class SwapCapture:
+            def __init__(self) -> None:
+                self.position = 0
+
+            def isOpened(self) -> bool:
+                return True
+
+            def get(self, prop: int) -> float:
+                return {1: float(self.position), 2: 30.0, 3: 20.0, 4: 8.0, 5: 6.0}.get(prop, 0.0)
+
+            def set(self, prop: int, value: float) -> bool:
+                if prop == 1:
+                    self.position = int(value)
+                return True
+
+            def grab(self) -> bool:
+                self.position += 1
+                return True
+
+            def read(self) -> tuple[bool, np.ndarray]:
+                frame = np.full((2, 3, 3), self.position, dtype=np.uint8)
+                self.position += 1
+                return True, frame
+
+            def release(self) -> None:
+                return None
+
+        class FakeCV2:
+            CAP_PROP_POS_FRAMES = 1
+            CAP_PROP_FPS = 2
+            CAP_PROP_FRAME_COUNT = 3
+            CAP_PROP_FRAME_WIDTH = 4
+            CAP_PROP_FRAME_HEIGHT = 5
+            COLOR_BGR2RGB = 6
+
+            def VideoCapture(self, _path: str) -> SwapCapture:
+                return SwapCapture()
+
+            @staticmethod
+            def cvtColor(frame: np.ndarray, _code: int) -> np.ndarray:
+                return frame
+
+        old_cv2 = media._CV2
+        old_error = media._CV2_IMPORT_ERROR
+        versions = iter([(1, 2, 3, 4, 5), (6, 7, 8, 9, 10)])
+        try:
+            media._CV2 = FakeCV2()
+            media._CV2_IMPORT_ERROR = None
+            with tempfile.TemporaryDirectory() as tmpdir:
+                path = Path(tmpdir) / "clip.mp4"
+                path.write_bytes(b"fake")
+                with patch.object(
+                    media,
+                    "_media_file_version",
+                    side_effect=lambda _path: next(versions),
+                ):
+                    with self.assertRaisesRegex(RuntimeError, "changed"):
+                        media.MediaReader(str(path))
+        finally:
+            media._CV2 = old_cv2
+            media._CV2_IMPORT_ERROR = old_error
+
+    @unittest.skipUnless(hasattr(os, "symlink"), "symlink requires platform support")
+    def test_media_reader_follows_regular_file_symlink_and_detects_target_swap(self) -> None:
+        class SymlinkCapture:
+            def __init__(self) -> None:
+                self.position = 0
+
+            def isOpened(self) -> bool:
+                return True
+
+            def get(self, prop: int) -> float:
+                return {1: float(self.position), 2: 30.0, 3: 20.0, 4: 8.0, 5: 6.0}.get(prop, 0.0)
+
+            def set(self, prop: int, value: float) -> bool:
+                if prop == 1:
+                    self.position = int(value)
+                return True
+
+            def grab(self) -> bool:
+                self.position += 1
+                return True
+
+            def read(self) -> tuple[bool, np.ndarray]:
+                frame = np.full((2, 3, 3), self.position, dtype=np.uint8)
+                self.position += 1
+                return True, frame
+
+            def release(self) -> None:
+                return None
+
+        class FakeCV2:
+            CAP_PROP_POS_FRAMES = 1
+            CAP_PROP_FPS = 2
+            CAP_PROP_FRAME_COUNT = 3
+            CAP_PROP_FRAME_WIDTH = 4
+            CAP_PROP_FRAME_HEIGHT = 5
+            COLOR_BGR2RGB = 6
+
+            def VideoCapture(self, _path: str) -> SymlinkCapture:
+                return SymlinkCapture()
+
+            @staticmethod
+            def cvtColor(frame: np.ndarray, _code: int) -> np.ndarray:
+                return frame
+
+        old_cv2 = media._CV2
+        old_error = media._CV2_IMPORT_ERROR
+        try:
+            media._CV2 = FakeCV2()
+            media._CV2_IMPORT_ERROR = None
+            with tempfile.TemporaryDirectory() as tmpdir:
+                root = Path(tmpdir)
+                original = root / "original.mp4"
+                original.write_bytes(b"original payload")
+                replacement = root / "replacement.mp4"
+                replacement.write_bytes(b"a completely different payload")
+                link = root / "clip.mp4"
+                os.symlink(str(original), str(link))
+                with media.MediaReader(str(link)) as reader:
+                    first = reader.read_frame(0)
+                    self.assertIsNotNone(first)
+                    os.replace(replacement, original)
+                    with self.assertRaisesRegex(RuntimeError, "changed"):
+                        reader.read_frame(1)
+        finally:
+            media._CV2 = old_cv2
+            media._CV2_IMPORT_ERROR = old_error
+
+    def test_media_reader_raises_end_error_when_reported_count_exceeds_actual_vfr(self) -> None:
+        class VfrCapture:
+            def __init__(self) -> None:
+                self.position = 0
+                self.grab_calls = 0
+
+            def isOpened(self) -> bool:
+                return True
+
+            def get(self, prop: int) -> float:
+                return {1: float(self.position), 2: 30.0, 3: 40.0, 4: 8.0, 5: 6.0}.get(prop, 0.0)
+
+            def set(self, prop: int, value: float) -> bool:
+                if prop == 1:
+                    self.position = int(value)
+                return True
+
+            def grab(self) -> bool:
+                self.grab_calls += 1
+                if self.position >= 21:
+                    return False
+                self.position += 1
+                return True
+
+            def read(self) -> tuple[bool, np.ndarray | None]:
+                if self.position >= 21:
+                    return False, None
+                frame = np.full((2, 3, 3), self.position, dtype=np.uint8)
+                self.position += 1
+                return True, frame
+
+            def release(self) -> None:
+                return None
+
+        class FakeCV2:
+            CAP_PROP_POS_FRAMES = 1
+            CAP_PROP_FPS = 2
+            CAP_PROP_FRAME_COUNT = 3
+            CAP_PROP_FRAME_WIDTH = 4
+            CAP_PROP_FRAME_HEIGHT = 5
+            COLOR_BGR2RGB = 6
+
+            def __init__(self) -> None:
+                self.captures: list[VfrCapture] = []
+
+            def VideoCapture(self, _path: str) -> VfrCapture:
+                capture = VfrCapture()
+                self.captures.append(capture)
+                return capture
+
+            @staticmethod
+            def cvtColor(frame: np.ndarray, _code: int) -> np.ndarray:
+                return frame
+
+        old_cv2 = media._CV2
+        old_error = media._CV2_IMPORT_ERROR
+        try:
+            media._CV2 = FakeCV2()
+            media._CV2_IMPORT_ERROR = None
+            with tempfile.TemporaryDirectory() as tmpdir:
+                path = Path(tmpdir) / "vfr.mp4"
+                path.write_bytes(b"fake")
+                with media.MediaReader(str(path)) as reader:
+                    with self.assertRaises(media.EndOfMediaError) as raised:
+                        reader.read_frame_for_processing(30)
+            self.assertEqual(raised.exception.frame_index, 30)
+        finally:
+            media._CV2 = old_cv2
+            media._CV2_IMPORT_ERROR = old_error
+
 
 if __name__ == "__main__":
     unittest.main()

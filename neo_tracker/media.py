@@ -321,7 +321,7 @@ class MediaReader:
         if not media_path.exists():
             raise FileNotFoundError(f"Media file does not exist: {self.path}")
         try:
-            _media_file_version(media_path)
+            source_version = _media_file_version(media_path)
         except OSError as exc:
             raise RuntimeError(f"Could not inspect media file: {self.path} ({exc})") from exc
         if media_path.suffix.lower() == ".wav":
@@ -332,7 +332,15 @@ class MediaReader:
         self._capture = self._cv2.VideoCapture(str(media_path))
         if not self._capture.isOpened():
             self._capture.release()
+            self._capture = None
             raise RuntimeError(f"Could not open media file: {self.path}")
+        try:
+            self._verify_source_unchanged(source_version)
+        except RuntimeError:
+            self._capture.release()
+            self._capture = None
+            raise
+        self._source_version = source_version
 
         fps = float(self._capture.get(self._cv2.CAP_PROP_FPS) or 0.0)
         frame_count = int(self._capture.get(self._cv2.CAP_PROP_FRAME_COUNT) or 0)
@@ -395,6 +403,7 @@ class MediaReader:
     ) -> np.ndarray:
         if self._capture is None:
             raise RuntimeError(f"Media reader is closed: {self.path}")
+        self._verify_source_unchanged(self._source_version)
         index = self._clamp_frame(frame_index) if clamp_to_reported_length else max(0, int(frame_index))
         if index < self._next_frame_index or index - self._next_frame_index > 12:
             self._seek_or_recover(index)
@@ -430,6 +439,20 @@ class MediaReader:
         if not self._grab_to(index):
             raise EndOfMediaError(index, self.path)
 
+    def _verify_source_unchanged(self, expected_version: _FileVersion) -> None:
+        """Fail closed when the media path no longer matches the opened source."""
+
+        try:
+            current_version = _media_file_version(Path(self.path))
+        except OSError as exc:
+            raise RuntimeError(
+                f"Media source changed or became unreadable while it was open: {self.path} ({exc})"
+            ) from exc
+        if current_version != expected_version:
+            raise RuntimeError(
+                f"Media source changed while it was open; reopen or retry with the new file: {self.path}"
+            )
+
     def _reported_frame_position(self) -> int | None:
         if self._capture is None:
             return None
@@ -454,6 +477,7 @@ class MediaReader:
         return self._next_frame_index == index
 
     def _reopen_capture(self) -> None:
+        self._verify_source_unchanged(self._source_version)
         capture = self._capture
         if capture is not None:
             capture.release()
@@ -463,6 +487,13 @@ class MediaReader:
             self._capture = None
             self._next_frame_index = 0
             raise RuntimeError(f"Could not reopen media file after a failed seek: {self.path}")
+        try:
+            self._verify_source_unchanged(self._source_version)
+        except RuntimeError:
+            replacement.release()
+            self._capture = None
+            self._next_frame_index = 0
+            raise
         self._capture = replacement
         self._next_frame_index = 0
 
