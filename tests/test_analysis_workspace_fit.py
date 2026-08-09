@@ -1,0 +1,180 @@
+from __future__ import annotations
+
+import unittest
+import time
+
+from PySide6.QtCore import QCoreApplication
+from PySide6.QtWidgets import QApplication, QWidget
+
+from neo_tracker.media import MediaInfo
+from neo_tracker.ui.analysis_workspace_controller import FitDraft
+from neo_tracker.ui.fit_panel import FitPanel
+from neo_tracker.ui.main_window import NeoTrackerWindow
+from tests.test_application_kinematics_controller import (
+    BlockingFitOperator,
+    RecordingFitOperator,
+    UnavailableFitOperator,
+    fit_result,
+    make_series,
+    pump_until,
+)
+
+
+class FitPanelTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.app = QApplication.instance() or QApplication([])
+        cls.gui_anchor = QWidget()
+
+    def test_panel_emits_user_draft_not_a_numerical_result(self) -> None:
+        panel = FitPanel()
+        source = make_series()
+        panel.set_series((source,))
+        panel.model_combo.setCurrentText("Linear")
+        panel.range_start_spin.setValue(0.2)
+        panel.range_end_spin.setValue(0.8)
+        drafts: list[FitDraft] = []
+        panel.runRequested.connect(drafts.append)
+
+        panel.run_button.click()
+
+        self.assertEqual(drafts, [FitDraft(source.series_id, "linear", 0.2, 0.8)])
+        self.assertFalse(hasattr(panel, "fit_operator"))
+
+    def test_nonlinear_parameters_are_explicit_json_and_validation_is_textual(self) -> None:
+        panel = FitPanel()
+        panel.set_series((make_series(),))
+        panel.model_combo.setCurrentText("Sinusoidal")
+        self.assertTrue(panel.initial_parameters_edit.isVisibleTo(panel) or not panel.isVisible())
+        panel.initial_parameters_edit.setText('{"omega": 3.0}')
+        panel.bounds_edit.setText('{"omega": [0.1, 10.0]}')
+
+        draft = panel.draft()
+
+        self.assertEqual(draft.initial_parameters, {"omega": 3.0})
+        self.assertEqual(draft.bounds, {"omega": (0.1, 10.0)})
+        panel.initial_parameters_edit.setText("not-json")
+        panel.run_button.click()
+        self.assertIn("valid JSON", panel.status_label.text())
+
+    def test_result_summary_shows_parameters_units_metrics_and_samples(self) -> None:
+        panel = FitPanel()
+        source = make_series()
+        panel.set_series((source,))
+        request = FitDraft(source.series_id, "linear", 0.0, 1.0).to_request(source)
+        result = fit_result(source, request)
+
+        panel.show_result(result)
+
+        self.assertIn("R² 1", panel.summary_label.text())
+        self.assertIn("RMSE 0", panel.summary_label.text())
+        self.assertIn("11 samples", panel.summary_label.text())
+        self.assertEqual(panel.parameter_table.rowCount(), 2)
+        self.assertEqual(panel.parameter_table.item(0, 0).text(), "slope")
+        self.assertEqual(panel.parameter_table.item(0, 2).text(), "m/s")
+        self.assertTrue(panel.residual_checkbox.isEnabled())
+        self.assertTrue(panel.export_button.isEnabled())
+
+    def test_busy_state_exposes_cancel_and_disables_mutating_inputs(self) -> None:
+        panel = FitPanel()
+        panel.set_series((make_series(),))
+        panel.set_busy(True)
+
+        self.assertFalse(panel.run_button.isEnabled())
+        self.assertTrue(panel.cancel_button.isEnabled())
+        self.assertFalse(panel.series_combo.isEnabled())
+        self.assertIn("running", panel.status_label.text().lower())
+
+
+class MainWindowFitIntegrationTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.app = QApplication.instance() or QApplication([])
+        cls.gui_anchor = QWidget()
+
+    def make_window(self) -> NeoTrackerWindow:
+        window = NeoTrackerWindow()
+
+        def close_cleanly() -> None:
+            if window.analysis_workspace_controller.busy:
+                window.analysis_workspace_controller.cancel("Test cleanup.")
+                pump_until(lambda: not window.analysis_workspace_controller.busy)
+            window._discard_unapplied_drafts(show_status=False)
+            window._set_project_clean()
+            window.close()
+            QCoreApplication.processEvents()
+
+        self.addCleanup(close_cleanly)
+        return window
+
+    def test_engine_protocol_fit_updates_panel_plot_and_selection(self) -> None:
+        window = self.make_window()
+        operator = RecordingFitOperator()
+        window.set_kinematics_fit_operator(operator)
+        source = make_series()
+        window.current_task.media_info = MediaInfo(
+            fps=30.0,
+            frame_count=len(source),
+            width=640,
+            height=360,
+            duration_s=1.0,
+            available=True,
+        )
+        window.set_physics_series((source,))
+        self.assertTrue(window.fit_panel.run_button.isEnabled())
+
+        window.fit_panel.run_button.click()
+        pump_until(lambda: not window.analysis_workspace_controller.busy)
+
+        self.assertEqual(window.fit_panel.parameter_table.rowCount(), 2)
+        self.assertIsNotNone(window.physics_workspace.plot._fit_series)
+        self.assertIsNotNone(window.selection_session.state.selected_fit_id)
+        self.assertEqual(window.analysis_workspace_controller.state.status, "complete")
+
+        window.fit_panel.range_end_spin.setValue(0.8)
+        QCoreApplication.processEvents()
+        self.assertEqual(window.analysis_workspace_controller.state.status, "dirty")
+        self.assertIsNone(window.physics_workspace.plot._fit_series)
+
+    def test_close_cancels_active_fit_and_reaches_idle(self) -> None:
+        window = self.make_window()
+        operator = BlockingFitOperator()
+        window.set_kinematics_fit_operator(operator)
+        source = make_series()
+        window.set_physics_series((source,))
+        window.fit_panel.run_button.click()
+        pump_until(operator.entered.is_set)
+        window._set_project_clean()
+
+        window.close()
+        deadline = time.monotonic() + 2.0
+        while window.analysis_workspace_controller.busy and time.monotonic() < deadline:
+            QCoreApplication.processEvents()
+            time.sleep(0.001)
+        QCoreApplication.processEvents()
+
+        self.assertTrue(operator.canceled.is_set())
+        self.assertFalse(window.analysis_workspace_controller.busy)
+        self.assertTrue(window._background_tasks.idle)
+
+    def test_unavailable_fit_is_text_only_and_does_not_enable_result_actions(self) -> None:
+        window = self.make_window()
+        window.set_kinematics_fit_operator(UnavailableFitOperator())
+        source = make_series()
+        window.set_physics_series((source,))
+
+        window.fit_panel.run_button.click()
+        pump_until(lambda: not window.analysis_workspace_controller.busy)
+
+        state = window.analysis_workspace_controller.state
+        self.assertEqual(state.status, "unavailable")
+        self.assertIn("unavailable", window.fit_panel.status_label.text().lower())
+        self.assertIsNone(state.fit_result)
+        self.assertIsNone(window.physics_workspace.plot._fit_series)
+        self.assertIsNone(window.selection_session.state.selected_fit_id)
+        self.assertFalse(window.fit_panel.residual_checkbox.isEnabled())
+        self.assertFalse(window.fit_panel.export_button.isEnabled())
+
+
+if __name__ == "__main__":
+    unittest.main()

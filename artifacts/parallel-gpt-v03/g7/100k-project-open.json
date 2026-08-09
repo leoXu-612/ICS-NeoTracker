@@ -1,0 +1,43 @@
+{
+  "command": "PYTHONPATH=. PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen python3 benchmarks/benchmark_project_open_ui.py --results 100000 --repeat-background 3 --max-heartbeat-ms 75",
+  "host_load_averages": [3.33, 3.22, 3.34],
+  "results": 100000,
+  "file_mib": 44.39827632904053,
+  "synchronous_reference": {
+    "call_ms": 1835.4725840035826,
+    "batch_ms": 1835.473584011197,
+    "max_heartbeat_ms": 1840.105167008005
+  },
+  "background_summary": {
+    "call_ms": 0.55704201804474,
+    "batch_ms": 4199.549708981067,
+    "max_heartbeat_ms": 45.45658302959055,
+    "apply_ms": 42.82529198098928
+  },
+  "background_runs": [
+    {
+      "call_ms": 0.4554159822873771,
+      "batch_ms": 4249.392582976725,
+      "max_heartbeat_ms": 34.84687500167638,
+      "apply_ms": 30.86062503280118
+    },
+    {
+      "call_ms": 0.6231659790500998,
+      "batch_ms": 4139.665291004349,
+      "max_heartbeat_ms": 46.26470903167501,
+      "apply_ms": 42.19683300470933
+    },
+    {
+      "call_ms": 0.55704201804474,
+      "batch_ms": 4199.549708981067,
+      "max_heartbeat_ms": 45.45658302959055,
+      "apply_ms": 42.82529198098928
+    }
+  ],
+  "results_exact": true,
+  "payload_equal": true,
+  "synchronous_fingerprint": "d9c2dd5992ccbd437da8cf320d4422a3137a6b7ef8ec815999f0947051c250b0",
+  "background_fingerprint": "d9c2dd5992ccbd437da8cf320d4422a3137a6b7ef8ec815999f0947051c250b0",
+  "deferred_diagnostics_pending": false,
+  "deferred_analysis_pending": false
+}

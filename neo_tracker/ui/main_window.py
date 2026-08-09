@@ -89,6 +89,7 @@ from neo_tracker.analysis import (
     STFTResult,
 )
 from neo_tracker.media import MediaIdentity, MediaInfo, MediaReader, has_media_backend
+from neo_tracker.kinematics import SampleSeries
 from neo_tracker.observations import ColorBlobObservation, observation_backend_info
 from neo_tracker.presets import PresetDescriptor, default_preset_registry
 from neo_tracker.project import (
@@ -97,6 +98,9 @@ from neo_tracker.project import (
     project_content_fingerprint,
 )
 from neo_tracker.ui.analysis_controller import AnalysisController, AnalysisRun, AnalysisSource
+from neo_tracker.ui.analysis_workspace_controller import (
+    AnalysisWorkspaceController,
+)
 from neo_tracker.ui.analysis_worker import AnalysisWorker
 from neo_tracker.ui.calibration_editor import CalibrationEditor
 from neo_tracker.ui.edit_history_panel import EditHistoryPanel, EditHistorySelection
@@ -144,18 +148,29 @@ from neo_tracker.ui.review_response import (
 )
 from neo_tracker.ui.review_response_worker import ReviewResponseWorker
 from neo_tracker.ui.results_table_model import ResultsTableModel
+from neo_tracker.ui.fit_panel import FitPanel
+from neo_tracker.ui.inspectors import PhysicsInspector
 from neo_tracker.ui.action_registry import ActionRegistry
+from neo_tracker.ui.selection_session import (
+    SelectionOrigin,
+    SelectionSession,
+)
 from neo_tracker.ui.shell import ApplicationShell
 from neo_tracker.ui.shell.bindings import (
     CoordinatorCompatibilityMixin,
     PRIMARY_BUTTON_ATTRIBUTES,
 )
+from neo_tracker.ui.shell.physics_workspace_mixin import PhysicsWorkspaceMixin
 from neo_tracker.ui.tracking_worker import (
     TRACKING_SOURCE_CHANGED_PREFIX,
     TrackingProgress,
     TrackingWorker,
 )
-from neo_tracker.ui.view_state import ViewState
+from neo_tracker.ui.view_state import (
+    PhysicsWorkspaceStateStore,
+    ViewState,
+)
+from neo_tracker.ui.workspaces import PhysicsWorkspace
 
 
 _PROJECT_OPEN_DEFERRED_RESULTS_THRESHOLD = 10_000
@@ -204,11 +219,24 @@ class ElidingLabel(QLabel):
             QLabel.setText(self, displayed)
 
 
-class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
-    def __init__(self) -> None:
+class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMainWindow):
+    physicsOperationRequested = Signal(object)
+
+    def __init__(
+        self,
+        *,
+        physics_layout_store: PhysicsWorkspaceStateStore | None = None,
+    ) -> None:
         super().__init__()
         self.setWindowTitle("Neo-Tracker")
         self.resize(1280, 780)
+        self._physics_layout_store = (
+            physics_layout_store or PhysicsWorkspaceStateStore.application_default()
+        )
+        self._restoring_physics_layout = False
+        self._canvas_focus_active = False
+        self._canvas_focus_main_sizes: tuple[int, ...] = ()
+        self._canvas_focus_sidebar_visible = True
         self.registry = default_preset_registry()
         self.default_pipeline_key = next(iter(self.registry))
         self.project_controller = ProjectTaskController(
@@ -410,6 +438,36 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self.analysis_export_csv_button = QPushButton("Export CSV")
         self.analysis_export_npz_button = QPushButton("Export NPZ")
         self.analysis_controller = AnalysisController()
+        self.selection_session = SelectionSession()
+        self._selection_unsubscribe = self.selection_session.subscribe(
+            self._selection_session_changed
+        )
+        self._applying_selection_revision: int | None = None
+        self._physics_series_owner_token: int | None = None
+        self._physics_series_by_id: dict[str, SampleSeries] = {}
+        self.physics_workspace = PhysicsWorkspace()
+        self.canvas_focus_button = self.physics_workspace.focus_button
+        self.fit_panel = FitPanel()
+        self.physics_inspector = PhysicsInspector()
+        self.create_velocity_button = self.physics_inspector.create_velocity_button
+        self.create_acceleration_button = self.physics_inspector.create_acceleration_button
+        self.smooth_series_button = self.physics_inspector.smooth_series_button
+        self.fit_model_button = self.physics_inspector.fit_model_button
+        self.export_physics_analysis_button = self.physics_inspector.export_analysis_button
+        self.show_residual_button = self.physics_inspector.show_residual_button
+        self.physics_workspace.set_fit_widget(self.fit_panel)
+        self.physics_workspace.sampleActivated.connect(self._physics_sample_activated)
+        self.physics_workspace.plotSampleActivated.connect(
+            self._physics_plot_sample_activated
+        )
+        self.physics_workspace.pageRouteRequested.connect(self._physics_route_requested)
+        self.physics_workspace.pageChanged.connect(self._physics_workspace_page_changed)
+        self.physics_workspace.layoutStateChanged.connect(
+            self._physics_workspace_layout_changed
+        )
+        self.fit_panel.runRequested.connect(self._run_physics_fit)
+        self.fit_panel.cancelRequested.connect(self._cancel_physics_fit)
+        self.fit_panel.draftChanged.connect(self._physics_fit_draft_changed)
         self.validate_json_button = QPushButton("Validate")
         self.apply_json_button = QPushButton("Apply JSON")
         self.reset_json_button = QPushButton("Reset View")
@@ -421,6 +479,21 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self._response_mode_routing_requested = False
         self._task_supervisor = TaskSupervisor()
         self._background_tasks = self._task_supervisor
+        self.analysis_workspace_controller = AnalysisWorkspaceController(
+            self._task_supervisor
+        )
+        self.analysis_workspace_controller.stateChanged.connect(
+            self._physics_fit_state_changed
+        )
+        self.analysis_workspace_controller.fitResultReady.connect(
+            self._physics_fit_ready
+        )
+        self.analysis_workspace_controller.operationRequested.connect(
+            self._physics_operation_requested
+        )
+        self.analysis_workspace_controller.idleReached.connect(
+            self._schedule_close_if_workers_stopped
+        )
         self._media_import_coordinator = MediaImportCoordinator(self._task_supervisor)
         self._media_import_coordinator.progressed.connect(self._media_probe_progressed)
         self._media_import_coordinator.completed.connect(self._media_import_completed)
@@ -467,7 +540,12 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         )
 
         self._build_ui()
+        self._restore_physics_layout()
+        self._reset_physics_context()
         self._application_shell = ApplicationShell(self)
+        self.action_registry.bind_button("physics.export", self.fit_panel.export_button)
+        self.action_registry.bind_button("physics.residual", self.fit_panel.residual_checkbox)
+        self._update_physics_actions(self.analysis_workspace_controller.state)
         self._apply_style()
         self._load_presets()
         self._render_task(refresh_project_state=False)
@@ -577,9 +655,16 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         app_header.addWidget(self.export_report_button)
         root_layout.addWidget(top_toolbar)
 
+        self.workspace_splitter = QSplitter(Qt.Orientation.Vertical)
+        self.workspace_splitter.setObjectName("workspaceSplitter")
+        self.workspace_splitter.setChildrenCollapsible(False)
+        self.workspace_splitter.splitterMoved.connect(self._physics_splitter_moved)
+        root_layout.addWidget(self.workspace_splitter, 1)
+
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setObjectName("mainSplitter")
-        root_layout.addWidget(splitter)
+        self.main_splitter = splitter
+        self.workspace_splitter.addWidget(splitter)
 
         preview_panel = QWidget()
         preview_panel.setObjectName("previewPanel")
@@ -661,15 +746,20 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
 
         sidebar = QWidget()
         sidebar.setObjectName("rightSidebar")
+        self.right_sidebar = sidebar
         sidebar.setMinimumWidth(450)
         sidebar_layout = QVBoxLayout(sidebar)
         sidebar_layout.setContentsMargins(8, 0, 0, 0)
         sidebar_layout.setSpacing(8)
         self.sidebar_tabs.setObjectName("sidebarTabs")
-        self.sidebar_tabs.setMinimumHeight(625)
+        self.sidebar_tabs.setMinimumHeight(300)
         sidebar_layout.addWidget(self.sidebar_tabs)
         splitter.addWidget(sidebar)
         splitter.setSizes([820, 500])
+        self.workspace_splitter.addWidget(self.physics_workspace)
+        self.workspace_splitter.setStretchFactor(0, 1)
+        self.workspace_splitter.setStretchFactor(1, 0)
+        self.workspace_splitter.setSizes([460, self.physics_workspace.preferred_height])
 
         self._build_media_tab()
         self._build_tracking_tab()
@@ -680,7 +770,7 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self._build_advanced_tab()
         self.sidebar_tabs.setAccessibleName("Neo-Tracker workflow sections")
         self.sidebar_tabs.setAccessibleDescription(
-            "Choose Media, Tracking, Review, Signal, Calibration, Flow, or Pipeline JSON."
+            "Choose Media, Tracking, Review, Signal, Calibration, Flow, or Pipeline JSON. Review also exposes physics inspection."
         )
         self.sidebar_tabs.tabBar().setAccessibleName("Neo-Tracker workflow section tabs")
         self.sidebar_tabs.currentChanged.connect(self._sidebar_tab_changed)
@@ -1628,6 +1718,8 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self.review_history_tabs.addTab(self.run_history_panel, "Runs")
         self.review_history_tabs.addTab(self.edit_history_panel, "Edits")
         layout.addWidget(self.review_history_tabs)
+        layout.addWidget(self._section_label("PHYSICS INSPECTOR"))
+        layout.addWidget(self.physics_inspector)
         self.review_tab = self._add_sidebar_page(tab, "Review", "reviewTab")
 
     def _build_processing_tab(self) -> None:
@@ -2759,6 +2851,7 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
                 self._show_empty_task_list_placeholder()
                 self.scratch_task = self._new_task(None, self.default_pipeline_key)
                 self.current_task = self.scratch_task
+                self._reset_physics_context()
                 self._render_task(refresh_project_state=False)
         finally:
             self._project_open_apply_defer_heavy_views = False
@@ -3049,6 +3142,7 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self.scratch_task.close_reader()
         self.scratch_task = self._new_task(None, self.default_pipeline_key)
         self.current_task = self.scratch_task
+        self._reset_physics_context()
         self._render_task(refresh_project_state=False)
 
     def _discard_removed_task_undo(self) -> None:
@@ -3190,6 +3284,7 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         else:
             index = int(task_index)
             self.current_task = self.tasks[index]
+        self._reset_physics_context()
         self._render_task(refresh_project_state=False)
         if draft_names:
             self.statusBar().showMessage(
@@ -3234,6 +3329,7 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self.current_task.tracking_outcome = ""
         self.current_task.tracking_note = ""
         self.current_task.roi = None
+        self._reset_physics_context()
         self._clear_analysis_result()
         self._render_task(sync_combo=False, refresh_project_state=False)
         self._mark_project_changed()
@@ -3248,6 +3344,16 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self._sync_preview_position_controls(self.current_task)
         self._sync_review_selection_to_frame()
         self._render_preview()
+        if (
+            self._applying_selection_revision is None
+            and self._physics_series_owner_token == id(self.current_task)
+        ):
+            state = self.selection_session.state
+            self.selection_session.select_frame(
+                int(self.current_task.preview_frame_index),
+                origin=SelectionOrigin.VIDEO,
+                expected_source_revision=state.source_revision,
+            )
 
     def _render_task(self, sync_combo: bool = True, *, refresh_project_state: bool = True) -> None:
         task = self.current_task
@@ -6741,6 +6847,8 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
             self._set_tracking_busy(False)
         if self._analysis_thread is None:
             self._set_analysis_busy(False)
+        if not self.analysis_workspace_controller.busy:
+            self.fit_panel.apply_state(self.analysis_workspace_controller.state)
         if self._media_probe_thread is None and self._project_open_thread is None:
             self._set_media_probe_busy(False)
         self._render_task(refresh_project_state=False)
@@ -6768,6 +6876,10 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
                 self._cancel_tracking()
             if "analysis" in active_kinds:
                 self._cancel_analysis("Closing Neo-Tracker; signal processing was canceled.", state="canceled")
+            if "kinematics-fit" in active_kinds:
+                self.analysis_workspace_controller.cancel(
+                    "Closing Neo-Tracker; the active fit was canceled."
+                )
             if "media-probe" in active_kinds:
                 self._cancel_media_probe()
             if "project-open" in active_kinds:
@@ -6788,9 +6900,13 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
             task.close_reader()
         self._retired_project_tasks.clear()
         self._analysis_coordinator.close()
+        self.analysis_workspace_controller.close()
         self._review_response_coordinator.close()
         self._preview_coordinator.close()
         self._playback_coordinator.close()
+        if self._selection_unsubscribe is not None:
+            self._selection_unsubscribe()
+            self._selection_unsubscribe = None
         self._application_shell.close()
         super().closeEvent(event)
 

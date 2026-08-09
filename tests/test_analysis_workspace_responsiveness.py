@@ -1,0 +1,168 @@
+from __future__ import annotations
+
+import tempfile
+import unittest
+from pathlib import Path
+
+from PySide6.QtCore import QCoreApplication, Qt
+from PySide6.QtGui import QImage
+from PySide6.QtTest import QTest
+from PySide6.QtWidgets import QApplication, QWidget
+
+from neo_tracker.ui.main_window import NeoTrackerWindow
+from neo_tracker.ui.physics_plot import PhysicsPlot
+from neo_tracker.ui.view_state import PhysicsWorkspaceState, PhysicsWorkspaceStateStore
+from neo_tracker.ui.workspaces import PhysicsWorkspace
+from tests.test_analysis_workspace import make_series
+
+
+class RetinaPhysicsPlot(PhysicsPlot):
+    def devicePixelRatioF(self) -> float:  # noqa: N802
+        return 2.0
+
+
+class PhysicsWorkspaceResponsiveTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.app = QApplication.instance() or QApplication([])
+        cls.gui_anchor = QWidget()
+
+    def make_window(
+        self,
+        store: PhysicsWorkspaceStateStore | None = None,
+    ) -> NeoTrackerWindow:
+        window = NeoTrackerWindow(physics_layout_store=store)
+
+        def close_cleanly() -> None:
+            window._discard_unapplied_drafts(show_status=False)
+            window._set_project_clean()
+            window.close()
+            QCoreApplication.processEvents()
+
+        self.addCleanup(close_cleanly)
+        return window
+
+    def test_supported_window_sizes_keep_shell_workspace_and_recovery_controls_visible(self) -> None:
+        window = self.make_window(PhysicsWorkspaceStateStore())
+        window.show()
+        for width, height in ((1024, 768), (1280, 808), (1440, 900)):
+            with self.subTest(size=(width, height)):
+                window.resize(width, height)
+                QCoreApplication.processEvents()
+
+                self.assertEqual((window.width(), window.height()), (width, height))
+                self.assertGreater(window.main_splitter.sizes()[0], 0)
+                self.assertGreater(window.main_splitter.sizes()[1], 0)
+                self.assertGreaterEqual(window.physics_workspace.height(), 38)
+                self.assertLess(
+                    window.physics_workspace.collapse_button.geometry().right(),
+                    window.physics_workspace.width(),
+                )
+                self.assertTrue(window.physics_workspace.tabs.isVisible())
+                window.physics_workspace.set_collapsed(True)
+                QCoreApplication.processEvents()
+                self.assertEqual(window.physics_workspace.collapse_button.text(), "Expand")
+                window.physics_workspace.set_collapsed(False)
+                QCoreApplication.processEvents()
+                self.assertEqual(window.physics_workspace.collapse_button.text(), "Collapse")
+
+    def test_canvas_focus_is_reversible_and_does_not_persist_transient_collapse(self) -> None:
+        store = PhysicsWorkspaceStateStore()
+        window = self.make_window(store)
+        window.physics_workspace.show_page("Plot")
+        window.physics_workspace.remember_height(320)
+        store.save(window.physics_workspace.layout_state())
+        window.show()
+        QCoreApplication.processEvents()
+        before_sizes = tuple(window.main_splitter.sizes())
+
+        window.action_registry.action("view.canvas_focus").trigger()
+        QCoreApplication.processEvents()
+        self.assertTrue(window.canvas_focus_active)
+        self.assertTrue(window.right_sidebar.isHidden())
+        self.assertTrue(window.physics_workspace.collapsed)
+        self.assertEqual(window.canvas_focus_button.text(), "Exit Focus")
+        self.assertEqual(store.load(), PhysicsWorkspaceState(False, "Plot", 320))
+
+        window.action_registry.action("view.canvas_focus").trigger()
+        QCoreApplication.processEvents()
+        self.assertFalse(window.canvas_focus_active)
+        self.assertFalse(window.right_sidebar.isHidden())
+        self.assertFalse(window.physics_workspace.collapsed)
+        self.assertEqual(window.physics_workspace.current_page, "Plot")
+        self.assertEqual(window.canvas_focus_button.text(), "Canvas Focus")
+        self.assertEqual(len(window.main_splitter.sizes()), len(before_sizes))
+
+    def test_bounded_layout_state_is_restored_by_a_new_window(self) -> None:
+        store = PhysicsWorkspaceStateStore()
+        first = self.make_window(store)
+        first.physics_workspace.show_page("Plot")
+        first.physics_workspace.remember_height(333)
+        first.physics_workspace.set_collapsed(True)
+        self.assertEqual(store.load(), PhysicsWorkspaceState(True, "Plot", 333))
+        first._set_project_clean()
+        first.close()
+        QCoreApplication.processEvents()
+
+        restored = self.make_window(store)
+
+        self.assertEqual(restored.physics_workspace.layout_state(), PhysicsWorkspaceState(True, "Plot", 333))
+        self.assertLessEqual(restored.workspace_splitter.sizes()[1], 38)
+
+    def test_forward_and_reverse_tab_traverse_data_controls(self) -> None:
+        workspace = PhysicsWorkspace()
+        workspace.set_series((make_series(),))
+        workspace.show()
+        workspace.series_combo.setFocus(Qt.FocusReason.TabFocusReason)
+        QCoreApplication.processEvents()
+        self.assertIs(workspace.focusWidget(), workspace.series_combo)
+
+        QTest.keyClick(workspace.series_combo, Qt.Key.Key_Tab)
+        QCoreApplication.processEvents()
+        self.assertIs(workspace.focusWidget(), workspace.series_table)
+
+        QTest.keyClick(
+            workspace.series_table,
+            Qt.Key.Key_Tab,
+            Qt.KeyboardModifier.ShiftModifier,
+        )
+        QCoreApplication.processEvents()
+        self.assertIs(workspace.focusWidget(), workspace.series_combo)
+        workspace.close()
+
+    def test_retina_export_uses_physical_pixels_and_plot_has_textual_semantics(self) -> None:
+        plot = RetinaPhysicsPlot()
+        plot.resize(320, 200)
+        plot.set_series((make_series(),))
+        self.assertIn("true time", plot.accessibleDescription().lower())
+        self.assertIn("invalid", plot.accessibleDescription().lower())
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "retina-plot.png"
+            self.assertTrue(plot.export_image(path))
+            exported = QImage(str(path))
+            self.assertEqual((exported.width(), exported.height()), (640, 400))
+
+    def test_physics_actions_and_states_have_non_color_text_and_accessibility(self) -> None:
+        window = self.make_window(PhysicsWorkspaceStateStore())
+        buttons = (
+            window.create_velocity_button,
+            window.create_acceleration_button,
+            window.smooth_series_button,
+            window.fit_model_button,
+            window.export_physics_analysis_button,
+            window.show_residual_button,
+            window.canvas_focus_button,
+        )
+        for button in buttons:
+            with self.subTest(button=button.text()):
+                self.assertTrue(button.text().strip())
+                self.assertTrue(button.accessibleName().strip())
+                self.assertTrue(button.accessibleDescription().strip())
+        self.assertIn("No physical series", window.fit_panel.status_label.text())
+        self.assertIn("no sample selected", window.physics_workspace.cursor_label.text())
+        self.assertIn("No analysis selection", window.physics_inspector.object_label.text())
+
+
+if __name__ == "__main__":
+    unittest.main()

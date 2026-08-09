@@ -1,0 +1,45 @@
+{
+  "command_context": {
+    "date": "2026-08-10",
+    "platform": "QT_QPA_PLATFORM=offscreen",
+    "python": "python3",
+    "measurement": "QTableView model reset, PhysicsPlot prepare/render, and QTimer heartbeat around renders"
+  },
+  "gui_heartbeat": {
+    "max_ms": 31.953540979884565,
+    "p50_ms": 26.850709051359445,
+    "p95_ms": 29.17883691843599
+  },
+  "heartbeat_ticks": 24,
+  "orphan_helpers": 0,
+  "peak_rss_mib": 96.328125,
+  "plot_paint": {
+    "max_ms": 28.112666972447187,
+    "p50_ms": 27.76279201498255,
+    "p95_ms": 28.04708300391212
+  },
+  "plot_prepare": {
+    "max_ms": 4.799125017598271,
+    "p50_ms": 3.1031660037115216,
+    "p95_ms": 4.001645487733185
+  },
+  "plot_prepared_points": 2427,
+  "result_digest": "9822bd5c2c582d43bfecdb7650fe6533535c5643cde92027c33df50eff5a9a6d",
+  "series_build_ms": 1.6414999845437706,
+  "table_attach": {
+    "max_ms": 0.008958042599260807,
+    "p50_ms": 0.0019170111045241356,
+    "p95_ms": 0.0027710048016160727
+  },
+  "table_cell_widgets": 0,
+  "table_rows": 100000,
+  "workload": {
+    "height_px": 360,
+    "paint_repeats": 21,
+    "plot_prepare_repeats": 11,
+    "samples": 100000,
+    "table_repeats": 31,
+    "valid_samples": 99725,
+    "width_px": 1280
+  }
+}
