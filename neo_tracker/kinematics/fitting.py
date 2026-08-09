@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-"""Stable linear/quadratic regression and bounded nonlinear fit dispatch."""
+"""Stable polynomial regression and optional bounded nonlinear fitting."""
 
-from collections.abc import Callable
+import math
+from typing import Any
 
 import numpy as np
 
-from .models import evaluate_model
+from .models import evaluate_model, normalize_sinusoidal_parameters
 from .protocols import CancellationProbe
 from .residuals import residual_metrics
 from .runtime import KinematicsCancelled, check_cancelled
@@ -17,6 +18,21 @@ from .validation import (
     fit_parameter_units,
     fit_sample_mask,
 )
+
+
+DEFAULT_MAX_EVALUATIONS = 4_000
+
+
+class _KinematicsUnavailable(RuntimeError):
+    pass
+
+
+def _load_least_squares() -> Any | None:
+    try:
+        from scipy.optimize import least_squares
+    except (ImportError, ModuleNotFoundError):
+        return None
+    return least_squares
 
 
 def _terminal_result(
@@ -146,28 +162,250 @@ def _linear_regression(
     )
 
 
+def _initial_exponential(time_s: np.ndarray, observed: np.ndarray) -> np.ndarray:
+    span = float(time_s[-1] - time_s[0])
+    data_range = float(np.ptp(observed))
+    scale = max(data_range, max(1.0, abs(float(np.mean(observed)))) * 1e-3)
+    offset = float(np.min(observed) - 0.05 * scale)
+    first = float(observed[0] - offset)
+    last = float(observed[-1] - offset)
+    if first == 0.0 or last == 0.0 or first * last <= 0.0:
+        rate = -1.0 / span
+    else:
+        rate = math.log(abs(last / first)) / span
+    exponent = rate * float(time_s[0])
+    if exponent > 700.0 or exponent < -745.0:
+        amplitude = first
+    else:
+        amplitude = first / math.exp(exponent)
+    return np.array([amplitude, rate, offset], dtype=np.float64)
+
+
+def _initial_sinusoidal(
+    time_s: np.ndarray,
+    observed: np.ndarray,
+    cancellation: CancellationProbe | None,
+) -> np.ndarray:
+    span = float(time_s[-1] - time_s[0])
+    delta = np.diff(time_s)
+    cadence = float(np.median(delta))
+    minimum_omega = max(2.0 * math.pi / (span * 4.0), np.finfo(np.float64).eps)
+    maximum_omega = min(math.pi / cadence, 2.0 * math.pi * 100.0 / span)
+    if maximum_omega <= minimum_omega:
+        maximum_omega = minimum_omega * 2.0
+    candidates = np.linspace(minimum_omega, maximum_omega, 256, dtype=np.float64)
+    best_error = math.inf
+    best = np.array([max(float(np.ptp(observed)) * 0.5, 1e-9), candidates[0], 0.0, float(np.mean(observed))])
+    ones = np.ones_like(time_s)
+    for index, omega in enumerate(candidates):
+        if index % 32 == 0:
+            check_cancelled(cancellation, phase="sinusoidal initial estimate")
+        design = np.column_stack((np.sin(omega * time_s), np.cos(omega * time_s), ones))
+        coefficients, _, rank, _ = np.linalg.lstsq(design, observed, rcond=None)
+        if rank != 3:
+            continue
+        predicted = design @ coefficients
+        error = float(np.dot(observed - predicted, observed - predicted))
+        if error < best_error:
+            sine_coefficient, cosine_coefficient, offset = coefficients
+            amplitude = math.hypot(float(sine_coefficient), float(cosine_coefficient))
+            phase = math.atan2(float(cosine_coefficient), float(sine_coefficient))
+            best = np.array([amplitude, omega, phase, float(offset)], dtype=np.float64)
+            best_error = error
+    return best
+
+
+def _nonlinear_initial_parameters(
+    request: FitRequest,
+    time_s: np.ndarray,
+    observed: np.ndarray,
+    cancellation: CancellationProbe | None,
+) -> np.ndarray:
+    names = fit_parameter_names(request.model)
+    unknown = sorted(set(request.initial_parameters) - set(names))
+    if unknown:
+        raise ValueError(f"unknown initial parameters: {', '.join(unknown)}")
+    if all(name in request.initial_parameters for name in names):
+        values = np.array([request.initial_parameters[name] for name in names], dtype=np.float64)
+    elif request.model is FitModel.EXPONENTIAL:
+        values = _initial_exponential(time_s, observed)
+    else:
+        values = _initial_sinusoidal(time_s, observed, cancellation)
+    for index, name in enumerate(names):
+        if name in request.initial_parameters:
+            values[index] = request.initial_parameters[name]
+    if not np.isfinite(values).all():
+        raise ValueError("nonlinear initial parameters must be finite")
+    return values
+
+
+def _nonlinear_bounds(
+    request: FitRequest,
+    time_s: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    names = fit_parameter_names(request.model)
+    unknown = sorted(set(request.bounds) - set(names))
+    if unknown:
+        raise ValueError(f"unknown parameter bounds: {', '.join(unknown)}")
+    lower = np.full(len(names), -np.inf, dtype=np.float64)
+    upper = np.full(len(names), np.inf, dtype=np.float64)
+    if request.model is FitModel.EXPONENTIAL:
+        max_abs_time = max(float(np.max(np.abs(time_s))), np.finfo(np.float64).eps)
+        rate_index = names.index("rate")
+        lower[rate_index] = -700.0 / max_abs_time
+        upper[rate_index] = 700.0 / max_abs_time
+    else:
+        span = float(time_s[-1] - time_s[0])
+        cadence = float(np.median(np.diff(time_s)))
+        omega_index = names.index("omega")
+        amplitude_index = names.index("amplitude")
+        lower[amplitude_index] = 0.0
+        lower[omega_index] = max(np.finfo(np.float64).eps, 2.0 * math.pi / (span * 20.0))
+        upper[omega_index] = math.pi / cadence
+    for index, name in enumerate(names):
+        if name in request.bounds:
+            lower[index], upper[index] = request.bounds[name]
+    return lower, upper
+
+
+def _normalized_sinusoidal_covariance(
+    raw_parameters: np.ndarray,
+    covariance: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    transform = np.eye(4, dtype=np.float64)
+    if raw_parameters[1] < 0.0:
+        transform[1, 1] = -1.0
+        transform[2, 2] = -1.0
+    if raw_parameters[0] < 0.0:
+        transform[0, 0] = -1.0
+    normalized = normalize_sinusoidal_parameters(raw_parameters)
+    return normalized, transform @ covariance @ transform.T
+
+
+def nonlinear_fit(
+    series: SampleSeries,
+    request: FitRequest,
+    mask: np.ndarray,
+    cancellation: CancellationProbe | None,
+    *,
+    max_evaluations: int = DEFAULT_MAX_EVALUATIONS,
+) -> FitResult:
+    least_squares = _load_least_squares()
+    if least_squares is None:
+        raise _KinematicsUnavailable(
+            f"{request.model.value} fitting requires the optional science dependency"
+        )
+    if isinstance(max_evaluations, bool) or not isinstance(max_evaluations, int) or max_evaluations <= 0:
+        raise ValueError("max_evaluations must be a positive integer")
+    names = fit_parameter_names(request.model)
+    parameter_count = len(names)
+    sample_count = int(np.count_nonzero(mask))
+    if sample_count < parameter_count:
+        raise ValueError(
+            f"{request.model.value} fit requires at least {parameter_count} eligible samples"
+        )
+    time_s = series.time_s[mask]
+    observed = series.values[mask]
+    initial = _nonlinear_initial_parameters(request, time_s, observed, cancellation)
+    lower, upper = _nonlinear_bounds(request, time_s)
+    if np.any(initial < lower) or np.any(initial > upper):
+        raise ValueError("nonlinear initial parameters fall outside safe or requested bounds")
+
+    def objective(parameters: np.ndarray) -> np.ndarray:
+        check_cancelled(cancellation, phase=f"{request.model.value} fit")
+        return evaluate_model(request.model, parameters, time_s) - observed
+
+    optimization = least_squares(
+        objective,
+        initial,
+        bounds=(lower, upper),
+        max_nfev=max_evaluations,
+        method="trf",
+    )
+    check_cancelled(cancellation, phase=f"{request.model.value} fit")
+    if not bool(optimization.success):
+        message = str(getattr(optimization, "message", "nonlinear fit did not converge"))
+        raise ValueError(f"{request.model.value} fit did not converge: {message}")
+    raw_parameters = np.asarray(optimization.x, dtype=np.float64)
+    if not np.isfinite(raw_parameters).all():
+        raise ValueError("nonlinear optimizer produced non-finite parameters")
+    predicted = np.full(len(series), np.nan, dtype=np.float64)
+    residuals = np.full(len(series), np.nan, dtype=np.float64)
+
+    covariance = np.full((parameter_count, parameter_count), np.nan, dtype=np.float64)
+    jacobian = np.asarray(optimization.jac, dtype=np.float64)
+    if sample_count > parameter_count and jacobian.shape == (sample_count, parameter_count):
+        rank = int(np.linalg.matrix_rank(jacobian))
+        if rank == parameter_count:
+            raw_prediction = evaluate_model(request.model, raw_parameters, time_s)
+            raw_residual = observed - raw_prediction
+            sigma_squared = float(np.dot(raw_residual, raw_residual)) / (
+                sample_count - parameter_count
+            )
+            covariance = sigma_squared * np.linalg.inv(jacobian.T @ jacobian)
+            covariance = (covariance + covariance.T) * 0.5
+    parameters = raw_parameters
+    if request.model is FitModel.SINUSOIDAL:
+        parameters, covariance = _normalized_sinusoidal_covariance(raw_parameters, covariance)
+    predicted[mask] = evaluate_model(request.model, parameters, time_s)
+    residuals[mask] = observed - predicted[mask]
+    metrics = residual_metrics(series.values, predicted, mask)
+    if np.isfinite(covariance).all():
+        diagonal = np.diag(covariance)
+        diagonal = np.where((diagonal < 0.0) & (diagonal > -1e-14), 0.0, diagonal)
+        standard_errors = np.sqrt(diagonal)
+        if not np.isfinite(standard_errors).all():
+            covariance[:] = np.nan
+            standard_errors = np.full(parameter_count, np.nan, dtype=np.float64)
+    else:
+        standard_errors = np.full(parameter_count, np.nan, dtype=np.float64)
+    return FitResult(
+        series_id=series.series_id,
+        model=request.model,
+        parameter_names=names,
+        parameters=parameters,
+        parameter_units=fit_parameter_units(request.model, series.unit),
+        standard_errors=standard_errors,
+        covariance=covariance,
+        predicted=predicted,
+        residuals=residuals,
+        valid_mask=mask,
+        rmse=metrics.rmse,
+        r_squared=metrics.r_squared,
+        sample_count=metrics.sample_count,
+        range_start_s=request.range_start_s,
+        range_end_s=request.range_end_s,
+        source_revision=series.source_revision,
+        status=FitStatus.OK,
+        message="",
+    )
+
+
 def _fit_or_terminal(
     series: SampleSeries,
     request: FitRequest,
     *,
     cancellation: CancellationProbe | None,
-    nonlinear: Callable[[SampleSeries, FitRequest, np.ndarray, CancellationProbe | None], FitResult]
-    | None = None,
+    max_evaluations: int,
 ) -> FitResult:
     try:
         check_cancelled(cancellation, phase="fit")
         mask = fit_sample_mask(series, request)
         if request.model in (FitModel.LINEAR, FitModel.QUADRATIC):
             return _linear_regression(series, request, mask, cancellation=cancellation)
-        if nonlinear is None:
-            from .nonlinear_fitting import nonlinear_fit
-
-            nonlinear = nonlinear_fit
-        return nonlinear(series, request, mask, cancellation)
+        return nonlinear_fit(
+            series,
+            request,
+            mask,
+            cancellation,
+            max_evaluations=max_evaluations,
+        )
     except KinematicsCancelled as exc:
         return _terminal_result(series, request, FitStatus.CANCELLED, str(exc))
     except StaleSourceRevisionError as exc:
         return _terminal_result(series, request, FitStatus.STALE, str(exc))
+    except _KinematicsUnavailable as exc:
+        return _terminal_result(series, request, FitStatus.UNAVAILABLE, str(exc))
     except (ArithmeticError, FloatingPointError, TypeError, ValueError, np.linalg.LinAlgError) as exc:
         return _terminal_result(series, request, FitStatus.FAILED, str(exc))
 
@@ -177,15 +415,30 @@ def fit_series(
     request: FitRequest,
     *,
     cancellation: CancellationProbe | None = None,
+    max_evaluations: int = DEFAULT_MAX_EVALUATIONS,
 ) -> FitResult:
     if not isinstance(series, SampleSeries):
         raise TypeError("series must be a SampleSeries")
     if not isinstance(request, FitRequest):
         raise TypeError("request must be a FitRequest")
-    return _fit_or_terminal(series, request, cancellation=cancellation)
+    return _fit_or_terminal(
+        series,
+        request,
+        cancellation=cancellation,
+        max_evaluations=max_evaluations,
+    )
 
 
 class KinematicsFitOperator:
+    def __init__(self, *, max_evaluations: int = DEFAULT_MAX_EVALUATIONS) -> None:
+        if (
+            isinstance(max_evaluations, bool)
+            or not isinstance(max_evaluations, int)
+            or max_evaluations <= 0
+        ):
+            raise ValueError("max_evaluations must be a positive integer")
+        self._max_evaluations = max_evaluations
+
     def fit(
         self,
         series: SampleSeries,
@@ -193,7 +446,17 @@ class KinematicsFitOperator:
         *,
         cancellation: CancellationProbe | None = None,
     ) -> FitResult:
-        return fit_series(series, request, cancellation=cancellation)
+        return fit_series(
+            series,
+            request,
+            cancellation=cancellation,
+            max_evaluations=self._max_evaluations,
+        )
 
 
-__all__ = ["KinematicsFitOperator", "fit_series"]
+__all__ = [
+    "DEFAULT_MAX_EVALUATIONS",
+    "KinematicsFitOperator",
+    "fit_series",
+    "nonlinear_fit",
+]
