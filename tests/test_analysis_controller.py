@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from neo_tracker.analysis import AnalysisConfig, available_tracking_series_info
 from neo_tracker.core import TrackerResult
-from neo_tracker.media import MediaInfo
+from neo_tracker.media import MAX_WAV_CHANNELS, MediaInfo
 from neo_tracker.ui.analysis_controller import AnalysisController
 
 
@@ -27,6 +27,25 @@ def tracking_results(count: int = 32, sample_rate: float = 16.0) -> list[Tracker
 
 
 class AnalysisControllerTests(unittest.TestCase):
+    def test_audio_sources_are_capped_at_max_channels(self) -> None:
+        media_info = MediaInfo(
+            kind="audio",
+            available=True,
+            channels=70,
+            sample_rate_hz=1.0,
+            frame_count=1,
+        )
+
+        sources = AnalysisController.available_sources([], {}, "clip.wav", media_info)
+        audio_sources = [source for source in sources if source.kind == "audio"]
+
+        self.assertLessEqual(len(audio_sources), 1 + MAX_WAV_CHANNELS)
+        channel_labels = [
+            source.channel for source in audio_sources if source.channel != "mono"
+        ]
+        self.assertEqual(len(channel_labels), MAX_WAV_CHANNELS)
+        self.assertNotIn(MAX_WAV_CHANNELS, channel_labels)
+
     def test_tracking_sources_include_units_rate_and_sample_count(self) -> None:
         controller = AnalysisController()
         sources = controller.available_sources(tracking_results(), {"x_world": "cm"}, None, None)

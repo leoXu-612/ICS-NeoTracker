@@ -125,6 +125,37 @@ class MediaRelinkPanelTests(unittest.TestCase):
         self.assertIn("full digest", panel.candidate_label.text())
         self.assertEqual(panel.apply_button.text(), "Apply Relink")
 
+    def test_sampled_identity_match_uses_distinct_title_and_clears_results(self) -> None:
+        panel = MediaRelinkPanel()
+        self.addCleanup(panel.close)
+        identity = MediaIdentity("sampled-sha256-v1", "a" * 64, 50_000_000, 786_432)
+        info = MediaInfo(
+            fps=20.0,
+            frame_count=72,
+            width=640,
+            height=360,
+            duration_s=3.6,
+            available=True,
+            source_identity=identity,
+        )
+        assessment = MediaRelinkAssessment(
+            state="match",
+            summary=(
+                "Bounded sampled SHA-256 source identity matches, but exact byte "
+                "equality is not verified. Applying relink clears current results and edits."
+            ),
+            differences=("Sampled digest covers 786,432 of 50,000,000 bytes.",),
+            can_apply=True,
+            clear_results=True,
+            identity_state="sampled",
+        )
+
+        panel.set_candidate("/new/video.mp4", info, assessment)
+
+        self.assertEqual(panel.status_label.text(), "Sampled identity match")
+        self.assertEqual(panel.apply_button.text(), "Relink + Clear Results/Edits")
+        self.assertIn("sampled", panel.differences_label.text().lower())
+
     def test_digest_mismatch_uses_source_differs_title(self) -> None:
         panel = MediaRelinkPanel()
         self.addCleanup(panel.close)

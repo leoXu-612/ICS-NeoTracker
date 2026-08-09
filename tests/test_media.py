@@ -180,6 +180,68 @@ class MediaLayerTests(unittest.TestCase):
         self.assertEqual(original.size_bytes, size_bytes)
         self.assertNotEqual(changed.sha256, original.sha256)
 
+    def test_sampled_identity_equal_when_change_is_outside_sample_windows(self) -> None:
+        size_bytes = media.MEDIA_IDENTITY_FULL_LIMIT_BYTES + media.MEDIA_IDENTITY_CHUNK_BYTES * 8
+        payload = (b"neo-tracker-source\x00" * (size_bytes // 17 + 1))[:size_bytes]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path_a = Path(tmpdir) / "a.bin"
+            path_b = Path(tmpdir) / "b.bin"
+            path_a.write_bytes(payload)
+            path_b.write_bytes(payload)
+            with path_b.open("r+b") as source:
+                source.seek(600 * 1024)
+                source.write(b"modified")
+            identity_a = media.probe_media_identity(path_a)
+            identity_b = media.probe_media_identity(path_b)
+
+        self.assertIsNotNone(identity_a)
+        self.assertIsNotNone(identity_b)
+        self.assertFalse(identity_a.complete)
+        self.assertEqual(identity_a, identity_b)
+        self.assertEqual(identity_b.strategy, "sampled-sha256-v1")
+
+    def _raw_wav_bytes(
+        self,
+        *,
+        channels: int,
+        sample_width: int,
+        sample_rate: int,
+        frame_count: int,
+    ) -> bytes:
+        data_size = frame_count * channels * sample_width
+        block_align = channels * sample_width
+        return (
+            b"RIFF"
+            + ((36 + data_size) % (2**32)).to_bytes(4, "little")
+            + b"WAVE"
+            + b"fmt "
+            + (16).to_bytes(4, "little")
+            + (1).to_bytes(2, "little")
+            + (channels % (2**16)).to_bytes(2, "little")
+            + (sample_rate % (2**32)).to_bytes(4, "little")
+            + ((sample_rate * block_align) % (2**32)).to_bytes(4, "little")
+            + (block_align % (2**16)).to_bytes(2, "little")
+            + ((sample_width * 8) % (2**16)).to_bytes(2, "little")
+            + b"data"
+            + (data_size % (2**32)).to_bytes(4, "little")
+        )
+
+    def test_wav_probe_rejects_extreme_channel_or_size_metadata(self) -> None:
+        extreme_headers = [
+            {"channels": 65535, "sample_width": 2, "sample_rate": 44100, "frame_count": 0},
+            {"channels": 2, "sample_width": 8, "sample_rate": 44100, "frame_count": 0},
+            {"channels": 2, "sample_width": 2, "sample_rate": 0, "frame_count": 0},
+            {"channels": 2, "sample_width": 2, "sample_rate": 44100, "frame_count": 2**29},
+        ]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            for index, header_values in enumerate(extreme_headers):
+                with self.subTest(header=header_values):
+                    path = Path(tmpdir) / f"extreme-{index}.wav"
+                    path.write_bytes(self._raw_wav_bytes(**header_values))
+                    info = media.probe_wav_media(path)
+                    self.assertFalse(info.available)
+                    self.assertIn("WAV", info.error)
+
     def test_probe_media_reads_wav_without_video_backend(self) -> None:
         old_cv2 = media._CV2
         old_error = media._CV2_IMPORT_ERROR

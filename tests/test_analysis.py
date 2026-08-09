@@ -447,8 +447,8 @@ class SignalAnalysisTests(unittest.TestCase):
         )
         result = compute_fft(series)
 
-        def partial_then_fail(path: str | Path, **_arrays: object) -> None:
-            Path(path).write_bytes(b"partial archive")
+        def partial_then_fail(handle: object, **_arrays: object) -> None:
+            handle.write(b"partial archive")  # type: ignore[attr-defined]
             raise OSError("disk full")
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -462,6 +462,126 @@ class SignalAnalysisTests(unittest.TestCase):
                 write_fft_npz(path, result)
             self.assertEqual(path.read_bytes(), sentinel)
             self.assertEqual(list(path.parent.glob(f".{path.name}.*.npz")), [])
+
+    def test_npz_export_atomic_for_all_suffixes(self) -> None:
+        series = SignalSeries(
+            "x",
+            np.arange(8, dtype=float),
+            np.arange(8, dtype=float),
+            1.0,
+        )
+        result = compute_fft(series)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            for name in ("analysis.npz", "export", "archive.dat"):
+                with self.subTest(target=name):
+                    path = Path(tmpdir) / name
+                    write_fft_npz(path, result)
+                    self.assertTrue(path.exists())
+                    self.assertEqual(list(path.parent.glob(f".{path.name}.*")), [])
+                    with np.load(path, allow_pickle=False) as loaded:
+                        self.assertEqual(int(loaded["format_version"]), 2)
+                        self.assertTrue(
+                            np.array_equal(loaded["frequency_hz"], result.frequency_hz)
+                        )
+
+    def test_npz_write_failure_cleans_sidecars_for_all_suffixes(self) -> None:
+        series = SignalSeries(
+            "x",
+            np.arange(8, dtype=float),
+            np.arange(8, dtype=float),
+            1.0,
+        )
+        result = compute_fft(series)
+
+        def partial_then_fail(handle: object, **_arrays: object) -> None:
+            handle.write(b"partial archive")  # type: ignore[attr-defined]
+            raise OSError("disk full")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            for name in ("analysis.npz", "export", "archive.dat"):
+                with self.subTest(target=name):
+                    path = Path(tmpdir) / name
+                    sentinel = b"previous valid archive"
+                    path.write_bytes(sentinel)
+                    with (
+                        patch.object(analysis.np, "savez", side_effect=partial_then_fail),
+                        self.assertRaisesRegex(OSError, "disk full"),
+                    ):
+                        write_fft_npz(path, result)
+                    self.assertEqual(path.read_bytes(), sentinel)
+                    self.assertEqual(list(path.parent.glob(f".{path.name}.*")), [])
+
+    def test_wav_signal_series_rejects_extreme_channel_metadata(self) -> None:
+        def raw_wav(channels: int, sample_width: int, frame_count: int = 0) -> bytes:
+            data_size = frame_count * channels * sample_width
+            block_align = channels * sample_width
+            return (
+                b"RIFF"
+                + ((36 + data_size) % (2**32)).to_bytes(4, "little")
+                + b"WAVE"
+                + b"fmt "
+                + (16).to_bytes(4, "little")
+                + (1).to_bytes(2, "little")
+                + (channels % (2**16)).to_bytes(2, "little")
+                + (44100 % (2**32)).to_bytes(4, "little")
+                + ((44100 * block_align) % (2**32)).to_bytes(4, "little")
+                + (block_align % (2**16)).to_bytes(2, "little")
+                + ((sample_width * 8) % (2**16)).to_bytes(2, "little")
+                + b"data"
+                + (data_size % (2**32)).to_bytes(4, "little")
+            )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            for index, header in enumerate(
+                (
+                    raw_wav(channels=65535, sample_width=2),
+                    raw_wav(channels=2, sample_width=8),
+                    raw_wav(channels=2, sample_width=2, frame_count=2**29),
+                )
+            ):
+                with self.subTest(header_index=index):
+                    path = Path(tmpdir) / f"extreme-{index}.wav"
+                    path.write_bytes(header)
+                    with self.assertRaisesRegex(ValueError, "WAV"):
+                        wav_signal_series(path)
+
+    def test_wav_signal_series_chunk_scales_with_channel_count(self) -> None:
+        class RecordingWave:
+            def __init__(self) -> None:
+                self.max_requested = 0
+
+            def getnchannels(self) -> int:
+                return 16
+
+            def getsampwidth(self) -> int:
+                return 2
+
+            def getframerate(self) -> int:
+                return 44100
+
+            def getnframes(self) -> int:
+                return 600_000
+
+            def readframes(self, count: int) -> bytes:
+                self.max_requested = max(self.max_requested, int(count))
+                return b"\x00" * (int(count) * 16 * 2)
+
+            def close(self) -> None:
+                pass
+
+            def __enter__(self) -> "RecordingWave":
+                return self
+
+            def __exit__(self, *_exc: object) -> bool:
+                self.close()
+                return False
+
+        fake = RecordingWave()
+        with patch("neo_tracker.analysis.wave.open", return_value=fake):
+            series = wav_signal_series("fake.wav", "mono", chunk_frames=1_048_576)
+
+        self.assertEqual(series.values.size, 600_000)
+        self.assertLessEqual(fake.max_requested, (16 * 1024 * 1024) // (16 * 2))
 
 
 if __name__ == "__main__":

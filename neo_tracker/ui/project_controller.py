@@ -89,6 +89,16 @@ class MediaRelinkAssessment:
     clear_results: bool = False
     identity_state: str = "unavailable"
 
+    @property
+    def requires_review(self) -> bool:
+        """Whether applying this assessment needs an explicit, auditable decision."""
+
+        if self.state in {"mismatch", "incompatible"}:
+            return True
+        if not self.clear_results:
+            return False
+        return self.identity_state in {"unverified", "unavailable", "sampled"}
+
 
 def first_expected_config_diff(
     expected: object,
@@ -206,6 +216,25 @@ class ProjectTaskController:
 
         if identity_state in {"full", "sampled"}:
             verification = "Full-file SHA-256" if identity_state == "full" else "Bounded sampled SHA-256"
+            if identity_state == "sampled" and has_result_state:
+                sampled = candidate.source_identity
+                coverage = (
+                    f"{sampled.sampled_bytes:,} of {sampled.size_bytes:,} bytes"
+                    if sampled is not None
+                    else "only bounded samples"
+                )
+                return MediaRelinkAssessment(
+                    "match",
+                    (
+                        "Bounded sampled SHA-256 source identity matches, but exact byte "
+                        "equality is not verified. Applying relink clears current results, "
+                        "manual edits, and outcome details; run history is kept."
+                    ),
+                    (f"Sampled digest covers {coverage}; exact byte equality is not established.",),
+                    can_apply=True,
+                    clear_results=True,
+                    identity_state=identity_state,
+                )
             return MediaRelinkAssessment(
                 "match",
                 f"{verification} source identity matches the saved project.",
@@ -441,9 +470,7 @@ class ProjectTaskController:
                 live_media_info,
                 has_result_state=has_result_state,
             )
-            requires_review = assessment.state in {"mismatch", "incompatible"} or (
-                assessment.state == "unverified" and has_result_state
-            )
+            requires_review = assessment.requires_review
             if requires_review:
                 detail = (
                     "Media at the saved path differs from the project snapshot. "

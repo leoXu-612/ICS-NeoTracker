@@ -150,6 +150,8 @@ def validate_roi_config(config: object) -> str | None:
             points = tuple((float(row[0]), float(row[1])) for row in config["points"])  # type: ignore[index]
             if len(points) < 3 or not all(_finite_values(x, y) for x, y in points):
                 return "polygon must contain at least three finite points"
+            if len(points) > MAX_ROI_POINTS:
+                return f"polygon must not exceed {MAX_ROI_POINTS:,} points"
             return None
         if roi_type == "curve_band":
             points = tuple((float(row[0]), float(row[1])) for row in config["polyline"])  # type: ignore[index]
@@ -161,6 +163,8 @@ def validate_roi_config(config: object) -> str | None:
                 or half_width <= 0.0
             ):
                 return "curve band must contain two finite points and a positive finite half-width"
+            if len(points) > MAX_ROI_POINTS:
+                return f"curve band must not exceed {MAX_ROI_POINTS:,} points"
             return None
     except (KeyError, TypeError, ValueError, IndexError, OverflowError):
         return "ROI contains missing or non-numeric geometry"

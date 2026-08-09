@@ -1,0 +1,84 @@
+qt.qpa.fonts: Populating font family aliases took 71 ms. Replace uses of missing font family "Sans Serif" with one that exists to avoid this cost. 
+[
+  {
+    "results": 100000,
+    "file_mib": 44.39827632904053,
+    "synchronous": {
+      "call_ms": 1908.628334000241,
+      "batch_ms": 1908.6296249879524,
+      "max_heartbeat_ms": 1912.5244170427322,
+      "max_gap_phase_before": "",
+      "max_gap_phase_after": ""
+    },
+    "background": {
+      "call_ms": 0.46312500489875674,
+      "batch_ms": 3665.9265420166776,
+      "max_heartbeat_ms": 48.53304097196087,
+      "max_gap_phase_before": "Opening project \u00b7 verifying the saved baseline\u2026",
+      "max_gap_phase_after": "Opening project \u00b7 applying the prepared workspace\u2026",
+      "apply_ms": 46.16199998417869
+    },
+    "results_exact": true,
+    "synchronous_signature": {
+      "project_path": "/var/folders/hf/vzc3ptl17dv1r73k0yw4zt180000gn/T/tmp315lxsma/large-100000.ntproj",
+      "tasks": 1,
+      "results": 100000,
+      "fingerprint": "d9c2dd5992ccbd437da8cf320d4422a3137a6b7ef8ec815999f0947051c250b0",
+      "dirty": false
+    },
+    "background_signature": {
+      "project_path": "/var/folders/hf/vzc3ptl17dv1r73k0yw4zt180000gn/T/tmp315lxsma/large-100000.ntproj",
+      "tasks": 1,
+      "results": 100000,
+      "fingerprint": "d9c2dd5992ccbd437da8cf320d4422a3137a6b7ef8ec815999f0947051c250b0",
+      "dirty": false
+    },
+    "payload_equal": true,
+    "deferred_state": {
+      "diagnostics_pending": false,
+      "analysis_pending": false
+    },
+    "background_runs": [
+      {
+        "call_ms": 0.7723750313743949,
+        "batch_ms": 3733.7331250309944,
+        "max_heartbeat_ms": 38.25995803344995,
+        "max_gap_phase_before": "Opening project \u00b7 verifying the saved baseline\u2026",
+        "max_gap_phase_after": "Opening project \u00b7 applying the prepared workspace\u2026",
+        "apply_ms": 35.53883300628513
+      },
+      {
+        "call_ms": 0.7455410086549819,
+        "batch_ms": 3681.505458022002,
+        "max_heartbeat_ms": 50.038958026561886,
+        "max_gap_phase_before": "Opening project \u00b7 verifying the saved baseline\u2026",
+        "max_gap_phase_after": "Opening project \u00b7 applying the prepared workspace\u2026",
+        "apply_ms": 46.58216697862372
+      },
+      {
+        "call_ms": 0.4033339791931212,
+        "batch_ms": 3757.982084003743,
+        "max_heartbeat_ms": 51.154291024431586,
+        "max_gap_phase_before": "Opening project \u00b7 verifying the saved baseline\u2026",
+        "max_gap_phase_after": "Opening project \u00b7 applying the prepared workspace\u2026",
+        "apply_ms": 47.537832986563444
+      },
+      {
+        "call_ms": 0.39620796451345086,
+        "batch_ms": 3710.8874999685213,
+        "max_heartbeat_ms": 47.83783300081268,
+        "max_gap_phase_before": "Opening project \u00b7 verifying the saved baseline\u2026",
+        "max_gap_phase_after": "Opening project \u00b7 applying the prepared workspace\u2026",
+        "apply_ms": 45.57379201287404
+      },
+      {
+        "call_ms": 0.46312500489875674,
+        "batch_ms": 3665.9265420166776,
+        "max_heartbeat_ms": 48.53304097196087,
+        "max_gap_phase_before": "Opening project \u00b7 verifying the saved baseline\u2026",
+        "max_gap_phase_after": "Opening project \u00b7 applying the prepared workspace\u2026",
+        "apply_ms": 46.16199998417869
+      }
+    ]
+  }
+]

@@ -13,6 +13,7 @@ import numpy as np
 from neo_tracker.atomic_io import atomic_output_path
 from neo_tracker.core import TrackerResult
 from neo_tracker.csv_utils import write_dict_csv
+from neo_tracker.media import MAX_WAV_DECODE_BLOCK_BYTES, validate_wav_header
 
 
 _SCIPY_SIGNAL: Any | None = None
@@ -197,8 +198,9 @@ def wav_signal_series(
         sample_width = int(wav.getsampwidth())
         sample_rate = float(wav.getframerate())
         frame_count = int(wav.getnframes())
-        if channels <= 0:
-            raise ValueError("WAV file has no channels")
+        validation_error = validate_wav_header(channels, sample_width, sample_rate, frame_count)
+        if validation_error is not None:
+            raise ValueError(validation_error)
         if channel == "mono":
             channel_index: int | None = None
             channel_label = "mono"
@@ -213,7 +215,9 @@ def wav_signal_series(
         values = np.empty(frame_count, dtype=float)
         written = 0
         remaining = frame_count
-        chunk_size = max(1, int(chunk_frames))
+        decode_bytes_per_frame = channels * sample_width
+        max_chunk_frames = max(1, MAX_WAV_DECODE_BLOCK_BYTES // decode_bytes_per_frame)
+        chunk_size = max(1, min(int(chunk_frames), max_chunk_frames))
         while remaining > 0:
             if cancel_requested is not None and cancel_requested():
                 raise InterruptedError("WAV loading was canceled")
@@ -468,28 +472,30 @@ def write_stft_csv(path: str | Path, result: STFTResult) -> None:
 
 def write_fft_npz(path: str | Path, result: FFTResult) -> None:
     with atomic_output_path(path) as temporary_path:
-        np.savez(
-            temporary_path,
-            frequency_hz=result.frequency_hz,
-            amplitude=result.amplitude,
-            power=result.power,
-            peak_frequency_hz=result.peak_frequency_hz,
-            metadata_json=np.asarray(_metadata_json(result.metadata)),
-            format_version=np.asarray(2, dtype=np.int64),
-        )
+        with temporary_path.open("wb") as handle:
+            np.savez(
+                handle,
+                frequency_hz=result.frequency_hz,
+                amplitude=result.amplitude,
+                power=result.power,
+                peak_frequency_hz=result.peak_frequency_hz,
+                metadata_json=np.asarray(_metadata_json(result.metadata)),
+                format_version=np.asarray(2, dtype=np.int64),
+            )
 
 
 def write_stft_npz(path: str | Path, result: STFTResult) -> None:
     with atomic_output_path(path) as temporary_path:
-        np.savez(
-            temporary_path,
-            time_s=result.time_s,
-            frequency_hz=result.frequency_hz,
-            amplitude=result.amplitude,
-            power=result.power,
-            metadata_json=np.asarray(_metadata_json(result.metadata)),
-            format_version=np.asarray(2, dtype=np.int64),
-        )
+        with temporary_path.open("wb") as handle:
+            np.savez(
+                handle,
+                time_s=result.time_s,
+                frequency_hz=result.frequency_hz,
+                amplitude=result.amplitude,
+                power=result.power,
+                metadata_json=np.asarray(_metadata_json(result.metadata)),
+                format_version=np.asarray(2, dtype=np.int64),
+            )
 
 
 def _metadata_json(metadata: dict[str, Any]) -> str:

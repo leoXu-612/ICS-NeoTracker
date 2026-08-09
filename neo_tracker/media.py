@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from hashlib import sha256
+from math import isfinite
 from pathlib import Path
 from stat import S_ISREG
 from typing import Any, Literal
@@ -15,6 +16,12 @@ _CV2_IMPORT_ERROR: Exception | None = None
 MEDIA_IDENTITY_CHUNK_BYTES = 256 * 1024
 MEDIA_IDENTITY_FULL_LIMIT_BYTES = MEDIA_IDENTITY_CHUNK_BYTES * 3
 _MEDIA_IDENTITY_STRATEGIES = frozenset({"full-sha256-v1", "sampled-sha256-v1"})
+MAX_WAV_CHANNELS = 64
+MAX_WAV_SAMPLE_WIDTH_BYTES = 4
+MAX_WAV_SAMPLE_RATE_HZ = 1_000_000.0
+MAX_WAV_FRAMES = 64 * 1024 * 1024
+MAX_WAV_DECODE_BYTES = 512 * 1024 * 1024
+MAX_WAV_DECODE_BLOCK_BYTES = 16 * 1024 * 1024
 _FileVersion = tuple[int, int, int, int, int]
 
 
@@ -25,6 +32,40 @@ class EndOfMediaError(RuntimeError):
         self.frame_index = int(frame_index)
         self.path = str(path)
         super().__init__(f"Media ended or became unreadable at frame {self.frame_index}: {self.path}")
+
+
+def validate_wav_header(
+    channels: int,
+    sample_width: int,
+    sample_rate: float,
+    frame_count: int,
+) -> str | None:
+    """Return a user-facing error for unsafe WAV metadata, otherwise ``None``."""
+
+    if channels <= 0:
+        return "WAV file has no channels"
+    if channels > MAX_WAV_CHANNELS:
+        return f"WAV channel count {channels} exceeds the supported limit of {MAX_WAV_CHANNELS}"
+    if sample_width <= 0 or sample_width > MAX_WAV_SAMPLE_WIDTH_BYTES:
+        return (
+            f"WAV sample width {sample_width} bytes is outside the supported "
+            f"1..{MAX_WAV_SAMPLE_WIDTH_BYTES} range"
+        )
+    if not isfinite(sample_rate) or sample_rate <= 0.0:
+        return "WAV sample rate must be a positive finite number"
+    if sample_rate > MAX_WAV_SAMPLE_RATE_HZ:
+        return f"WAV sample rate must not exceed {MAX_WAV_SAMPLE_RATE_HZ:,.0f} Hz"
+    if frame_count < 0:
+        return "WAV frame count must be non-negative"
+    if frame_count > MAX_WAV_FRAMES:
+        return f"WAV frame count must not exceed {MAX_WAV_FRAMES:,}"
+    decode_bytes = frame_count * channels * sample_width
+    if decode_bytes > MAX_WAV_DECODE_BYTES:
+        return (
+            f"WAV decoded size {decode_bytes:,} bytes exceeds the supported "
+            f"limit of {MAX_WAV_DECODE_BYTES:,} bytes"
+        )
+    return None
 
 
 @dataclass(frozen=True)
@@ -240,10 +281,14 @@ def probe_wav_media(path: str) -> MediaInfo:
     try:
         with wave.open(str(media_path), "rb") as wav:
             channels = int(wav.getnchannels())
+            sample_width = int(wav.getsampwidth())
             sample_rate = float(wav.getframerate())
             frame_count = int(wav.getnframes())
     except Exception as exc:
         return MediaInfo(kind="audio", error=f"Could not open WAV file: {path} ({exc})")
+    validation_error = validate_wav_header(channels, sample_width, sample_rate, frame_count)
+    if validation_error is not None:
+        return MediaInfo(kind="audio", error=f"{validation_error}: {path}")
     source_identity, identity_error = _stable_media_identity(media_path, source_version)
     if identity_error:
         return MediaInfo(kind="audio", error=identity_error)

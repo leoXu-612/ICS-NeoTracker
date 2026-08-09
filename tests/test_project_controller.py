@@ -131,6 +131,24 @@ class ProjectTaskControllerTests(unittest.TestCase):
         self.assertEqual(task.pipeline.roi.to_config()["type"], "rectangle")
         self.assertIsNone(task.calibration_rod.unit_per_pixel())
 
+    def test_apply_roi_config_rejects_oversized_polygon_without_partial_application(self) -> None:
+        task = self.controller.new_task("missing.mp4", "color_marker")
+        original_roi = task.roi
+        oversized = {
+            "type": "polygon",
+            "points": [[float(index), 0.0] for index in range(4097)],
+        }
+
+        self.assertFalse(self.controller.apply_roi_config_to_task(task, oversized))
+        self.assertEqual(task.roi, original_roi)
+
+        allowed = {
+            "type": "polygon",
+            "points": [[float(index), 0.0] for index in range(4096)],
+        }
+        self.assertTrue(self.controller.apply_roi_config_to_task(task, allowed))
+        self.assertEqual(len(task.roi["points"]), 4096)
+
     def test_project_load_blocks_same_path_media_drift_until_explicit_relink(self) -> None:
         live = MediaInfo(
             fps=30.0,
@@ -252,11 +270,93 @@ class ProjectTaskControllerTests(unittest.TestCase):
         self.assertEqual(verified.state, "match")
         self.assertEqual(verified.identity_state, "sampled")
         self.assertIn("Bounded sampled SHA-256", verified.summary)
-        self.assertFalse(verified.clear_results)
+        self.assertTrue(verified.clear_results)
+        self.assertTrue(verified.requires_review)
         self.assertEqual(changed.state, "mismatch")
         self.assertEqual(changed.identity_state, "mismatch")
         self.assertEqual(changed.differences, ("Source content digest differs",))
         self.assertTrue(changed.clear_results)
+
+    def test_sampled_identity_match_without_results_does_not_clear_or_review(self) -> None:
+        saved_identity = MediaIdentity("sampled-sha256-v1", "a" * 64, 50_000_000, 786_432)
+        saved = MediaInfo(
+            fps=20.0,
+            frame_count=72,
+            width=640,
+            height=360,
+            available=False,
+            source_identity=saved_identity,
+        )
+        candidate = replace(saved, available=True)
+
+        empty_task = self.controller.assess_media_relink(saved, candidate, has_result_state=False)
+
+        self.assertEqual(empty_task.state, "match")
+        self.assertEqual(empty_task.identity_state, "sampled")
+        self.assertFalse(empty_task.clear_results)
+        self.assertFalse(empty_task.requires_review)
+
+    def test_full_identity_match_preserves_results_without_review(self) -> None:
+        saved_identity = MediaIdentity("full-sha256-v1", "a" * 64, 4096, 4096)
+        saved = MediaInfo(
+            fps=20.0,
+            frame_count=72,
+            width=640,
+            height=360,
+            available=False,
+            source_identity=saved_identity,
+        )
+        candidate = replace(saved, available=True)
+
+        assessment = self.controller.assess_media_relink(saved, candidate, has_result_state=True)
+
+        self.assertEqual(assessment.state, "match")
+        self.assertEqual(assessment.identity_state, "full")
+        self.assertFalse(assessment.clear_results)
+        self.assertFalse(assessment.requires_review)
+
+    def test_snapshot_open_quarantines_sampled_identity_match_with_results(self) -> None:
+        saved_identity = MediaIdentity("sampled-sha256-v1", "1" * 64, 50_000_000, 786_432)
+        live_identity = MediaIdentity("sampled-sha256-v1", "1" * 64, 50_000_000, 786_432)
+        live = MediaInfo(
+            fps=20.0,
+            frame_count=72,
+            width=640,
+            height=360,
+            duration_s=3.6,
+            available=True,
+            source_identity=live_identity,
+        )
+        controller = ProjectTaskController(
+            self.registry,
+            "color_marker",
+            media_probe=lambda _path: live,
+        )
+        snapshot = ProjectTaskSnapshot(
+            media_path="/experiments/source.mp4",
+            pipeline_key="color_marker",
+            media_info={
+                "kind": "video",
+                "available": True,
+                "fps": 20.0,
+                "frame_count": 72,
+                "width": 640,
+                "height": 360,
+                "duration_s": 3.6,
+                "source_identity": saved_identity.to_dict(),
+            },
+            results=[TrackerResult(0, 0.0, {"x_px": 12.0}, {"x_px": 12.0}, 0.9, "ok")],
+        )
+
+        task = controller.task_from_snapshot(snapshot)
+
+        self.assertTrue(task.media_identity_requires_review)
+        self.assertFalse(task.media_info.available)
+        self.assertIsNotNone(task.pending_media_relink)
+        _candidate, assessment = task.pending_media_relink
+        self.assertEqual(assessment.state, "match")
+        self.assertEqual(assessment.identity_state, "sampled")
+        self.assertTrue(assessment.clear_results)
 
     def test_saved_digest_without_candidate_digest_is_unverified_not_match(self) -> None:
         saved_identity = MediaIdentity("full-sha256-v1", "a" * 64, 4096, 4096)

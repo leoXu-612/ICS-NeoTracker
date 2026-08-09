@@ -120,8 +120,10 @@ class MediaRelinkPanel(QWidget):
             "unavailable": "Replacement unavailable",
         }
         title = titles.get(assessment.state, "Replacement checked")
-        if assessment.state == "match" and assessment.identity_state in {"full", "sampled"}:
+        if assessment.state == "match" and assessment.identity_state == "full":
             title = "Source verified"
+        elif assessment.state == "match" and assessment.identity_state == "sampled":
+            title = "Sampled identity match"
         elif assessment.state == "mismatch" and assessment.identity_state == "mismatch":
             title = "Source differs"
         self._set_status(title, assessment.state, assessment.summary)

@@ -5546,9 +5546,7 @@ class NeoTrackerWindow(QMainWindow):
             info,
             has_result_state=has_result_state,
         )
-        requires_review = assessment.state in {"mismatch", "incompatible"} or (
-            assessment.state == "unverified" and has_result_state
-        )
+        requires_review = assessment.requires_review
         if requires_review:
             self._stage_media_relink(task.media_path, info, assessment=assessment)
             if previous_info is not None:

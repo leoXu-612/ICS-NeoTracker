@@ -2,122 +2,137 @@
 
 ## Conclusion
 
-P0-A（OpenCV/PyAV 双 FFmpeg 栈冲突）已按最小方案关闭：`media` extra 移除零使用点的 `av` 依赖并补齐 3 项守卫测试，436 项回归、compileall、pip check、内容索引与 10 万结果 heartbeat 全部通过；真实长时媒体、原生 macOS 无障碍与部署证据仍缺失，任务保持 `IN_PROGRESS`，整体结论为 `PARTIAL`。
+P1-A1 的 4 个已复现问题（sampled identity 误绑定、ROI 4096 上限绕过、WAV 通道元数据放大、NPZ 空文件/sidecar）已全部按“先补失败测试 → 最小修复 → 反证”闭环：定向 89 项、全量 449 项（69.750 s）、compileall、pip check 全部通过，2 轮 × 5 次 10 万结果打开 heartbeat 无一次超过 75 ms；但真实长时媒体、原生无障碍与部署证据仍缺失，且 Codex 独立复核曾观测到 153.45 ms 单次 heartbeat 超限且波动来源未完全归因，故整体结论保持 `PARTIAL`，任务 `IN_PROGRESS`。
 
 ## Findings
 
-### P0-A：`media` extra 同时声明 OpenCV 与 PyAV，同进程导入触发 FFmpeg 61/62 冲突
+### A. 大媒体 sampled identity 被当作精确匹配（MEDIUM）— CLOSED
 
-- 复现：`python3 -c 'import cv2; import av'` 与 `python3 -c 'import av; import cv2'`（一次性子进程，任意顺序）均输出 macOS objc 警告：`AVFFrameReceiver`/`AVFAudioReceiver` 在两个 `libavdevice` 中重复实现（cv2 携带 FFmpeg 61.3.100，av 携带 FFmpeg 62.3.101），提示可能出现类型转换失败与神秘崩溃；单独导入任一模块无警告。原始输出见 `artifacts/deepseek-2026-08-09/p0a-ffmpeg-conflict.md`。
-- 影响：部署风险。若安装 `[media]` 后任何代码（或第三方依赖）在 GUI 进程同时导入两者，可能产生原生崩溃；且该依赖集与"GUI 进程不加载两套 FFmpeg"不变量冲突。
-- 根因：`pyproject.toml` media extra 声明了 `av>=12`，但 `neo_tracker/`、`tests/`、`benchmarks/` 对 PyAV 零使用；`neo_tracker.egg-info/` 中的 `av>=12` 为自动生成的陈旧元数据。
-- 状态：CLOSED（依赖声明层面）。修复与验证见 "Changes Made" / "Testing"。
+- 复现（本机真实文件）：2,000,044 字节 WAV 在 600 KiB 偏移改写 PCM 样本（位于采样窗口之外）后，两文件 `MediaIdentity` 完全相等（`sampled-sha256-v1`，仅 786,432 字节采样）、metadata 相同且均可打开，解码样本由 `0.0` 变为 `0.99997`；修复前 `assess_media_relink()` 返回 `match / sampled / clear_results=False`，旧 Results/Edits 静默绑定新内容。
+- 影响：采样窗口外的替换/篡改可绕过项目级来源校验，用户在不知情下用新内容续用旧结果。
+- 根因：sampled digest 相等被直接当作“已验证”的精确匹配，且无审查入口。
+- 修复：sampled match + 有结果状态 → `clear_results=True` + `requires_review=True`，differences 写明“采样覆盖 X of Y 字节，未建立逐字节相等”；打开、追踪前、来源漂移三处统一走 `MediaRelinkAssessment.requires_review` 隔离；UI 区分 `Source verified`（full）与 `Sampled identity match`（sampled），Apply 显示 `Relink + Clear Results/Edits`。full match 与无结果 sampled match 行为不变。
+- 反证：修复后同复现返回 `match / sampled / clear_results=True / requires_review=True`。
 
-### P0-A 关联：Qt accessibility、QThread 生命周期、OpenCV/FFmpeg 旧崩溃报告
+### B. task-level ROI 绕过 4096 点上限（MEDIUM）— CLOSED
 
-- 2026-08-09 复核：`~/Library/Logs/DiagnosticReports` 最近 7 天无 python/Qt/neo_tracker 相关 `.ips`（仅有 CodexProviderSwitcher 与 Retired/xdvipdfmx，与产品无关），433→436 项回归无异常退出。
-- 结论：旧报告（2026-07-14/15 Accessibility/AppKit、2026-07-16 QThread）无新复现证据，本包不重新归因；依赖冲突已从依赖声明层面关闭，但"环境显式导入 PyAV"仍可能触发警告（见 Remaining Risks）。
+- 复现：`apply_roi_config_to_task()` 接受 4097 点 polygon 并全量应用，`validate_roi_config()` 不检查上限。
+- 影响：超过 `MAX_ROI_POINTS=4096` 的几何可进入 Qt 表格与 pipeline，绕过统一几何上限。
+- 修复：`validate_roi_config()` 对 polygon/curve_band 拒绝 `>4096` 点；`apply_roi_config_to_task()` 先校验后变更，拒绝时无部分应用（task.roi 与 pipeline.roi 保持原值）。4096 允许。
 
-### P0-B：真实长时媒体矩阵
+### C. WAV channel metadata 可驱动无界 UI/解码放大（MEDIUM）— CLOSED
 
-- 状态：BLOCKED。工作区 `artifacts/experiment-videos/` 仅含 72 帧红点短视频等 synthetic/短样本，无目标相机 H.264/HEVC、CFR/VFR、1080p/4K 真实素材；未提供目标硬件、典型会话时长与通过门槛，故未用 synthetic 替代结论。
-- 已记录待办：首帧/稳态 Preview latency、Tracking 吞吐与 overlap、whole-process RSS、fd/helper 残留、Cancel/Close 时延、结果/fingerprint/provenance、热/功耗证据；优化前需保存可复现 baseline。
+- 复现：手写 `channels=65535`、`sample_width=8`、`frame_count=2^29` 头均被 probe 标记可用；`available_sources()` 按声明通道建对象；`wav_signal_series()` 固定 1,048,576 frames chunk，中间数组随 `frames × channels` 放大；workload gate 只按 frame count 估算。
+- 影响：恶意/损坏 WAV 头可在 Qt/NumPy 分配前触发无界 UI 对象与解码内存放大。
+- 修复：`media.validate_wav_header()`（channels 1..64、sample_width 1..4、sample_rate ≤1 MHz、frames ≤2^26、`frames×channels×sample_width ≤512 MiB`）在 probe 与解码入口共用；chunk 按 `16 MiB ÷ (channels × sample_width)` 收缩；`available_sources()` 通道循环封顶。极端头在分配前拒绝，不标记 available。
+- 备注：stdlib `wave` 把位深字段按 `(bits+7)//8` 转字节宽，测试头按位深构造。
 
-### P1-A：安全与数据可信度 Review
+### D. 非 `.npz` 目标发布空文件并遗留真实 sidecar（LOW）— CLOSED
 
-- 状态：PARTIAL。工程不变量（原子保存、IPC 上限、来源复验、取消终态、无 pickle）由现有 436 项回归覆盖，本次未发现新的可复现缺陷；未按信任边界重跑完整攻击面审计（`.ntproj` 深度/NaN、media TOCTOU、helper IPC 溢出、导出失败路径等），需独立工作包逐项产出带严重度与精确复现的 findings。
+- 复现：目标 `export`/`archive.dat` 时，`np.savez(temp_path)` 自动追加 `.npz`，`os.replace` 发布空临时文件，真实 archive 留在隐藏 sidecar；失败路径 sidecar 不清理。
+- 修复：把 `atomic_output_path` 临时文件作为二进制 file object 交给 `np.savez`；`.npz`/无后缀/其他后缀的成功与失败路径均有测试，失败保留原文件、无 sidecar。
 
-### P1-B：原生 macOS UI 与无障碍
+### 验收遗留（P0-A 复核）
 
-- 状态：BLOCKED（权限/工具）。本环境仅能提供 offscreen 证据；原生 Retina 2×、系统文本缩放、全键盘焦点、VoiceOver/Accessibility Inspector、动态 compositor 残留均需真实窗口会话与辅助功能权限，未在本包执行。
-
-### P2：产品能力缺口
-
-- 状态：NOT STARTED。二维 `radius×angle` 原始采样可视化、外部 pipeline config 安全反序列化、安装/打包/签名/notarization 部署路径均未动工；按工单要求，不在 P0/P1 稳定前扩大插件/API 表面积。
+- `collab/FROM_DEEPSEEK.md` 此前写 `396/396`，实际为 `397/397`：已在本版以最终重建后的实际条目数更正。
+- heartbeat：本版按要求以 2 轮 × 5 次逐值报告；Codex 独立复核的 153.45 ms 单次超限未在本机复现，波动来源未完全归因，故不宣称“heartbeat 全部通过/稳定”。
+- `7deeee6` 为文档/证据/索引提交，P0-A 代码修改在初始提交 `f999fae`：本版提交说明不再把 `7deeee6` 描述为依赖修复原子提交。
 
 ## Changes Made
 
-- `pyproject.toml`：`media` extra 由 `["opencv-python>=4.9", "av>=12"]` 改为 `["opencv-python>=4.9"]`（移除零使用点的 PyAV）。
-- 新增 `tests/test_media_dependencies.py`（3 项守卫测试）：
-  1. `neo_tracker/` 静态扫描禁止 `import av` / `from av`；
-  2. media extra 不得声明 PyAV；
-  3. 子进程 `import cv2` 后断言 `av` 不在 `sys.modules`（运行时守卫）。
-- 重新生成 `neo_tracker.egg-info/`（`pip install -e . --no-deps`），requires.txt/PKG-INFO 同步移除 `av`。
-- `artifacts/deepseek-2026-08-09/`：`baseline.md`（环境/备份/回归/基准/残留）与 `p0a-ffmpeg-conflict.md`（复现原始输出/审计/修复/clean-env 验证/限制）。
-- 文档：`README.md` 安装节说明 media extra 仅含 OpenCV 及不引入 PyAV 的原因；`交接.md` 新增 3.75 节与 2026-08-09 复核基线；`PROJECT_INDEX.md` 更新测试数与索引语义（排除 `.git/`）。
-- `PROJECT_FILE_INDEX.sha256` 重新生成并校验。
-
-说明：`build/` 为历史构建产物，`pip install -e .` 曾短暂重生成其内容，已从开工前备份定向还原，未以 `build/lib/` 作为任何修改来源。
+- `neo_tracker/ui/project_controller.py`：`MediaRelinkAssessment.requires_review`；sampled match + 有结果 → `clear_results=True` + 差异说明；打开流程改用 `assessment.requires_review`。
+- `neo_tracker/ui/main_window.py`：追踪前来源复核改用 `assessment.requires_review`。
+- `neo_tracker/ui/media_relink_panel.py`：sampled match 独立标题与清理提示。
+- `neo_tracker/config.py`：polygon/curve_band 4096 点上限校验。
+- `neo_tracker/media.py`：`validate_wav_header()` + `MAX_WAV_*` 常量，probe 入口校验。
+- `neo_tracker/analysis.py`：`wav_signal_series` 复用校验、chunk 按通道收缩；`write_fft_npz/write_stft_npz` 改为 file object 写入。
+- `neo_tracker/ui/analysis_controller.py`：通道循环封顶 `MAX_WAV_CHANNELS`。
+- 测试：新增/更新 13 项（sampled 审查 4、ROI 上限 2、WAV 上限与 chunk 5、NPZ 原子导出 3、通道封顶 1，含既有断言修正）。
+- `artifacts/deepseek-2026-08-09/`：`p1a1-data-trust-and-io-bounds.md`、`benchmark-round1.json`、`benchmark-round2.json`。
+- 文档：`交接.md`（3.76 + 验证证据）、`PROJECT_INDEX.md`、`PROJECT_FILE_INDEX.sha256`。
 
 ## Files Modified
 
-- `pyproject.toml`
-- `tests/test_media_dependencies.py`（新增）
-- `neo_tracker.egg-info/requires.txt`、`neo_tracker.egg-info/PKG-INFO`（重新生成）
-- `artifacts/deepseek-2026-08-09/baseline.md`（新增）
-- `artifacts/deepseek-2026-08-09/p0a-ffmpeg-conflict.md`（新增）
-- `README.md`
+- `neo_tracker/ui/project_controller.py`
+- `neo_tracker/ui/main_window.py`
+- `neo_tracker/ui/media_relink_panel.py`
+- `neo_tracker/config.py`
+- `neo_tracker/media.py`
+- `neo_tracker/analysis.py`
+- `neo_tracker/ui/analysis_controller.py`
+- `tests/test_project_controller.py`
+- `tests/test_media.py`
+- `tests/test_config.py`
+- `tests/test_analysis.py`
+- `tests/test_analysis_controller.py`
+- `tests/test_media_relink_panel.py`
+- `artifacts/deepseek-2026-08-09/p1a1-data-trust-and-io-bounds.md`（新增）
+- `artifacts/deepseek-2026-08-09/benchmark-round1.json`（新增）
+- `artifacts/deepseek-2026-08-09/benchmark-round2.json`（新增）
 - `交接.md`
 - `PROJECT_INDEX.md`
 - `PROJECT_FILE_INDEX.sha256`
-- `collab/FROM_DEEPSEEK.md`（本文件，新增）
+- `collab/FROM_DEEPSEEK.md`（本文件）
+- `FORDEEPSEEK.md`（Codex 验收更新，随本包提交留痕）
 
 ## Testing
 
 ```bash
-# 定向（当前解释器与全新 venv 各一次）
-PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen python3 -m unittest tests.test_media_dependencies -v
-# Ran 3 tests ... OK
+# 定向（先红后绿：旧实现 23 项失败/错误 → 修复后 89 项 OK）
+PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen \
+  python3 -m unittest tests.test_media tests.test_project_controller \
+    tests.test_config tests.test_analysis tests.test_analysis_controller \
+    tests.test_media_relink_panel
+# Ran 89 tests ... OK
 
-# 全量回归
-PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen python3 -m unittest discover -s tests -q
-# 修改前 433 tests / 61.976 s；修改后 436 tests / 64.652 s ... OK
+# 全量
+PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen \
+  python3 -m unittest discover -s tests -q
+# Ran 449 tests in 69.750s ... OK
 
 PYTHONDONTWRITEBYTECODE=1 python3 -m compileall -q neo_tracker tests benchmarks
-# 退出码 0，无输出
+# 退出码 0
 
 python3 -m pip check
 # No broken requirements found.
 
 LC_ALL=en_US.UTF-8 shasum -a 256 -c PROJECT_FILE_INDEX.sha256
-# 396/396 OK
-
-# 10 万结果项目打开
-PYTHONPATH=. QT_QPA_PLATFORM=offscreen \
-  python3 benchmarks/benchmark_project_open_ui.py \
-  --results 100000 --repeat-background 3 --max-heartbeat-ms 75
-# max_heartbeat_ms 46.46/48.87（修改前 42.37/50.61/56.88），门槛 <75 ms；payload_equal true
-
-# Clean environment（全新 venv）
-python3 -m venv "$tmpd" && "$tmpd/bin/pip" install -q '.[media]'
-"$tmpd/bin/python" -c 'import cv2; print(cv2.__version__)'   # 5.0.0
-"$tmpd/bin/python" -c 'import av'                            # ModuleNotFoundError
+# 400/400 OK
 ```
 
 ## Performance and Runtime Evidence
 
-- Workload：10 万结果 `.ntproj` 打开 ×3（修改前后各一轮），offscreen，`repeat-background 3`。
-- 环境：macOS 15.7.7 Apple Silicon；Python 3.12.6；NumPy 2.2.3；PySide6 6.11.1；OpenCV 4.13.0（解释器）/ 5.0.0（venv）；PyAV 17.1.0（环境中仍安装，未使用）。
-- 结果：heartbeat 46.46/48.87 ms（修改前 42.37/50.61/56.88），均低于 `<75 ms`；apply 44.40/46.49 ms；payload/results/fingerprint/diagnostics/analysis 一致；fingerprint `d9c2dd59…`。
-- RSS/进程：本次未做 whole-process RSS 与热/功耗测量（P0-B 记录为缺口）；回归与基准后无残留项目进程、无新 `.ips`。
-- 限制：offscreen/合成证据不证明原生 Retina、compositor、真实相机素材或长时会话稳定性。
+- Workload：10 万结果 `.ntproj` 打开，2 轮 × 5 次 background open（门槛 <75 ms），offscreen。
+- 环境：macOS 15.7.7 Apple Silicon；Python 3.12.6；NumPy 2.2.3；PySide6 6.11.1；OpenCV 4.13.0。
+- 逐值 heartbeat（ms）：round1 = 38.26 / 50.04 / 51.15 / 47.84 / 48.53；round2 = 35.32 / 48.78 / 48.61 / 47.15 / 47.56。
+- 统计：median 48.53 / 47.56；p95 50.04 / 48.61；max 51.15 / 48.78；超 75 ms 次数 0/0；两轮退出码均 0。
+- `max_gap_phase_before/after`：全部为 `Opening project · verifying the saved baseline…` → `…applying the prepared workspace…`；apply median 46.16 / 44.38 ms。
+- 正确性：`payload_equal=True`，fingerprint 不变（`d9c2dd59…`），diagnostics/analysis 无 pending。
+- 原始数据：`artifacts/deepseek-2026-08-09/benchmark-round1.json` / `round2.json`（首行为 Qt 字体告警，JSON 自 `[` 起）。
+- 残留检查：无项目进程残留、无新 `.ips`、临时 venv 已清理。
+- 限制：本机两轮未超门槛，但独立复核曾出现 153.45 ms 单次超限；波动可能来自同机负载，未完全归因。offscreen 证据不证明原生 Retina/compositor 或真实相机素材稳定性。
 
 ## Remaining Risks
 
-- 事实：当前解释器环境中仍装有 PyAV 17.1.0；本次仅清理依赖声明，未卸载任何已装包。运行时守卫证明 `import cv2` 不传递加载 `av`，但若第三方代码显式 `import av`，旧 objc 重复类警告仍会出现。
-- 推断：旧崩溃报告（Accessibility/AppKit、QThread）与 FFmpeg 冲突无新复现证据，未做堆栈归因；不能由"无新 `.ips`"推断这些路径已修复。
-- 未验证假设：真实相机素材的长时稳定性、原生无障碍与部署签名/notarization 均缺证据；在这些闭环前不得建议 `DONE`。
-- 待办：P0-B 需用户提供目标素材与硬件/时长门槛；P1-A 需按信任边界逐项审计；P1-B 需真实窗口与辅助功能权限。
+- 事实：sampled identity 采用“显式人工确认 + 清理结果”方案；大项目打开时 sampled match 需用户审查，未被审查前结果保持隔离。后台可持久化 full-file identity 是后续优先项（本轮未实现，避免扩大改动面）。
+- 事实：当前解释器仍装有 PyAV 17.1.0；P0-A 仅关闭依赖声明层风险。
+- 推断：153.45 ms heartbeat 单次超限来自同机负载，但无负载快照佐证，属未验证假设。
+- 未验证：真实长时媒体矩阵（P0-B）、原生无障碍（P1-B）、部署/签名（P2）仍缺证据；在这些闭环前不得建议 `DONE`。
 
 ## Suggested Commit Message
 
 ```text
-fix(media): drop unused PyAV from media extra to avoid FFmpeg 61/62 conflict
+fix(trust): enforce sampled-identity review, ROI/WAV bounds, and atomic NPZ export
 
-- Remove av>=12 from pyproject media extra (zero usage in source/tests/benchmarks)
-- Add tests guarding product source against PyAV imports and declaring media extra
-- Regenerate egg-info metadata; record baseline, repro, and clean-env verification
-- Full suite: 436 tests OK; heartbeat <75 ms on 100k-result open; index 396/396 OK
+- Sampled identity match with results now requires review and clears results,
+  with explicit coverage note; full match behavior unchanged (P1-A1 A)
+- validate_roi_config rejects >4096 polygon/curve_band points before any
+  task mutation (P1-A1 B)
+- WAV probe/decode validate channels, sample width, rate, frames and
+  decoded-byte bounds; chunks shrink with channel count; source list capped
+  (P1-A1 C)
+- NPZ exports write through an atomic file object so non-.npz targets publish
+  the real archive and never leak hidden sidecars (P1-A1 D)
+- Red/green: 23 failing targeted tests -> 89 OK; full suite 449 OK in 69.750s;
+  compileall and pip check pass; 100k-open benchmark 2x5 rounds all <75 ms
 ```
-
-Git 备注：仓库由用户于 2026-08-09 16:51 初始化（Initial commit `f999fae`），本包修改已在初始提交之后的工作树中，随后由 DeepSeek 提交留痕。

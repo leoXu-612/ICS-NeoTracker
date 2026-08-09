@@ -24,7 +24,7 @@ from neo_tracker.analysis import (
     write_stft_npz,
 )
 from neo_tracker.core import TrackerResult
-from neo_tracker.media import MediaInfo
+from neo_tracker.media import MAX_WAV_CHANNELS, MediaInfo
 
 
 @dataclass(frozen=True)
@@ -319,7 +319,7 @@ class AnalysisController:
                     total_sample_count=sample_count,
                 )
             )
-            for channel_index in range(max(0, int(media_info.channels))):
+            for channel_index in range(max(0, min(int(media_info.channels), MAX_WAV_CHANNELS))):
                 sources.append(
                     AnalysisSource(
                         kind="audio",

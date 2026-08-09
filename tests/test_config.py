@@ -4,7 +4,7 @@ import unittest
 
 import numpy as np
 
-from neo_tracker.config import apply_pipeline_config, validate_roi_config
+from neo_tracker.config import MAX_ROI_POINTS, apply_pipeline_config, validate_roi_config
 from neo_tracker.coordinates import PathCoordinate
 from neo_tracker.filters import ExponentialSmoothingFilter
 from neo_tracker.motion import PathMotionPrior
@@ -110,6 +110,31 @@ class PipelineConfigTests(unittest.TestCase):
                 apply_pipeline_config(pipeline, {"roi": config})
 
                 self.assertIs(pipeline.roi, original_roi)
+
+    def test_validate_roi_config_enforces_max_roi_points(self) -> None:
+        polygon_allowed = {
+            "type": "polygon",
+            "points": [[float(index), 0.0] for index in range(MAX_ROI_POINTS)],
+        }
+        polygon_rejected = {
+            "type": "polygon",
+            "points": [[float(index), 0.0] for index in range(MAX_ROI_POINTS + 1)],
+        }
+        curve_allowed = {
+            "type": "curve_band",
+            "polyline": [[float(index), 0.0] for index in range(MAX_ROI_POINTS)],
+            "half_width": 1.0,
+        }
+        curve_rejected = {
+            "type": "curve_band",
+            "polyline": [[float(index), 0.0] for index in range(MAX_ROI_POINTS + 1)],
+            "half_width": 1.0,
+        }
+
+        self.assertIsNone(validate_roi_config(polygon_allowed))
+        self.assertIsNotNone(validate_roi_config(polygon_rejected))
+        self.assertIsNone(validate_roi_config(curve_allowed))
+        self.assertIsNotNone(validate_roi_config(curve_rejected))
 
     def test_invalid_edge_front_axis_preserves_existing_observation(self) -> None:
         pipeline = wavefront_preset()
