@@ -5,6 +5,54 @@ from dataclasses import dataclass
 from types import MappingProxyType
 
 
+PHYSICS_WORKSPACE_PAGES = (
+    "Data",
+    "Plot",
+    "Fit",
+    "Diagnostics",
+    "Runs",
+    "Edits",
+    "Signal",
+)
+
+
+@dataclass(frozen=True)
+class PhysicsWorkspaceState:
+    """Bounded, serializable presentation state; it never contains analysis data."""
+
+    collapsed: bool = False
+    page: str = "Data"
+    height: int = 280
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.collapsed, bool):
+            raise TypeError("collapsed must be a boolean")
+        if self.page not in PHYSICS_WORKSPACE_PAGES:
+            raise ValueError(f"unknown physics workspace page: {self.page}")
+        if isinstance(self.height, bool) or not isinstance(self.height, int):
+            raise TypeError("physics workspace height must be an integer")
+        if not 120 <= self.height <= 1_200:
+            raise ValueError("physics workspace height must be in [120, 1200]")
+
+    def to_mapping(self) -> dict[str, object]:
+        return {
+            "collapsed": self.collapsed,
+            "page": self.page,
+            "height": self.height,
+        }
+
+    @classmethod
+    def from_mapping(cls, value: Mapping[str, object]) -> "PhysicsWorkspaceState":
+        unknown = set(value) - {"collapsed", "page", "height"}
+        if unknown:
+            raise ValueError(f"unknown physics workspace fields: {sorted(unknown)}")
+        return cls(
+            collapsed=value.get("collapsed", False),  # type: ignore[arg-type]
+            page=value.get("page", "Data"),  # type: ignore[arg-type]
+            height=value.get("height", 280),  # type: ignore[arg-type]
+        )
+
+
 @dataclass(frozen=True)
 class ActionViewState:
     """Presentation state shared by every surface bound to one command."""
