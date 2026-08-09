@@ -30,6 +30,7 @@ from neo_tracker.project import (
     NeoTrackerProject,
     ProjectTaskSnapshot,
     TrackingRunRecord,
+    no_duplicate_json_keys,
     project_content_fingerprint,
     tracker_result_from_dict,
 )
@@ -85,17 +86,24 @@ def _release_project_open_gc_guard() -> None:
                 gc.set_threshold(*thresholds)
 
 
-def _safe_json_loads(payload: bytes, *, label: str) -> Any:
+def _safe_json_loads(
+    payload: bytes,
+    *,
+    label: str,
+    reject_duplicate_keys: bool = False,
+) -> Any:
     try:
         text = payload.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise ValueError(f"{label} must be valid UTF-8 JSON") from exc
     try:
+        object_pairs_hook = no_duplicate_json_keys if reject_duplicate_keys else None
         return json.loads(
             text,
             parse_constant=lambda token: (_ for _ in ()).throw(
                 ValueError(f"{label} contains non-finite constant {token}")
             ),
+            object_pairs_hook=object_pairs_hook,
         )
     except (json.JSONDecodeError, RecursionError) as exc:
         raise ValueError(f"{label} must contain valid JSON: {exc}") from exc
@@ -126,7 +134,7 @@ def _read_project_json_for_stage(project_path: str) -> dict[str, Any]:
         raise ValueError(
             f"project file grew above the {MAX_PROJECT_FILE_BYTES:,}-byte safety limit while reading"
         )
-    parsed = _safe_json_loads(payload, label="project file")
+    parsed = _safe_json_loads(payload, label="project file", reject_duplicate_keys=True)
     if not isinstance(parsed, dict):
         raise ValueError("project data must be a dictionary")
     if parsed.get("format") != "neo-tracker-project":

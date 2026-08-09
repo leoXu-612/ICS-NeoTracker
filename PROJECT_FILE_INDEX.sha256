@@ -1,7 +1,7 @@
 8a1e34f9d60b1ae0883532bf2378944c45979bd32ecf9f6b3ac51f9490c3f4a5  ./.gitignore
 97a4ddf1fd7c859b7c610a97bd3e7cb2b376f74effeb5b4a5d19b0bb7337b04b  ./FORDEEPSEEK.md
 a68e9c529565944c873530a399fdaab7906e80221369865486544ca46d20d36b  ./MIGRATION_RECORD.md
-d94e9b3b93e624749a217e3a41e2774f1171e3b4f47b7ac2a78dc4b0f363dfde  ./PROJECT_INDEX.md
+b1ed2e8b66255073668b4ad57b498bc8e857383284252192691c329bd9373ade  ./PROJECT_INDEX.md
 73888349aa10c6aace4ce08ccc2118d3ea1d9adc288ed6873a3ac1ce94f1506b  ./README.md
 2cff680330304f0dd6a811106f707df5f94e562f3b0bfc4213d638991881f746  ./artifacts/code-review-ui-2026-07-22/01-media-ready.png
 2b98f252469573d4cab7bc2802788e5f4c1993689ff553e3eb018cdef1fda35f  ./artifacts/code-review-ui-2026-07-22/01b-media-ready-1024x768.png
@@ -35,11 +35,20 @@ c355d47e96e46ca3bbb03b6513746aab2c4a174a09fc8eda5e22f95950e028e0  ./artifacts/de
 5b93888a08fb14c2e1c79f7b59a2b63d7d7abbf617036d81a5e9f8165048ffdf  ./artifacts/deepseek-2026-08-09/benchmark-p1a1r-round1.stderr.txt
 a7afd2fdebf557afdae458891c782582ff9fc521ad4ad96ae47b0c920bff59da  ./artifacts/deepseek-2026-08-09/benchmark-p1a1r-round2.json
 10f4e0f74e27610e6314109bd9f82a207c173ad095a5246a27fa3496a857a20a  ./artifacts/deepseek-2026-08-09/benchmark-p1a1r-round2.stderr.txt
+3a611f30bdef4843a5caa923135b29ecfe73c0c6dbd834789a0f714233ea3f22  ./artifacts/deepseek-2026-08-09/benchmark-p1a2-round1.json
+f55128ff8f162b7e2d0fd30b65bdecca33ae77301b32f63f64729b50a98b2aa4  ./artifacts/deepseek-2026-08-09/benchmark-p1a2-round1.stderr.txt
+bd4d559d09adbc898de40a806904db467524a0b58986e205261c07f3d60da1e7  ./artifacts/deepseek-2026-08-09/benchmark-p1a2-round2.json
+253d4dbe725c2ce7db3898d4232b067425e9a06a70c00ca71182b0d6d1097605  ./artifacts/deepseek-2026-08-09/benchmark-p1a2-round2.stderr.txt
+aa8d531fa180e61ba158e21cadd777d1f225f2f8016b220ce858df5fe61d099f  ./artifacts/deepseek-2026-08-09/benchmark-p1a2-round3.json
+febe03d264ed633aa3cf2f05bb1da3bd78e938a872779f962a1e28cf5d94800e  ./artifacts/deepseek-2026-08-09/benchmark-p1a2-round3.stderr.txt
+1cd2f89b1f6217c038e1cbab27285ca8c19359ae40174f614489097eb0878430  ./artifacts/deepseek-2026-08-09/benchmark-p1a2-round4.json
+2a215d74288569f69b4bc6f436da152ae1bfc7cf99bb568f437748fadd65f800  ./artifacts/deepseek-2026-08-09/benchmark-p1a2-round4.stderr.txt
 5a7f94f2a2f83e894c886a92516700a53208d8780052ac7befeb8b97d51d309f  ./artifacts/deepseek-2026-08-09/benchmark-round1.json
 c5884d55cc4ad8b55f5276e5380638300b8fdbd6f65aaff72de431f7d1981665  ./artifacts/deepseek-2026-08-09/benchmark-round2.json
 2568ee5240298361739ef049500e5d7850d5bf8407feee4eea078badd3adf029  ./artifacts/deepseek-2026-08-09/p0a-ffmpeg-conflict.md
 eaf5f4e9865a657c124dc7f1fa51ff69f3988b4957d58cea3fe34f722ccad45a  ./artifacts/deepseek-2026-08-09/p1a1-data-trust-and-io-bounds.md
 f0dabf1ef597a0cef0c12168373808ac41b6b3b2852af2188fa7858aa2961203  ./artifacts/deepseek-2026-08-09/p1a1r-acceptance-fixes.md
+4449a034aea457785cad92bffe9ee540c0410f75e04d3e1915918f6304f60f1d  ./artifacts/deepseek-2026-08-09/p1a2-project-json-integrity.md
 fc3be17e8f64f1a546bbe9a4f4fd317a90ed0271f9a268a7422bf14dcb60ee5d  ./artifacts/design-audit-2026-07-08/01-empty-project.png
 1e3acab95639c80fa4514e9086f22a7a62f67eb28612d4b2cf7b5afde67ef3bb  ./artifacts/design-audit-2026-07-08/02-wav-processing-source.png
 788b0c6e9f9c360b5f9f0059441c881083efa308933d8fea169d629d34931a07  ./artifacts/design-audit-2026-07-08/03-tracking-review.png
@@ -316,7 +325,7 @@ e4d5b7c0cc91b2fa84387e180918fb5c7b2f507bb31d0a60b5c3a8346917d4ad  ./build/lib/ne
 df3162e19e40006ea4fd3e031d13bc2fe9f2d07d524e9c1f84f7d7b9e1aa56ce  ./build/lib/neo_tracker/visualization.py
 5a429f7d4b2b1311d85b2b1f7c20cd3f1b97cc4775c4c45136a3fc3308b21331  ./collab/FROM_CLAUDE.md
 ec4f6317dcf8def9817e5f6954dbfb8dee85f5e114353e0011d7d558b2169b11  ./collab/FROM_CODEX.md
-4922439c207b0fecdfdd9794ec2b24356bdd638dcb16d727e7000113242c5624  ./collab/FROM_DEEPSEEK.md
+8aed57f9b890b9ef09a46733eb122627d8c1cd4d022d721d23bb3887642b216a  ./collab/FROM_DEEPSEEK.md
 b546e574e3ba1349d1d89b0f86e008526fb436b3f4c40c86f0d53b312645c0ee  ./collab/PROTOCOL.md
 b2e3eb5572fd7bcf4527a5107f067bb60e3b1dd693aba655756c1a1f6c835dbf  ./neo_tracker.egg-info/PKG-INFO
 15207053b832b7e102da57708dc767daece44dc6f1a8dd40174ce2d9815243b6  ./neo_tracker.egg-info/SOURCES.txt
@@ -339,7 +348,7 @@ e60655e027958e092e87966ebd949f7b1e476cd992e47840b1548a9989c96ca6  ./neo_tracker/
 2512a0364a1e1fb5c9806967d83af0d2afa01624e9354311a5a697013719bf8f  ./neo_tracker/observations.py
 cf59b5b70dec4877ab1065f1d32eb5e7e69aba434817254b0b0b76a1a014619d  ./neo_tracker/optimizers.py
 952d4836b4e05cef43b948683bcb334659b014d0347d7a05154989703ac686f0  ./neo_tracker/presets.py
-58f988375b76316fe61773fa91b81aed24527387c194d5690d9809c6ebba88f1  ./neo_tracker/project.py
+68b3cff90e7286ad83f6b504249252fca522b02292449f76f1351cbfdde35116  ./neo_tracker/project.py
 d85d3b56ad069a71f183f8c69bafb7d0a0fd3a3383ca7e80706a7edf410a9e0b  ./neo_tracker/roi.py
 994142f2955c813af8f7f2b4815e78cc9a6b85436e29905184cba36aa6fd65ae  ./neo_tracker/states.py
 6de183ad14f29baf05f256f88b00576d2763173b52b0b1eeb2ce19ac8b50b0a2  ./neo_tracker/ui/__init__.py
@@ -357,7 +366,7 @@ a34d83d69bfc9e7a2179d6c221ac53ea40283009624abcc9791a9de77e4189c9  ./neo_tracker/
 5a08cb3a24981a27f19b89893e65c73b2826dab585ce56baa6d58055c0e4a00b  ./neo_tracker/ui/preview_canvas.py
 612b5c1c1f7f30537514bbbc4f9a660c0b47e84eae311b422b6e7d4bf8bae744  ./neo_tracker/ui/preview_decode_worker.py
 ff724a6727293cbd1fbd7fe58b43948efff7b92b3f8359b58e54ebf5068c9e54  ./neo_tracker/ui/project_controller.py
-f8662c80bc4e214eb3a617cad612f4a44e91b1e8cec25a1763315125056096d9  ./neo_tracker/ui/project_open_worker.py
+4290dc1c8ff47d72effbdd3650930684ec73e58a5c1415d0a21c49a6f646d4c5  ./neo_tracker/ui/project_open_worker.py
 77a27a1b0b43efc0d86c91c1b733a4b91df9b7b39a9449d2f8c4076f122586ba  ./neo_tracker/ui/project_save_worker.py
 ca5fd9d8d43c3625040817a26d1f01f79650882f1a67fd753e4175e47ce0e9d7  ./neo_tracker/ui/project_status_panel.py
 a5580ec1af86e3ca9f22ce090ca7c503e81995f3b084de582c227ca32f3c9cab  ./neo_tracker/ui/results_table_model.py
@@ -386,9 +395,9 @@ caf44e6d2f021edc48d34756a9ef3ec1a535dd2a5862eab2ce92259c718c5fdc  ./tests/test_m
 1a11728c14e6f7482680ae05bf4aec6553010d708ceea38da9bd66feb5248e6b  ./tests/test_media_relink_panel.py
 6c92d3adb6c400b57667cfffb0237c7aa05a2fd0dc3a0f9b709138332fd371b0  ./tests/test_optimizers_export.py
 9116ac38a358eccdd590537c4e83927960e091963107036096700861810f2c39  ./tests/test_playback_controller.py
-f9ba52236060f85093e2f3c1b1e0026dee183bbd3733386baebc60bbfde2e0d9  ./tests/test_project.py
+473f1937046a3c5b5297c0a994c4adf7456949bb975a60695ea7be2557e81726  ./tests/test_project.py
 80738b22ad162292123f96fd256d4c937b3bd0e518206012094c127172de616f  ./tests/test_project_controller.py
-00c4a767e16167fa3a4ed7ed060695a80473cdddfd307faafefb320296a12b4e  ./tests/test_project_open_worker.py
+5ece0328ff606843bacae0eb24f11c7cadfa3715d58e7e0d7bc3dd9cd227fa5e  ./tests/test_project_open_worker.py
 16688c2756a64f5fe30e18b9ab6254d2a8fa47b8a46bc51bdfd1508846140196  ./tests/test_project_status_panel.py
 44aff4d138459e390dbc36b179840d04a60f009e0d2d4b78e51aa4985a2eda6d  ./tests/test_results_table_model.py
 c9a4c3ddef66c5109e7e163b2bd3090cce867a734eeb6e137be64a0746f8ad25  ./tests/test_review_controller.py
@@ -402,4 +411,4 @@ c17661815cd19899305810d7038acd1db5c2c566ecbaf15b6eda1331db65e546  ./tests/test_t
 832fa5aedb68e50e5d6b70eed4695678c35d6c6eb0b7b4ad2db75d67e39e6280  ./tests/test_tracking_pipeline.py
 efae396a111daec10324dd5c275af528b44bee75abce858abbd500701a64265a  ./tests/test_tracking_worker.py
 7b925aacf926451c08ab243336d276e53c53df9952100c571e78ac5b6b2cbb61  ./tests/test_ui_main_window.py
-99cd63ea74bab309687cfe6e0b5a1324b4e6acdaef65fd4cd365d9bd03cc27fe  ./交接.md
+6376932fc067528a0d1f92dee00c90e572777413fd5cdffd7f04c51b483ce867  ./交接.md

@@ -84,6 +84,17 @@ def _validate_project_structure(value: object) -> None:
             )
 
 
+def no_duplicate_json_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """Reject duplicate object keys so file bytes map one-to-one to parsed data."""
+
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"project JSON contains duplicate key {key!r}")
+        result[key] = value
+    return result
+
+
 def _bounded_list(value: object, label: str, limit: int) -> list[Any]:
     if not isinstance(value, list):
         raise ValueError(f"{label} must be a list")
@@ -578,7 +589,10 @@ class ProjectTaskSnapshot:
                 "project task pipeline_key",
                 PIPELINE_KEY_LIMIT,
             ),
-            preview_frame_index=int(data.get("preview_frame_index", 0)),
+            preview_frame_index=_frame_index(
+                data.get("preview_frame_index", 0),
+                label="project task preview_frame_index",
+            ),
             media_info=data.get("media_info") if isinstance(data.get("media_info"), dict) else None,
             roi=data.get("roi") if isinstance(data.get("roi"), dict) else None,
             calibration_rod=data.get("calibration_rod") if isinstance(data.get("calibration_rod"), dict) else None,
@@ -710,10 +724,9 @@ class NeoTrackerProject:
 
     @staticmethod
     def _migrate_to_current(data: dict[str, Any]) -> dict[str, Any]:
-        try:
-            version = int(data.get("version", 1))
-        except (TypeError, ValueError) as exc:
-            raise ValueError("project version must be an integer") from exc
+        version = data.get("version", 1)
+        if isinstance(version, bool) or not isinstance(version, int):
+            raise ValueError("project version must be an integer")
         if version < 1 or version > PROJECT_FORMAT_VERSION:
             raise ValueError(f"unsupported Neo-Tracker project version: {version}")
         migrated = dict(data)
@@ -759,6 +772,7 @@ class NeoTrackerProject:
                 parse_constant=lambda token: (_ for _ in ()).throw(
                     ValueError(f"project JSON contains non-finite constant {token}")
                 ),
+                object_pairs_hook=no_duplicate_json_keys,
             )
         except (json.JSONDecodeError, RecursionError) as exc:
             raise ValueError(f"project file must contain valid JSON: {exc}") from exc

@@ -18,6 +18,7 @@ from neo_tracker.ui.project_open_worker import (
     PreparedProjectOpen,
     ProjectOpenWorker,
     _acquire_project_open_gc_guard,
+    _read_project_json_for_stage,
     _read_project_open_stage,
     _release_project_open_gc_guard,
     _stop_load_process,
@@ -257,6 +258,17 @@ class ProjectOpenWorkerTests(unittest.TestCase):
 
         self.assertEqual(len(failures), 1)
         self.assertIn("roi", failures[0])
+
+    def test_open_rejects_duplicate_json_keys_at_isolated_parse(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "duplicate-keys.ntproj"
+            path.write_text(
+                '{"format":"neo-tracker-project","version":2,"name":"first","name":"second",'
+                '"media_paths":[],"pipeline_library":[],"tasks":[],"notes":""}',
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "duplicate key"):
+                _read_project_json_for_stage(str(path))
 
     def test_stream_stage_rejects_boolean_counts_and_interleaved_collections(self) -> None:
         project = {

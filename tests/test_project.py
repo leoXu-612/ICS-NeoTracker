@@ -392,6 +392,92 @@ class ProjectPersistenceTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "non-finite constant NaN"):
                 NeoTrackerProject.load(path)
 
+    def test_project_load_rejects_duplicate_json_keys(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "duplicate-keys.ntproj"
+            path.write_text(
+                '{"format":"neo-tracker-project","version":2,"name":"first","name":"second",'
+                '"media_paths":[],"pipeline_library":[],"tasks":[],"notes":""}',
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "duplicate key"):
+                NeoTrackerProject.load(path)
+
+    def test_project_load_rejects_type_confused_version(self) -> None:
+        base = {
+            "format": "neo-tracker-project",
+            "media_paths": [],
+            "pipeline_library": [],
+            "tasks": [],
+            "notes": "",
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            for version in (True, 1.9, "1", "2", 0, 3):
+                with self.subTest(version=version):
+                    path = Path(tmpdir) / f"version-{type(version).__name__}.ntproj"
+                    payload = dict(base, name="version-check")
+                    path.write_text(
+                        json.dumps({**payload, "version": version}),
+                        encoding="utf-8",
+                    )
+                    with self.assertRaisesRegex(ValueError, "version"):
+                        NeoTrackerProject.load(path)
+            for version in (1, 2):
+                with self.subTest(accepted_version=version):
+                    path = Path(tmpdir) / f"accepted-{version}.ntproj"
+                    path.write_text(
+                        json.dumps({**base, "name": "ok", "version": version}),
+                        encoding="utf-8",
+                    )
+                    self.assertEqual(NeoTrackerProject.load(path).to_dict()["version"], 2)
+
+    def test_project_load_rejects_type_confused_preview_frame_index(self) -> None:
+        base = {
+            "format": "neo-tracker-project",
+            "version": 2,
+            "name": "preview",
+            "media_paths": [],
+            "pipeline_library": [],
+            "notes": "",
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            for value in (True, 1.5, "7", -3):
+                with self.subTest(preview_frame_index=value):
+                    path = Path(tmpdir) / f"preview-{type(value).__name__}.ntproj"
+                    task = {
+                        "media_path": None,
+                        "pipeline_key": "color_marker",
+                        "preview_frame_index": value,
+                        "results": [],
+                        "edit_history": [],
+                        "tracking_outcome": "",
+                        "tracking_note": "",
+                        "run_history": [],
+                    }
+                    payload = dict(base, tasks=[task])
+                    path.write_text(json.dumps(payload), encoding="utf-8")
+                    with self.assertRaisesRegex(ValueError, "preview_frame_index"):
+                        NeoTrackerProject.load(path)
+            for value in (0, 100):
+                with self.subTest(accepted_preview_frame_index=value):
+                    path = Path(tmpdir) / f"preview-ok-{value}.ntproj"
+                    task = {
+                        "media_path": None,
+                        "pipeline_key": "color_marker",
+                        "preview_frame_index": value,
+                        "results": [],
+                        "edit_history": [],
+                        "tracking_outcome": "",
+                        "tracking_note": "",
+                        "run_history": [],
+                    }
+                    payload = dict(base, tasks=[task])
+                    path.write_text(json.dumps(payload), encoding="utf-8")
+                    self.assertEqual(
+                        NeoTrackerProject.load(path).tasks[0].preview_frame_index,
+                        value,
+                    )
+
     def test_project_save_rejects_nonfinite_result_without_replacing_target(self) -> None:
         result = TrackerResult(
             frame_index=0,

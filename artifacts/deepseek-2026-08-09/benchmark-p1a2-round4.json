@@ -1,0 +1,83 @@
+[
+  {
+    "results": 100000,
+    "file_mib": 44.39827632904053,
+    "synchronous": {
+      "call_ms": 2953.2217090018094,
+      "batch_ms": 2953.2298750127666,
+      "max_heartbeat_ms": 2957.2703749872744,
+      "max_gap_phase_before": "",
+      "max_gap_phase_after": ""
+    },
+    "background": {
+      "call_ms": 0.48220797907561064,
+      "batch_ms": 4060.9422079869546,
+      "max_heartbeat_ms": 68.67012503789738,
+      "max_gap_phase_before": "Opening project \u00b7 decoding validated records\u2026",
+      "max_gap_phase_after": "Opening project \u00b7 decoding validated records\u2026",
+      "apply_ms": 53.45391697483137
+    },
+    "results_exact": true,
+    "synchronous_signature": {
+      "project_path": "/var/folders/hf/vzc3ptl17dv1r73k0yw4zt180000gn/T/tmp7vxpuxjn/large-100000.ntproj",
+      "tasks": 1,
+      "results": 100000,
+      "fingerprint": "d9c2dd5992ccbd437da8cf320d4422a3137a6b7ef8ec815999f0947051c250b0",
+      "dirty": false
+    },
+    "background_signature": {
+      "project_path": "/var/folders/hf/vzc3ptl17dv1r73k0yw4zt180000gn/T/tmp7vxpuxjn/large-100000.ntproj",
+      "tasks": 1,
+      "results": 100000,
+      "fingerprint": "d9c2dd5992ccbd437da8cf320d4422a3137a6b7ef8ec815999f0947051c250b0",
+      "dirty": false
+    },
+    "payload_equal": true,
+    "deferred_state": {
+      "diagnostics_pending": false,
+      "analysis_pending": false
+    },
+    "background_runs": [
+      {
+        "call_ms": 0.8437500218860805,
+        "batch_ms": 4013.000375009142,
+        "max_heartbeat_ms": 38.711957982741296,
+        "max_gap_phase_before": "Opening project \u00b7 verifying the saved baseline\u2026",
+        "max_gap_phase_after": "Opening project \u00b7 applying the prepared workspace\u2026",
+        "apply_ms": 35.51320795668289
+      },
+      {
+        "call_ms": 0.6979579920880497,
+        "batch_ms": 3846.929666993674,
+        "max_heartbeat_ms": 57.192541018594056,
+        "max_gap_phase_before": "Opening project \u00b7 verifying the saved baseline\u2026",
+        "max_gap_phase_after": "Opening project \u00b7 applying the prepared workspace\u2026",
+        "apply_ms": 55.02837500534952
+      },
+      {
+        "call_ms": 0.46729197492823005,
+        "batch_ms": 3986.453083984088,
+        "max_heartbeat_ms": 50.261750002391636,
+        "max_gap_phase_before": "Opening project \u00b7 verifying the saved baseline\u2026",
+        "max_gap_phase_after": "Opening project \u00b7 applying the prepared workspace\u2026",
+        "apply_ms": 47.72258299635723
+      },
+      {
+        "call_ms": 0.48112496733665466,
+        "batch_ms": 3835.468082979787,
+        "max_heartbeat_ms": 49.359042022842914,
+        "max_gap_phase_before": "Opening project \u00b7 verifying the saved baseline\u2026",
+        "max_gap_phase_after": "Opening project \u00b7 applying the prepared workspace\u2026",
+        "apply_ms": 47.23354201996699
+      },
+      {
+        "call_ms": 0.48220797907561064,
+        "batch_ms": 4060.9422079869546,
+        "max_heartbeat_ms": 68.67012503789738,
+        "max_gap_phase_before": "Opening project \u00b7 decoding validated records\u2026",
+        "max_gap_phase_after": "Opening project \u00b7 decoding validated records\u2026",
+        "apply_ms": 53.45391697483137
+      }
+    ]
+  }
+]

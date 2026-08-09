@@ -123,3 +123,76 @@ fix(trust): fail closed on task ROI load, preflight WAV decode cost, emit valid 
 - Red/green: 3 fails + 3 errors -> 44 targeted OK; full suite 454 OK in
   60.192s; compileall and pip check pass; 2x5 open rounds all <75 ms
 ```
+
+---
+
+# P1-A2（第二提交）— `.ntproj` JSON 完整性
+
+## Conclusion
+
+P1-A2 的三个 `.ntproj` 完整性问题（重复 JSON 键 last-wins、`version` 类型混淆、`preview_frame_index` 类型混淆）已修复并验证：全量 458 项（64.489 s）、compileall、pip check、索引全过；基准 4 轮 × 5 次中第 1/3/4 轮 0 次超限、第 2 轮 1 次 88.62 ms 超限（对应 batch 4,511 ms），按验收规则保持 `PARTIAL`，不宣称跨负载稳定。
+
+## Findings
+
+- A（重复键，MEDIUM）：`json.loads` 对重复键 last-wins，字节不同的文件可解析为同一语义，破坏文件字节与解析状态的一一对应。修复：`no_duplicate_json_keys`（`object_pairs_hook`）只在不可信文件解析边界生效（`load()` 与隔离子进程文件解析）；GUI 侧 stage 记录解码不加钩子，避免每对象 Python 回调拖慢 QThread 心跳。
+- B（version 类型混淆，LOW）：`version=true / 1.9 / "1"` 被 `int()` 接受并迁移。修复：要求真 int 且 1..2。
+- C（preview_frame_index 类型混淆，LOW）：`True / 1.5 / "7" / -3` 被 `int()` 接受。修复：`_frame_index` 非负真 int 校验。
+
+## Changes Made / Files Modified
+
+- `neo_tracker/project.py`：`no_duplicate_json_keys`；`load()` 钩子；`_migrate_to_current` 严格 version；`preview_frame_index` 用 `_frame_index`。
+- `neo_tracker/ui/project_open_worker.py`：`_safe_json_loads(..., reject_duplicate_keys)`，文件解析边界启用、stage 解码不启用。
+- `tests/test_project.py`（3 项新测试）、`tests/test_project_open_worker.py`（1 项新测试）。
+- `artifacts/deepseek-2026-08-09/p1a2-project-json-integrity.md`、`benchmark-p1a2-round{1..4}.json` + `.stderr.txt`（新增）。
+- `交接.md`（3.78）、`PROJECT_INDEX.md`、`PROJECT_FILE_INDEX.sha256`、本文件。
+
+## Testing
+
+```bash
+# 定向：红 10 项失败 -> 绿 33 OK（test_project + test_project_open_worker）
+PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen \
+  python3 -m unittest tests.test_project tests.test_project_open_worker
+# Ran 33 tests ... OK
+
+# 全量
+PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen \
+  python3 -m unittest discover -s tests -q
+# Ran 458 tests in 64.489s ... OK
+
+python3 -m compileall -q neo_tracker tests benchmarks   # 退出码 0
+python3 -m pip check                                    # No broken requirements found.
+python3 -m json.tool artifacts/deepseek-2026-08-09/benchmark-p1a2-round{1,2,3,4}.json >/dev/null
+# 4/4 通过
+```
+
+## Performance and Runtime Evidence
+
+| 轮次 | heartbeat 逐值 (ms) | median | p95 | max | >75ms | 退出码 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 37.02 / 53.23 / 49.34 / 47.74 / 57.91 | 49.34 | 53.23 | 57.91 | 0 | 0 |
+| 2 | 36.39 / 46.00 / 88.62 / 50.81 / 58.86 | 50.81 | 58.86 | 88.62 | 1 | 1 |
+| 3 | 36.18 / 47.92 / 56.02 / 46.23 / 69.31 | 47.92 | 56.02 | 69.31 | 0 | 0 |
+| 4 | 38.71 / 57.19 / 50.26 / 49.36 / 68.67 | 50.26 | 57.19 | 68.67 | 0 | 0 |
+
+- `payload_equal=True`、fingerprint `d9c2dd5992cc…` 不变；阶段均为 baseline 校验→workspace 应用。
+- 第 2 轮超限对应 batch 4,511 ms（其余 3,700–3,900 ms），疑似系统负载；钩子从 GUI 解码路径移除后同轮超限由 4/5 降为 1/5。历史 153.45 ms 记录保留。
+
+## Remaining Risks
+
+- 第 2 轮 88.62 ms 单次超限未归因为代码改动（负载推测无快照佐证）；`PARTIAL` 保持。
+- 嵌套 `pipelines`/`media_info` 深层类型校验仍依赖现有 `apply_pipeline_config`/模型校验；重复键拒绝覆盖本项目全部 JSON 解析入口。
+
+## Suggested Commit Message
+
+```text
+fix(trust): reject duplicate JSON keys and type-confused .ntproj version/index fields
+
+- json.loads now rejects duplicate object keys at the untrusted file parse
+  boundary (load + isolated open), not on the GUI-side stage decode path
+- version must be a real int in [1,2]; preview_frame_index must be a
+  non-negative real int; bool/float/str/negative values are rejected
+- Red/green: 10 failing tests -> 33 targeted OK; full suite 458 OK in
+  64.489s; compileall and pip check pass
+- Benchmark 4x5: rounds 1/3/4 pass; round 2 has one 88.62 ms over-limit
+  with elevated batch time; PARTIAL retained, evidence kept as valid JSON
+```
