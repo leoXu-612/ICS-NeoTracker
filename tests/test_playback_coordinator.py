@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from PySide6.QtCore import QCoreApplication
+from PySide6.QtWidgets import QApplication
 
 from neo_tracker.application.playback_coordinator import PlaybackCoordinator
 from neo_tracker.ui.playback_controller import PlaybackClock
@@ -11,7 +11,11 @@ from neo_tracker.ui.playback_controller import PlaybackClock
 class PlaybackCoordinatorTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.app = QCoreApplication.instance() or QCoreApplication([])
+        # Use the most capable Qt application type so this module can run before
+        # widget-based coordinator tests in the same unittest process.  A
+        # QCoreApplication cannot later be upgraded to QApplication, and Qt
+        # aborts if those later tests construct a QWidget.
+        cls.app = QApplication.instance() or QApplication([])
 
     def test_source_time_tick_and_idempotent_stop(self) -> None:
         now = [100.0]

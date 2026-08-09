@@ -6,6 +6,7 @@ from collections.abc import Callable
 
 import numpy as np
 from PySide6.QtCore import QCoreApplication, QObject, Signal, Slot
+from PySide6.QtWidgets import QApplication
 
 from neo_tracker.application.preview_coordinator import PreviewCoordinator, PreviewRequest
 from neo_tracker.application.task_supervisor import TaskSupervisor
@@ -69,7 +70,10 @@ def _pump_until(predicate: Callable[[], bool], timeout_s: float = 2.0) -> None:
 class PreviewCoordinatorTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.app = QCoreApplication.instance() or QCoreApplication([])
+        # Keep arbitrary multi-module test order safe: creating a bare
+        # QCoreApplication here prevents later widget tests from constructing
+        # their required QApplication and terminates the interpreter in Qt.
+        cls.app = QApplication.instance() or QApplication([])
 
     def make_coordinator(self) -> tuple[PreviewCoordinator, TaskSupervisor, list[_Session]]:
         sessions: list[_Session] = []

@@ -827,3 +827,156 @@ Codex 已在权威工作区完成：
 ### Next Integration Step
 
 - 进入 G5：分别提取 Analysis 与 Review Response 生命周期，保留 context/revision stale-result gate、pending request 合并、取消与 close 行为。
+
+## [2026-08-09 22:08 Asia/Taipei] G5 Analysis 与 Review Response Coordinator — DONE
+
+### Base
+
+- Branch: `refactor/gpt-application-shell`
+- Base SHA: `c921eee`
+- Head SHA: `99681ee`
+
+### Conclusion
+
+- `AnalysisCoordinator` 已接管 FFT/STFT Worker、阶段状态、取消与 owner/source/settings stale-result gate。
+- `ReviewResponseCoordinator` 已接管 latest-only pending request、worker 生命周期、有效性复验与有界 LRU 提交。
+- Window 不再构造或保存 Analysis/Review Response QThread、Worker、Job 或 pending request；数学实现与 Observation response 计算未修改。
+
+### Files Changed
+
+- `neo_tracker/application/analysis_coordinator.py`
+- `neo_tracker/application/review_response_coordinator.py`
+- `neo_tracker/ui/main_window.py`
+- `tests/test_analysis_coordinator.py`
+- `tests/test_review_response_coordinator.py`
+- `tests/test_main_window_architecture.py`
+- `artifacts/parallel-gpt-2026-08-09/g5/**`
+
+### Tests
+
+- Coordinator/架构定向：15/15，PASS。
+- Analysis/Review/Application 定向：63/63，PASS。
+- 既有 `test_ui_main_window`：143/143，PASS。
+- 全量：495/495，68.267 秒，PASS。
+- `compileall`、`pip check` 与 `git diff --check`：PASS。
+
+### Performance
+
+- G5 未改变项目打开路径；按工单只在关键 G6 再运行 10 万结果基准。
+
+### Compatibility
+
+- Public API changes: none。
+- Project format/scientific outputs: unchanged。
+- Analysis 导出只在 context-valid result 接受后启用；取消、失败、stale 或运行中保持禁用。
+
+### Remaining Risks
+
+- 原生音视频解码、系统负载与 VoiceOver 不由本阶段的 offscreen 生命周期测试证明。
+
+### Next Integration Step
+
+- 进入 G6：统一 Action Registry、不可变 ViewState 与 Application Shell，完成结构审计和关键基准。
+
+## [2026-08-09 22:39 Asia/Taipei] G6 Action Registry 与 Window Shell — DONE
+
+### Base
+
+- Branch: `refactor/gpt-application-shell`
+- Base SHA: `99681ee`
+- Head SHA: `a7491be`
+
+### Conclusion
+
+- 16 个主要命令现在由一个 `ActionRegistry` 注册，按钮与菜单共享同一 QAction/处理入口。
+- 主要命令的 enabled/text/tooltip 由不可变 `ViewState` 驱动，`ApplicationShell` 负责绑定和投影。
+- Window 内 7 个 Job dataclass、7 组主要 Worker/QThread 构造和 Preview/Review pending/session 存储均已移除；剩余旧字段名只是 Coordinator 状态的只读测试适配器。
+
+### Files Changed
+
+- `neo_tracker/ui/action_registry.py`
+- `neo_tracker/ui/view_state.py`
+- `neo_tracker/ui/shell/__init__.py`
+- `neo_tracker/ui/shell/main_shell.py`
+- `neo_tracker/ui/shell/bindings.py`
+- `neo_tracker/ui/main_window.py`
+- `tests/test_action_registry.py`
+- `tests/test_view_state.py`
+- `tests/test_application_shell.py`
+- `tests/test_main_window_architecture.py`
+- `artifacts/parallel-gpt-2026-08-09/g6/**`
+
+### Tests
+
+- G6 Action/ViewState/Shell/architecture：13/13，PASS。
+- 全量：502/502，60.590 秒，PASS。
+- `compileall`、`pip check` 与 `git diff --check`：PASS。
+
+### Performance
+
+- 首组 5 次 heartbeat：38.16 / 76.56 / 50.01 / 45.60 / 51.50 ms，1/5 超 75 ms，退出码 1。
+- 确认组：40.34 / 45.02 / 50.02 / 45.23 / 46.62 ms，0/5 超限，退出码 0。
+- 两组均 `payload_equal=true`、`results_exact=true`、deferred views 完成且 fingerprint 不变；相对 G0 没有稳定 >20% 回退。
+- 76.56 ms outlier 原样保留，不宣称跨负载稳定性已解决。
+
+### Compatibility
+
+- Public API/project format/scientific outputs/user-visible workflow: unchanged。
+- 未添加大规模快捷键、布局改版或 QSS 迁移。
+
+### Remaining Risks
+
+- `main_window.py` 仍承担复杂 Widget 构建和渲染；本工单只提取应用协调、状态与命令边界。
+- offscreen 回归不证明原生 Retina、VoiceOver、真实长时媒体或所有系统负载窗口。
+
+### Next Integration Step
+
+- 仅交付分支和提交；由集成人审查后决定合并，GPT 不直接修改 `main`。
+
+## [2026-08-10 01:14 Asia/Taipei] 最终工单验收与 Qt harness 修正 — DONE
+
+### Base
+
+- Branch: `refactor/gpt-application-shell`
+- Base SHA: `a7491be`
+- Head SHA: 本节对应独立收尾提交。
+
+### Conclusion
+
+- 逐项复核工作清单时，定向模块组合首次复现退出码 134：Preview/Playback 测试先创建 `QCoreApplication`，后续 QWidget 测试无法再创建 `QApplication`，Qt 直接 abort。
+- 两处测试改为统一创建 `QApplication`；相同顺序的 12 模块组合现稳定通过。
+- 同时补齐此前遗漏的 G5/G6 `FROM_CODEX` 阶段记录；产品源码、项目格式和科学结果均未改变。
+
+### Files Changed
+
+- `tests/test_preview_coordinator.py`
+- `tests/test_playback_coordinator.py`
+- `artifacts/parallel-gpt-2026-08-09/final-audit/README.md`
+- `collab/FROM_CODEX.md`
+
+### Tests
+
+- 顺序回归：44/44，1.665 秒，PASS。
+- 全量：502/502，63.586 秒，PASS。
+- `compileall`：PASS。
+- `pip check`：PASS，`No broken requirements found.`
+- `git diff --check` 与所有权/禁区检查：PASS。
+
+### Performance
+
+- 8 核、load 3.96 下 10 万结果 5 次 heartbeat：63.45 / 49.08 / 48.58 / 48.85 / 47.40 ms；0/5 超 75 ms，退出码 0。
+- GUI apply：59.89 / 46.81 / 44.97 / 45.27 / 45.06 ms；fully usable：3860.66 / 3837.36 / 3861.27 / 3910.11 / 3810.41 ms。
+- payload/results/fingerprint 一致，deferred views 完成；历史 outlier 保留，未外推为所有负载稳定。
+
+### Compatibility
+
+- Public API changes: none。
+- Project format/scientific/user-visible behavior changes: none。
+
+### Remaining Risks
+
+- 原生系统无障碍、真实长时媒体、系统满载调度与部署签名不属于本架构工单的 offscreen 完成证据。
+
+### Next Integration Step
+
+- 交付 `refactor/gpt-application-shell` 分支及全部独立提交；不直接合并 `main`。
