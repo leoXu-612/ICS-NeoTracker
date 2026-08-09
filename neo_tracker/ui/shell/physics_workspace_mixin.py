@@ -373,5 +373,3 @@ class PhysicsWorkspaceMixin:
             self.review_history_tabs.setCurrentIndex(0)
         elif route == "Edits":
             self.review_history_tabs.setCurrentIndex(1)
-
-
