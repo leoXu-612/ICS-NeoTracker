@@ -130,6 +130,7 @@ class MediaInfo:
     kind: str = "video"
     sample_rate_hz: float = 0.0
     channels: int = 0
+    sample_width_bytes: int = 0
     error: str = ""
     source_identity: MediaIdentity | None = None
 
@@ -301,6 +302,7 @@ def probe_wav_media(path: str) -> MediaInfo:
         kind="audio",
         sample_rate_hz=sample_rate,
         channels=channels,
+        sample_width_bytes=sample_width,
         source_identity=source_identity,
     )
 

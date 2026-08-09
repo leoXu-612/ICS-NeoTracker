@@ -220,6 +220,44 @@ class ProjectOpenWorkerTests(unittest.TestCase):
         self.assertEqual(len(failures), 1)
         self.assertTrue(failures[0])
 
+    def test_open_rejects_oversized_task_roi_fail_closed(self) -> None:
+        controller = self.make_controller(lambda _path: MediaInfo(available=True))
+        project = {
+            "format": "neo-tracker-project",
+            "version": 2,
+            "name": "oversized-roi",
+            "media_paths": [],
+            "pipeline_library": [],
+            "notes": "",
+            "tasks": [
+                {
+                    "media_path": None,
+                    "pipeline_key": "color_marker",
+                    "preview_frame_index": 0,
+                    "roi": {
+                        "type": "polygon",
+                        "points": [[float(index), 0.0] for index in range(4097)],
+                    },
+                    "results": [],
+                    "edit_history": [],
+                    "tracking_outcome": "",
+                    "tracking_note": "",
+                    "run_history": [],
+                }
+            ],
+        }
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "oversized-roi.ntproj"
+            path.write_text(json.dumps(project), encoding="utf-8")
+            failures: list[str] = []
+            worker = ProjectOpenWorker(path, controller)
+            worker.failed.connect(failures.append)
+
+            worker.run()
+
+        self.assertEqual(len(failures), 1)
+        self.assertIn("roi", failures[0])
+
     def test_stream_stage_rejects_boolean_counts_and_interleaved_collections(self) -> None:
         project = {
             "format": "neo-tracker-project",

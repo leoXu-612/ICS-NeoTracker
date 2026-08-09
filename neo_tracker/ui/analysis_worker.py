@@ -5,7 +5,12 @@ from threading import Event
 
 from PySide6.QtCore import QObject, Signal, Slot
 
-from neo_tracker.analysis import AnalysisConfig, SignalSeries, validate_analysis_sample_count
+from neo_tracker.analysis import (
+    AnalysisConfig,
+    SignalSeries,
+    validate_analysis_sample_count,
+    validate_wav_decode_workload,
+)
 from neo_tracker.ui.analysis_controller import AnalysisController, AnalysisRun, AnalysisSource
 
 
@@ -51,6 +56,8 @@ class AnalysisWorker(QObject):
             if self.cancellation_requested:
                 self.canceled.emit()
                 return
+            if self.source.decoded_source_bytes > 0:
+                validate_wav_decode_workload(self.source.decoded_source_bytes)
             if self.source.sample_count > 0:
                 validate_analysis_sample_count(self.source.sample_count, self.config)
             self.stage_changed.emit("loading")

@@ -13,7 +13,7 @@ import numpy as np
 from neo_tracker.atomic_io import atomic_output_path
 from neo_tracker.core import TrackerResult
 from neo_tracker.csv_utils import write_dict_csv
-from neo_tracker.media import MAX_WAV_DECODE_BLOCK_BYTES, validate_wav_header
+from neo_tracker.media import MAX_WAV_DECODE_BLOCK_BYTES, MAX_WAV_DECODE_BYTES, validate_wav_header
 
 
 _SCIPY_SIGNAL: Any | None = None
@@ -432,6 +432,21 @@ def validate_analysis_sample_count(
         f"{method_label} workload needs about {estimate_mib:,.0f} MiB, above the {limit_mib:,.0f} MiB safety limit; "
         + advice
     )
+
+
+def validate_wav_decode_workload(
+    decoded_source_bytes: int,
+    *,
+    max_bytes: int = MAX_WAV_DECODE_BYTES,
+) -> None:
+    """Reject a WAV source whose raw decode cost exceeds the bounded limit."""
+
+    decoded = max(0, int(decoded_source_bytes))
+    if decoded > max_bytes:
+        raise ValueError(
+            f"WAV decode workload {decoded:,} bytes exceeds the "
+            f"limit of {max_bytes:,} bytes"
+        )
 
 
 def fft_to_rows(result: FFTResult) -> list[dict[str, float | str]]:

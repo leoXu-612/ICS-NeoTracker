@@ -1,6 +1,6 @@
 # ICS-NeoTracker — DeepSeek 开发执行交接
 
-> 结论：当前代码已通过完整回归和大型项目交互门槛，但真实长时媒体、原生解码稳定性、整进程资源、原生 macOS 无障碍与部署环境仍缺证据；DeepSeek 应先关闭这些 P0/P1 风险，再继续功能扩展。
+> 结论：提交 `41b8deb` 的 4 项安全修复已通过独立回归，但 ROI 项目载入仍会静默忽略超限 task ROI、WAV 分析预检仍未计入多通道解码成本，且两份 benchmark `.json` 不是合法 JSON；当前先完成 P1-A1R 验收修正，不进入功能扩展。
 
 更新时间：2026-08-09（Asia/Taipei）  
 任务状态：`IN_PROGRESS`  
@@ -8,69 +8,54 @@
 
 ## 0. Codex 验收结论与当前工单（2026-08-09）
 
-### 0.1 上一包 P0-A 验收：`PARTIAL ACCEPT`
+### 0.1 P1-A1 验收：`PARTIAL ACCEPT`
 
-已确认并接受：
+已独立确认：
 
-- `pyproject.toml` 的 `media` extra 只声明 `opencv-python>=4.9`，不再主动安装未使用的 PyAV。
-- `tests/test_media_dependencies.py` 的 3 项守卫具有实际约束：产品源码不得导入 PyAV、media extra 不得声明 PyAV、单独导入 `cv2` 不得传递加载 `av`。
-- Codex 独立复跑：436 项 unittest 全部通过（64.627 秒）；`compileall`、`pip check` 通过；当前 397 项内容索引全部校验通过；Git 工作树在复测前为 clean，HEAD 为 `7deeee6f9c79c8661a46226390449204d7349b2e`。
+- `41b8deb` 同时包含 sampled identity 审查隔离、ROI 4096 点上限、WAV header/分块上限、NPZ file-object 原子导出及对应测试；Git 提交范围清晰，验收前工作树 clean。
+- Codex 独立复跑：定向 89/89（0.932 秒）、全量 449/449（59.470 秒）、`compileall`、`pip check` 与 400/400 SHA-256 索引全部通过。
+- Codex 独立复跑 10 万结果项目 5 次 background open：heartbeat 34.64 / 47.01 / 46.00 / 45.76 / 46.34 ms，max 47.01 ms，均低于 `<75 ms`；payload、fingerprint 与 deferred state 正确。
+- P1-A1 A（sampled identity）与 D（NPZ 导出）验收关闭；B、C 的核心修复有效，但仍有下面的验收缺口。
 
-不得扩大为以下结论：
+仍需修正：
 
-- 当前解释器仍同时安装 OpenCV 4.13.0 与 PyAV 17.1.0；显式在同一进程导入二者仍稳定产生 `AVFFrameReceiver` / `AVFAudioReceiver` 重复实现警告。修复只关闭“本项目依赖集主动引入 PyAV”的风险，不证明历史 Python/Qt 原生退出根因已经修复。
-- 10 万结果 heartbeat 的稳定门槛没有通过独立复核：同一命令三次 background run 为 35.55 / 72.84 / 153.45 ms，第三次超过 `<75 ms`，命令退出码为 1；payload 与 fingerprint 仍一致。不得继续写“heartbeat 全部通过”，必须先解释波动来源并用冷/热轮次分离的重复统计重验。
-- `collab/FROM_DEEPSEEK.md` 写的是 `396/396`，当前索引实际为 `397/397`。
-- 当前提交 `7deeee6` 的 diff 主要是文档、证据和索引；`pyproject.toml` 与依赖守卫测试已存在于初始提交 `f999fae`。因此不能把 `7deeee6` 单独描述为包含依赖修复代码的原子提交。
+1. `ProjectTaskController.task_from_snapshot()` 调用 `apply_roi_config_to_task()` 后忽略 `False`。因此 4097 点 task-level ROI 会被校验函数拒绝，却可能在项目载入时被静默忽略，而不是以稳定错误拒绝项目。P1-A1 B 要求 fail closed，尚未完全满足。
+2. `AnalysisWorker` 预检仍只把 `source.sample_count` 交给 `validate_analysis_sample_count()`；`AnalysisSource` 不携带 WAV sample width/decoded bytes，预检没有显式计入 `frames × channels × sample_width` 的多通道解码成本。header 与 16 MiB block 上限已生效，但 P1-A1 C 的 workload 验收项尚未闭环。
+3. `artifacts/deepseek-2026-08-09/benchmark-round1.json` 与 `benchmark-round2.json` 首行混入 Qt stderr 字体告警，`python3 -m json.tool` 无法解析；这些文件不能称为原始 JSON 证据。
+4. DeepSeek 的 10 次和 Codex 本轮 5 次均未超门槛，但历史同命令曾出现 153.45 ms 单次超限。当前证据支持“本轮通过”，不支持“跨负载稳定性已证明”。
+5. 当前解释器仍同时安装 OpenCV 4.13.0 与 PyAV 17.1.0；依赖声明已不主动安装 PyAV，但这不证明历史原生 Python 退出根因已关闭。
 
-### 0.2 下一步任务：P1-A1 数据可信度、输入上限与导出原子性 `TODO`
+### 0.2 当前任务：P1-A1R 验收修正 `TODO`
 
-目标：修复下面 4 个已由当前源码和一次性 `/tmp` 复现确认的问题；不做 UI 改版、功能扩展、真实媒体性能外推或无关重构。
+目标：只关闭上述 1–3 项可复现缺口；不做 UI 改版、功能扩展、decoder 替换、真实媒体外推或无关重构。
 
-#### A. 大媒体 sampled identity 被错误当作精确匹配（`MEDIUM`）
+#### A. task-level ROI 项目载入必须 fail closed
 
-当前事实：大于 768 KiB 的文件只读取开头、中段、结尾各 256 KiB，但 `ProjectTaskController.assess_media_relink()` 把相同 sampled digest 返回为 `state="match"`。Codex 复现使用 2,000,044-byte WAV，在未采样的 600 KiB 偏移修改真实 PCM 样本后：
+- 在转换全部坐标前先检查容器类型与长度，4096 点允许、4097 点拒绝。
+- `task_from_snapshot()` 不得忽略 `apply_roi_config_to_task()` 的失败；无效 snapshot ROI 必须产生稳定、带字段路径的错误。
+- 增加 4096/4097 polygon 与 curve-band 的 snapshot/open 测试；拒绝时当前已打开项目不得被部分替换。
 
-- 两文件 `MediaIdentity` 完全相同；
-- 两文件 metadata 相同且均可打开；
-- 解码样本由 `0000` 变为 `ff7f`；
-- Relink assessment 仍为 `match / sampled / clear_results=False / can_apply=True`。
+#### B. WAV 分析预检必须携带并计算解码成本
 
-必须满足：sampled equality 不得静默证明“字节完全相同”，也不得在没有明确、可审计决策的情况下让旧 Results/Edits 与新内容继续绑定。优先方案是在隔离后台完成可持久化的 full-file identity；若选择显式人工确认方案，必须阻断 preview/tracking/export 对旧结果的误绑定，并清楚区分 exact match、sampled hint 与 user-approved risk。不得在 GUI 主线程全文件 hash，也不得把每帧热路径变成重复 hash。
+- 从已验证的 `MediaInfo` 向 `AnalysisSource` 传递最少必要的 WAV 元数据或直接传递有界 `decoded_source_bytes`。
+- 在调用 `series_loader`、分配 NumPy 输出或进入长时读取前，同时校验分析工作集与 `frames × channels × sample_width` 解码成本；不得只依赖 frame count。
+- 实际 `wave.open()` 后仍需重新验证 header，防止 probe 与读取之间来源替换；不得移除现有 512 MiB 总量和 16 MiB block 上限。
+- 增加“相同 frame count、不同 channels/sample width 导致不同预检结果”的测试，并证明超限时 loader 未被调用。
 
-#### B. task-level ROI 绕过 4096 点上限（`MEDIUM`）
+#### C. 性能证据必须是合法 JSON
 
-`validate_roi_config()` 对 polygon / curve-band 只检查最小点数与有限数值；独立的 task `roi` 随后由 `apply_roi_config_to_task()` 全量复制并同步填充 Qt 表格，没有经过 `_points()` 的 `MAX_ROI_POINTS=4096` 限制。必须在反序列化/校验入口统一执行同一上限，4096 点允许、4097 点拒绝，拒绝应有稳定错误且不得部分应用任务。
-
-#### C. WAV channel metadata 可驱动无界 UI/解码放大（`MEDIUM`）
-
-`.wav` 走 stdlib 直接 probe，未复用 isolated-media 的 channel 上限；`available_sources()` 会按声明 channel 数创建一项一对象，`wav_signal_series()` 的 chunk 还会按 `frames × channels` 解码，而 workload gate 只按 frame count 估算。必须：
-
-- 在任何 Qt/NumPy 分配前校验 WAV channels、sample width、sample rate、frame count 与合理的乘积/字节上限；
-- 让 chunk 大小随 channel 数缩小，避免固定 1,048,576 frames 造成大块中间数组；
-- workload 估算覆盖多通道解码成本；
-- 用手工 header 构造的极端 channel WAV 做拒绝测试，不把损坏输入标记为 available。
-
-#### D. 非 `.npz` 目标会发布空文件并遗留真实 sidecar（`LOW`）
-
-`atomic_output_path()` 的临时文件沿用用户后缀，而 `np.savez(path)` 会在非 `.npz` 路径后自动追加 `.npz`：最终原子替换的是空临时文件，真实 archive 留在相邻隐藏 sidecar。必须把已安全创建的二进制 file object 交给 `np.savez`，或保证临时路径本身以 `.npz` 结尾；对 `.npz`、无后缀和其他后缀各补成功/失败清理测试。
+- 重新生成两轮各 5 次 benchmark；stdout 单独写 `.json`，Qt/系统 stderr 写 `.stderr.txt`，不得把告警前缀拼进 JSON。
+- 两个 `.json` 必须通过 `python3 -m json.tool`；报告逐值、median、p95/max、超门槛次数、阶段、payload/fingerprint 与退出码。
+- 保留历史 153.45 ms 记录并标明“历史超限、本轮结果”，不得删除或改写成从未发生。
 
 ### 0.3 实施与验收约束
 
-1. 先补能在旧实现上失败的定向测试，再做最小修复；不得修改 `build/lib/`。
-2. 每个问题都要记录 source → sink、失败前状态、修复后状态和反证；不要把“测试通过”写成安全证明。
-3. 全量运行：
-
-   ```bash
-   PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen python3 -m unittest discover -s tests -q
-   PYTHONDONTWRITEBYTECODE=1 python3 -m compileall -q neo_tracker tests benchmarks
-   python3 -m pip check
-   ```
-
-4. 10 万结果 benchmark 至少运行 2 轮、每轮 5 次 background open；分别报告每次值、median、p95/max、超门槛次数和 `max_gap_phase_before/after`。任一轮出现 `>75 ms` 就保持 `PARTIAL`，不得只选最好结果。
-5. 更新 `collab/FROM_DEEPSEEK.md`、`PROJECT_INDEX.md`、`交接.md` 与 `PROJECT_FILE_INDEX.sha256`；报告实际索引条目数。
-6. 完成后只提交一个范围清晰的 commit；先用 `git diff --cached --stat` 确认源码、测试和证据都在同一提交中。若工作树含非本工单改动，停止并报告，不得覆盖。
-7. 回复固定包含：`Conclusion / Findings / Changes Made / Files Modified / Testing / Performance and Runtime Evidence / Remaining Risks / Suggested Commit Message`。
+1. 先补能在 `41b8deb` 上失败的定向测试，再做最小修复；不得修改 `build/lib/`。
+2. `FORDEEPSEEK.md` 是 Codex 发放任务的权威文件，DeepSeek 不得改写；完成报告写入 `collab/FROM_DEEPSEEK.md` 和新的 `artifacts/deepseek-2026-08-09/` 证据。
+3. 必跑：定向测试、全量 unittest、`compileall`、`pip check`、SHA-256 索引与两轮 benchmark；报告实际测试数和索引数。
+4. 更新 `collab/FROM_DEEPSEEK.md`、`PROJECT_INDEX.md`、`交接.md` 与 `PROJECT_FILE_INDEX.sha256`；保持旧证据可追溯。
+5. 完成后只提交一个范围清晰的 commit；提交前确认没有混入非本工单改动。
+6. 回复固定包含：`Conclusion / Findings / Changes Made / Files Modified / Testing / Performance and Runtime Evidence / Remaining Risks / Suggested Commit Message`。
 
 ## 1. 执行授权与目标
 
@@ -94,15 +79,15 @@
 
 | 维度 | 当前证据 | 状态 |
 | --- | --- | --- |
-| 完整回归 | 436 项 unittest，64.627 秒 | PASS |
+| 完整回归 | Codex 独立复跑 449 项 unittest，59.470 秒 | PASS |
 | Python 编译 | `compileall` | PASS |
 | Python 依赖 | `pip check` 返回 `No broken requirements found` | PASS |
-| 内容完整性 | 当前 397 个稳定文件全部通过 SHA-256 校验 | PASS |
-| 10 万结果项目打开 | 三次 background open 3.861/3.905/4.167 秒 | PASS |
-| 10 万结果 UI heartbeat | 35.55/72.84/153.45 ms，门槛 `<75 ms` | **FAIL / FLAKY** |
-| 10 万结果 GUI apply | 33.51/69.12/61.80 ms | PARTIAL |
+| 内容完整性 | 当前 400 个稳定文件全部通过 SHA-256 校验 | PASS |
+| 10 万结果项目打开 | Codex 本轮 5 次 background open 3.875/3.711/3.911/3.885/3.861 秒 | PASS |
+| 10 万结果 UI heartbeat | 本轮 34.64/47.01/46.00/45.76/46.34 ms；历史有 153.45 ms 超限 | **PASS THIS RUN / FLAKY HISTORY** |
+| 10 万结果 GUI apply | 本轮 32.67/44.59/44.03/42.23/42.99 ms | PASS THIS RUN |
 | 大项目正确性 | payload、results、fingerprint、Review diagnostics、Analysis sources 一致 | PASS |
-| Git | `main` @ `7deeee6`，复测前工作树 clean | PASS |
+| Git | `main` @ `41b8deb`，验收前工作树 clean | PASS |
 
 当前验证环境：
 
@@ -148,7 +133,7 @@
 
 ### P0-A：定位原生 Python 意外退出与解码依赖冲突
 
-2026-08-09 验收更新：依赖声明层面的 P0-A 已关闭；历史 Accessibility/AppKit、QThread 与其他原生退出根因仍未关闭。当前优先执行上面的 P1-A1 工单。
+2026-08-09 验收更新：依赖声明层面的 P0-A 已关闭；历史 Accessibility/AppKit、QThread 与其他原生退出根因仍未关闭。当前优先完成上面的 P1-A1R 验收修正。
 
 当前发现：单独导入 `cv2` 或 `av` 无警告；同一解释器同时导入时，macOS 报告 `AVFFrameReceiver` 和 `AVFAudioReceiver` 被两套 `libavdevice` 重复实现：OpenCV 携带 FFmpeg 61，PyAV 携带 FFmpeg 62，并警告可能出现异常崩溃。
 
@@ -157,7 +142,7 @@
 - 当前产品源码会懒加载 OpenCV，但没有发现 PyAV 导入，因此上述冲突是部署风险，不是现有产品崩溃根因的证明。
 - 2026-07-14/15 的已知报告位于 Accessibility → AppKit/libqcocoa 原生调用链，曾出现 `EXC_BAD_ACCESS`/`SIGBUS`。
 - 2026-07-16 的一次 `QThread::~QThread()` SIGABRT 来自测试截图 harness 在 worker 结束前销毁窗口，不等同于正常产品关闭。
-- 2026-08-09 的 433 项回归没有异常退出。
+- 2026-08-09 的 Codex 独立 449 项回归没有异常退出。
 
 执行顺序：
 
@@ -235,7 +220,7 @@ UI 改动必须同时提供原生截图、键盘/无障碍结果和测试；截�
 
 1. 执行 `pwd -P`，确认处于权威工作区。
 2. 依次阅读 `PROJECT_INDEX.md`、`交接.md`、`README.md` 和本文件。
-3. 先运行 SHA-256 校验；当前目录没有 Git，因此在任何写入前创建带时间戳的完整备份并记录其 SHA-256。
+3. 先运行 SHA-256 校验和 `git status --short`；若工作树不 clean，停止并报告，不得覆盖现有改动。
 4. 运行完整 baseline，记录环境、命令、退出码和耗时。
 
 ### 每个工作包

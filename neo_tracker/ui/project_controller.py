@@ -502,7 +502,11 @@ class ProjectTaskController:
             if roi_error is not None:
                 raise ValueError(f"project pipeline $.roi is invalid: {roi_error}")
         if snapshot.roi:
-            self.apply_roi_config_to_task(task, snapshot.roi)
+            roi_error = validate_roi_config(snapshot.roi)
+            if roi_error is not None:
+                raise ValueError(f"project task $.roi is invalid: {roi_error}")
+            if not self.apply_roi_config_to_task(task, snapshot.roi):
+                raise ValueError("project task $.roi could not be applied")
         rod = self.calibration_rod_from_dict(snapshot.calibration_rod)
         if rod is not None:
             self.apply_calibration_rod_to_task(task, rod)
@@ -536,6 +540,7 @@ class ProjectTaskController:
             "duration_s": float(info.duration_s),
             "sample_rate_hz": float(info.sample_rate_hz),
             "channels": int(info.channels),
+            "sample_width_bytes": int(info.sample_width_bytes),
             "error": info.error,
             "source_identity": info.source_identity.to_dict() if info.source_identity is not None else None,
         }
@@ -573,6 +578,7 @@ class ProjectTaskController:
             kind=kind,
             sample_rate_hz=sample_rate,
             channels=cls._snapshot_int(snapshot_info.get("channels"), 0),
+            sample_width_bytes=cls._snapshot_int(snapshot_info.get("sample_width_bytes"), 0),
             error=error,
             source_identity=source_identity,
         )

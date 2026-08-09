@@ -99,6 +99,58 @@ class AnalysisWorkerTests(unittest.TestCase):
         self.assertEqual(len(failed), 1)
         self.assertIn("safety limit", failed[0])
 
+    def test_worker_rejects_wav_decode_cost_before_loading(self) -> None:
+        loaded: list[bool] = []
+        failed: list[str] = []
+        worker = AnalysisWorker(
+            source=AnalysisSource(
+                kind="audio",
+                label="Audio WAV: mono",
+                sample_rate_hz=48_000.0,
+                sample_count=100,
+                decoded_source_bytes=512 * 1024 * 1024 + 1,
+            ),
+            config=AnalysisConfig(method="fft"),
+            owner_token=3,
+            series_loader=lambda _cancel: loaded.append(True),  # type: ignore[arg-type,return-value]
+        )
+        worker.failed.connect(failed.append)
+
+        worker.run()
+
+        self.assertEqual(loaded, [])
+        self.assertEqual(len(failed), 1)
+        self.assertIn("decode", failed[0].lower())
+
+    def test_worker_preflight_differentiates_decode_cost_with_same_frame_count(self) -> None:
+        calls: list[int] = []
+
+        def make_worker(decoded_bytes: int, token: int) -> AnalysisWorker:
+            return AnalysisWorker(
+                source=AnalysisSource(
+                    kind="audio",
+                    label=f"Audio WAV: {token}",
+                    sample_rate_hz=48_000.0,
+                    sample_count=100,
+                    decoded_source_bytes=decoded_bytes,
+                ),
+                config=AnalysisConfig(method="fft"),
+                owner_token=token,
+                series_loader=lambda _cancel: calls.append(token),  # type: ignore[arg-type,return-value]
+            )
+
+        within_limit = make_worker(100 * 2 * 2, 1)
+        over_limit = make_worker(512 * 1024 * 1024 + 1, 2)
+        failed: list[str] = []
+        over_limit.failed.connect(failed.append)
+
+        within_limit.run()
+        over_limit.run()
+
+        self.assertEqual(calls, [1])
+        self.assertEqual(len(failed), 1)
+        self.assertIn("decode", failed[0].lower())
+
 
 if __name__ == "__main__":
     unittest.main()

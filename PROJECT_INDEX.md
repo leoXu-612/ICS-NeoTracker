@@ -1,6 +1,6 @@
 # ICSTracker Project Index
 
-更新时间：2026-08-09 18:45（Asia/Taipei）
+更新时间：2026-08-09 19:40（Asia/Taipei）
 
 ## 权威工作区
 
@@ -16,7 +16,7 @@
 - `collab/PROTOCOL.md`：协作信箱与路径约定。
 - `collab/FROM_CODEX.md`：Codex 任务和迁移通知。
 - `collab/FROM_CLAUDE.md`：Claude 的独立审查记录。
-- `PROJECT_FILE_INDEX.sha256`：当前 400 个稳定文件的内容索引（排除 `.DS_Store`、`*.pyc`、`__pycache__`、`.git/` 与索引自身），可用于完整性校验。
+- `PROJECT_FILE_INDEX.sha256`：当前 405 个稳定文件的内容索引（排除 `.DS_Store`、`*.pyc`、`__pycache__`、`.git/` 与索引自身），可用于完整性校验。
 - `MIGRATION_RECORD.md`：本次目录迁移、备份和验证记录。
 
 ## 代码索引
@@ -63,7 +63,7 @@ neo_tracker/
   ui/review_response.py ROI-local 响应按需完整展开、历史响应图恢复与全局有界 LRU
   ui/review_response_worker.py QThread 后台历史响应图重算与取消
   ui/tracking_worker.py QThread 监控与 spawn 解码/追踪子进程、单次 child-input 序列化、异常 EOF 有界失败、严格一帧预取、16 帧结果 checkpoint、0.35 s 取消宽限后的有界 terminate/kill、运行前后来源复核、插件隔离 fail-closed、终态性能样本
-tests/                 449 项 unittest 回归测试（含 media 依赖守卫、sampled identity 审查、ROI 上限、WAV 通道上限与 NPZ 原子导出）
+tests/                 454 项 unittest 回归测试（含 media 依赖守卫、sampled identity 审查、ROI 上限与载入 fail-closed、WAV 通道/解码预检、NPZ 原子导出）
 benchmarks/            可重复的 tracking input/compute、严格一帧预取、持久 Preview decoder session、进度 cadence、Add/Open/Save GUI heartbeat、100,000-result 项目流式打开与 Review 增量编辑、Color/Template/Edge/Annular/ROI/Review/Signal/WAV 工作集和语义对照基准
 assets/                App 图标与封面资产
 artifacts/             UI 审查截图、实验视频与可复现性能记录

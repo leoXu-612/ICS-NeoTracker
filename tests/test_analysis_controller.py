@@ -46,6 +46,23 @@ class AnalysisControllerTests(unittest.TestCase):
         self.assertEqual(len(channel_labels), MAX_WAV_CHANNELS)
         self.assertNotIn(MAX_WAV_CHANNELS, channel_labels)
 
+    def test_audio_sources_carry_decoded_source_bytes(self) -> None:
+        media_info = MediaInfo(
+            kind="audio",
+            available=True,
+            channels=2,
+            sample_width_bytes=2,
+            sample_rate_hz=48_000.0,
+            frame_count=1000,
+        )
+
+        sources = AnalysisController.available_sources([], {}, "clip.wav", media_info)
+        audio_sources = [source for source in sources if source.kind == "audio"]
+
+        self.assertEqual(len(audio_sources), 3)  # mono + 2 channels
+        for source in audio_sources:
+            self.assertEqual(source.decoded_source_bytes, 1000 * 2 * 2)
+
     def test_tracking_sources_include_units_rate_and_sample_count(self) -> None:
         controller = AnalysisController()
         sources = controller.available_sources(tracking_results(), {"x_world": "cm"}, None, None)

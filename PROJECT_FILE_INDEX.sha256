@@ -1,7 +1,7 @@
 8a1e34f9d60b1ae0883532bf2378944c45979bd32ecf9f6b3ac51f9490c3f4a5  ./.gitignore
-1646067e22cb61fe93d7eda78f077180316b7dbca1bc93d556372ab37ef9a81e  ./FORDEEPSEEK.md
+97a4ddf1fd7c859b7c610a97bd3e7cb2b376f74effeb5b4a5d19b0bb7337b04b  ./FORDEEPSEEK.md
 a68e9c529565944c873530a399fdaab7906e80221369865486544ca46d20d36b  ./MIGRATION_RECORD.md
-f725285d39119ec9d369541413156902e71cb9278b26885d005964c732bf4e63  ./PROJECT_INDEX.md
+d94e9b3b93e624749a217e3a41e2774f1171e3b4f47b7ac2a78dc4b0f363dfde  ./PROJECT_INDEX.md
 73888349aa10c6aace4ce08ccc2118d3ea1d9adc288ed6873a3ac1ce94f1506b  ./README.md
 2cff680330304f0dd6a811106f707df5f94e562f3b0bfc4213d638991881f746  ./artifacts/code-review-ui-2026-07-22/01-media-ready.png
 2b98f252469573d4cab7bc2802788e5f4c1993689ff553e3eb018cdef1fda35f  ./artifacts/code-review-ui-2026-07-22/01b-media-ready-1024x768.png
@@ -31,10 +31,15 @@ e55610ba0abb2e2e29aee07b8cfa79dad2a901786063d31a928c2c31addd2c48  ./artifacts/co
 6f48f1a501dc564c65364336c4ad68472c7ad991f386daaebf3b156a3ece676a  ./artifacts/code-review-ui-2026-07-22/runtime-evidence.json
 8ea26d72ce42846aedaa177f00f07b90e23dc260d4b12167eaf96a231fdc5555  ./artifacts/code-review-ui-2026-07-22/synthetic-red-marker.mp4
 a23666823ecfc38da2f99d226c3a4e4bb5f5f4cfadd1776a8fb5031daa1764f4  ./artifacts/deepseek-2026-08-09/baseline.md
+c355d47e96e46ca3bbb03b6513746aab2c4a174a09fc8eda5e22f95950e028e0  ./artifacts/deepseek-2026-08-09/benchmark-p1a1r-round1.json
+5b93888a08fb14c2e1c79f7b59a2b63d7d7abbf617036d81a5e9f8165048ffdf  ./artifacts/deepseek-2026-08-09/benchmark-p1a1r-round1.stderr.txt
+a7afd2fdebf557afdae458891c782582ff9fc521ad4ad96ae47b0c920bff59da  ./artifacts/deepseek-2026-08-09/benchmark-p1a1r-round2.json
+10f4e0f74e27610e6314109bd9f82a207c173ad095a5246a27fa3496a857a20a  ./artifacts/deepseek-2026-08-09/benchmark-p1a1r-round2.stderr.txt
 5a7f94f2a2f83e894c886a92516700a53208d8780052ac7befeb8b97d51d309f  ./artifacts/deepseek-2026-08-09/benchmark-round1.json
 c5884d55cc4ad8b55f5276e5380638300b8fdbd6f65aaff72de431f7d1981665  ./artifacts/deepseek-2026-08-09/benchmark-round2.json
 2568ee5240298361739ef049500e5d7850d5bf8407feee4eea078badd3adf029  ./artifacts/deepseek-2026-08-09/p0a-ffmpeg-conflict.md
 eaf5f4e9865a657c124dc7f1fa51ff69f3988b4957d58cea3fe34f722ccad45a  ./artifacts/deepseek-2026-08-09/p1a1-data-trust-and-io-bounds.md
+f0dabf1ef597a0cef0c12168373808ac41b6b3b2852af2188fa7858aa2961203  ./artifacts/deepseek-2026-08-09/p1a1r-acceptance-fixes.md
 fc3be17e8f64f1a546bbe9a4f4fd317a90ed0271f9a268a7422bf14dcb60ee5d  ./artifacts/design-audit-2026-07-08/01-empty-project.png
 1e3acab95639c80fa4514e9086f22a7a62f67eb28612d4b2cf7b5afde67ef3bb  ./artifacts/design-audit-2026-07-08/02-wav-processing-source.png
 788b0c6e9f9c360b5f9f0059441c881083efa308933d8fea169d629d34931a07  ./artifacts/design-audit-2026-07-08/03-tracking-review.png
@@ -311,7 +316,7 @@ e4d5b7c0cc91b2fa84387e180918fb5c7b2f507bb31d0a60b5c3a8346917d4ad  ./build/lib/ne
 df3162e19e40006ea4fd3e031d13bc2fe9f2d07d524e9c1f84f7d7b9e1aa56ce  ./build/lib/neo_tracker/visualization.py
 5a429f7d4b2b1311d85b2b1f7c20cd3f1b97cc4775c4c45136a3fc3308b21331  ./collab/FROM_CLAUDE.md
 ec4f6317dcf8def9817e5f6954dbfb8dee85f5e114353e0011d7d558b2169b11  ./collab/FROM_CODEX.md
-9b41f51545d2b66c21faa0a28fe1e01178e9764e5febc226fa09862378acf253  ./collab/FROM_DEEPSEEK.md
+4922439c207b0fecdfdd9794ec2b24356bdd638dcb16d727e7000113242c5624  ./collab/FROM_DEEPSEEK.md
 b546e574e3ba1349d1d89b0f86e008526fb436b3f4c40c86f0d53b312645c0ee  ./collab/PROTOCOL.md
 b2e3eb5572fd7bcf4527a5107f067bb60e3b1dd693aba655756c1a1f6c835dbf  ./neo_tracker.egg-info/PKG-INFO
 15207053b832b7e102da57708dc767daece44dc6f1a8dd40174ce2d9815243b6  ./neo_tracker.egg-info/SOURCES.txt
@@ -321,7 +326,7 @@ a16204fb5424f61ab3b1e219b8c0f55a59e30e8ec3cc056aac0a3591d9d240f9  ./neo_tracker.
 e6377f7664c9d31e403c5c576af72da7278291dfce82e3ba5a2af82f9b434f11  ./neo_tracker.egg-info/top_level.txt
 57a3fd05702bedf9937993d53c5d0a51fb60e03fbb049024dccd04245a97e3be  ./neo_tracker/__init__.py
 8d253596944fb1535bce3dd8fb14c8e1d84fbb794a7909bc23529886d5ecdf2d  ./neo_tracker/__main__.py
-4a700c0587592147c864010bb7611b7e2557ae60dda91ab10228fc8df2ad2214  ./neo_tracker/analysis.py
+f37fa8d64aaf9b166ae132de07ab1e21f569f867b5e27b994ff26e556859a184  ./neo_tracker/analysis.py
 bad36bd88a8c7baf630e5407426bd25d248cdbecec5e35e348d6724c26acd7fe  ./neo_tracker/atomic_io.py
 6af48fdbca97a2723823758a54eb9e92631d2ae5511d05568bdfacd215d2ee0b  ./neo_tracker/config.py
 ec396f8f91dad381f2b18e42641169d39a914ac9564ca05ea206361527091fa3  ./neo_tracker/coordinates.py
@@ -329,7 +334,7 @@ ed7c3568822b5ffa3fba3b81b29a780bb54f9f179e4b394e4140f8deab5df17d  ./neo_tracker/
 a20219ee49afe3512934b80456078118580dc491f254f7f9b56487088379ac70  ./neo_tracker/csv_utils.py
 f112d0e3f7c49eb196818a0bea12b8aae2850404fe2cb5041e2128cedd990ac8  ./neo_tracker/export.py
 25ee8210920ff53f15af09c78b9ea7fafc5224a45d1041532e30d4be8f98fa30  ./neo_tracker/filters.py
-2cba68114a8d9f3fe56d8ea2f87c6cacdb41eef19cc6b0334d3d6980bd22f20e  ./neo_tracker/media.py
+df94791e3102811acf948ce43faf79711e120bec39c5d7729c590516a4e196b8  ./neo_tracker/media.py
 e60655e027958e092e87966ebd949f7b1e476cd992e47840b1548a9989c96ca6  ./neo_tracker/motion.py
 2512a0364a1e1fb5c9806967d83af0d2afa01624e9354311a5a697013719bf8f  ./neo_tracker/observations.py
 cf59b5b70dec4877ab1065f1d32eb5e7e69aba434817254b0b0b76a1a014619d  ./neo_tracker/optimizers.py
@@ -338,8 +343,8 @@ cf59b5b70dec4877ab1065f1d32eb5e7e69aba434817254b0b0b76a1a014619d  ./neo_tracker/
 d85d3b56ad069a71f183f8c69bafb7d0a0fd3a3383ca7e80706a7edf410a9e0b  ./neo_tracker/roi.py
 994142f2955c813af8f7f2b4815e78cc9a6b85436e29905184cba36aa6fd65ae  ./neo_tracker/states.py
 6de183ad14f29baf05f256f88b00576d2763173b52b0b1eeb2ce19ac8b50b0a2  ./neo_tracker/ui/__init__.py
-2f497505ea253e60ac4751aa5ad4fc455eae865d9bae9ddca25a8c0068a3b1a9  ./neo_tracker/ui/analysis_controller.py
-a770ef578e0c38f18819b7af49b0fca52b693011042ec9d7021066ae09638cd7  ./neo_tracker/ui/analysis_worker.py
+820e725c68b9e1dd3eb415cf1a0c7a8bce92815ba866f2984cad2616bc50ae4a  ./neo_tracker/ui/analysis_controller.py
+80976758ff667c45c633749ee7e058301c1fac9c3ee98f2b57c1a9b78ce7783c  ./neo_tracker/ui/analysis_worker.py
 3d9f1f1f7329d51292a12a19ced0bc182de84f625fe4369eb8ba98b208494893  ./neo_tracker/ui/background_tasks.py
 6f91ae1cba154236520c0564fceb55b8ab1125541be9723181c3de6ab2043801  ./neo_tracker/ui/calibration_editor.py
 005af64599137054ec3d749dbddb77912da486410fd8ebd82ccc24d704231367  ./neo_tracker/ui/confidence_plot.py
@@ -351,7 +356,7 @@ a34d83d69bfc9e7a2179d6c221ac53ea40283009624abcc9791a9de77e4189c9  ./neo_tracker/
 348d34f0d5065e6972691ed8f04e66f0568092301bcba5f7184dfb85f16fe137  ./neo_tracker/ui/playback_controller.py
 5a08cb3a24981a27f19b89893e65c73b2826dab585ce56baa6d58055c0e4a00b  ./neo_tracker/ui/preview_canvas.py
 612b5c1c1f7f30537514bbbc4f9a660c0b47e84eae311b422b6e7d4bf8bae744  ./neo_tracker/ui/preview_decode_worker.py
-6b8054221fa80cb20ba0df3549abacdd62d7fc35eefb4363bd1ba0ff840b1407  ./neo_tracker/ui/project_controller.py
+ff724a6727293cbd1fbd7fe58b43948efff7b92b3f8359b58e54ebf5068c9e54  ./neo_tracker/ui/project_controller.py
 f8662c80bc4e214eb3a617cad612f4a44e91b1e8cec25a1763315125056096d9  ./neo_tracker/ui/project_open_worker.py
 77a27a1b0b43efc0d86c91c1b733a4b91df9b7b39a9449d2f8c4076f122586ba  ./neo_tracker/ui/project_save_worker.py
 ca5fd9d8d43c3625040817a26d1f01f79650882f1a67fd753e4175e47ce0e9d7  ./neo_tracker/ui/project_status_panel.py
@@ -367,8 +372,8 @@ e4d5b7c0cc91b2fa84387e180918fb5c7b2f507bb31d0a60b5c3a8346917d4ad  ./neo_tracker/
 796a100c370a76b484ca50bfe60e417d596fba650a1bf11ecca2b53418ac1093  ./neo_tracker/visualization.py
 2c9f6bc51de34d6d54e60ce275fcf8dd5ba4e58f2475214a655141762efe6e8d  ./pyproject.toml
 7285e24863c9ad0915f7ece0716c25050ae383356ab214c76625b9a19ad19c94  ./tests/test_analysis.py
-c49fe6d74a4025bc39e3ce8164fda9518588234e9ba1eb29be88b423e7fd25da  ./tests/test_analysis_controller.py
-8c66385568db5a8684d41e65bc29cc12f68849aea71830c28c7394a6e61349e8  ./tests/test_analysis_worker.py
+2b922dd3c34b65814a3ee474659f2a0ae8bb29d485ca83a9fe1c968047404001  ./tests/test_analysis_controller.py
+0ab94fa787b7a49776e8a238972cde9627484845051df9772c412f9ba2806267  ./tests/test_analysis_worker.py
 52cbfb479c87f797d1e95435a8fc32ebc530754addaff3615bad234fb69589e8  ./tests/test_background_tasks.py
 6f92d6694d28e9cf943af2f9f11e130b696e0d06cdfb260055f801df2f79a3e7  ./tests/test_calibration_editor.py
 988fc1d3165299a88b72645292f16eb9dcd20dc5cbc0b28e52eeba41e9af870c  ./tests/test_confidence_plot.py
@@ -382,8 +387,8 @@ caf44e6d2f021edc48d34756a9ef3ec1a535dd2a5862eab2ce92259c718c5fdc  ./tests/test_m
 6c92d3adb6c400b57667cfffb0237c7aa05a2fd0dc3a0f9b709138332fd371b0  ./tests/test_optimizers_export.py
 9116ac38a358eccdd590537c4e83927960e091963107036096700861810f2c39  ./tests/test_playback_controller.py
 f9ba52236060f85093e2f3c1b1e0026dee183bbd3733386baebc60bbfde2e0d9  ./tests/test_project.py
-3030075a76686e901e32db346b0f74a6f192f5136e206f95fda2b4d3ed56124b  ./tests/test_project_controller.py
-ed57719a50ffb66af1360a432042d33ca2047c0437f0444de2bb476c885faf20  ./tests/test_project_open_worker.py
+80738b22ad162292123f96fd256d4c937b3bd0e518206012094c127172de616f  ./tests/test_project_controller.py
+00c4a767e16167fa3a4ed7ed060695a80473cdddfd307faafefb320296a12b4e  ./tests/test_project_open_worker.py
 16688c2756a64f5fe30e18b9ab6254d2a8fa47b8a46bc51bdfd1508846140196  ./tests/test_project_status_panel.py
 44aff4d138459e390dbc36b179840d04a60f009e0d2d4b78e51aa4985a2eda6d  ./tests/test_results_table_model.py
 c9a4c3ddef66c5109e7e163b2bd3090cce867a734eeb6e137be64a0746f8ad25  ./tests/test_review_controller.py
@@ -397,4 +402,4 @@ c17661815cd19899305810d7038acd1db5c2c566ecbaf15b6eda1331db65e546  ./tests/test_t
 832fa5aedb68e50e5d6b70eed4695678c35d6c6eb0b7b4ad2db75d67e39e6280  ./tests/test_tracking_pipeline.py
 efae396a111daec10324dd5c275af528b44bee75abce858abbd500701a64265a  ./tests/test_tracking_worker.py
 7b925aacf926451c08ab243336d276e53c53df9952100c571e78ac5b6b2cbb61  ./tests/test_ui_main_window.py
-bf237efceed22778d768d29366733e676c66c4a8e210360cb7c77987dfd0cb81  ./交接.md
+99cd63ea74bab309687cfe6e0b5a1324b4e6acdaef65fd4cd365d9bd03cc27fe  ./交接.md

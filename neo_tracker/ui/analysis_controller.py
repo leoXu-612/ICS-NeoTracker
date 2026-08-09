@@ -37,6 +37,7 @@ class AnalysisSource:
     sample_rate_hz: float = 0.0
     sample_count: int = 0
     total_sample_count: int = 0
+    decoded_source_bytes: int = 0
 
     @property
     def identity(self) -> tuple[str, str, int | str]:
@@ -54,6 +55,8 @@ class AnalysisSource:
             "sample_count": int(self.sample_count),
             "total_sample_count": int(self.total_sample_count),
         }
+        if self.decoded_source_bytes:
+            data["decoded_source_bytes"] = int(self.decoded_source_bytes)
         if self.kind == "tracking":
             data["key"] = self.key
         elif self.kind == "audio":
@@ -75,6 +78,7 @@ class AnalysisSource:
             sample_rate_hz=_safe_float(data.get("sample_rate_hz")),
             sample_count=sample_count,
             total_sample_count=_safe_int(data.get("total_sample_count", sample_count)),
+            decoded_source_bytes=_safe_int(data.get("decoded_source_bytes", 0)),
         )
 
     @property
@@ -308,6 +312,10 @@ class AnalysisController:
         if is_audio and media_info is not None:
             sample_rate = media_info.sample_rate_hz if media_info.sample_rate_hz > 0.0 else media_info.fps
             sample_count = max(0, int(media_info.frame_count))
+            channel_count = max(0, min(int(media_info.channels), MAX_WAV_CHANNELS))
+            decoded_source_bytes = (
+                sample_count * channel_count * max(0, int(media_info.sample_width_bytes))
+            )
             sources.append(
                 AnalysisSource(
                     kind="audio",
@@ -317,9 +325,10 @@ class AnalysisController:
                     sample_rate_hz=sample_rate,
                     sample_count=sample_count,
                     total_sample_count=sample_count,
+                    decoded_source_bytes=decoded_source_bytes,
                 )
             )
-            for channel_index in range(max(0, min(int(media_info.channels), MAX_WAV_CHANNELS))):
+            for channel_index in range(channel_count):
                 sources.append(
                     AnalysisSource(
                         kind="audio",
@@ -329,6 +338,7 @@ class AnalysisController:
                         sample_rate_hz=sample_rate,
                         sample_count=sample_count,
                         total_sample_count=sample_count,
+                        decoded_source_bytes=decoded_source_bytes,
                     )
                 )
         return sources or [AnalysisSource(kind="none", label="No signal source available")]

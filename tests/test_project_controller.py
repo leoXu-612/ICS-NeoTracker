@@ -112,7 +112,7 @@ class ProjectTaskControllerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, r"project pipeline \$\.roi is invalid"):
             self.controller.task_from_snapshot(snapshot)
 
-    def test_invalid_optional_roi_and_calibration_are_ignored(self) -> None:
+    def test_invalid_snapshot_roi_fails_closed_and_invalid_calibration_ignored(self) -> None:
         snapshot = ProjectTaskSnapshot(
             media_path=None,
             pipeline_key="color_marker",
@@ -125,10 +125,22 @@ class ProjectTaskControllerTests(unittest.TestCase):
             },
         )
 
-        task = self.controller.task_from_snapshot(snapshot)
+        with self.assertRaisesRegex(ValueError, r"project task \$\.roi is invalid"):
+            self.controller.task_from_snapshot(snapshot)
+
+        valid_roi_snapshot = ProjectTaskSnapshot(
+            media_path=None,
+            pipeline_key="color_marker",
+            calibration_rod={
+                "start_px": [0.0, 0.0],
+                "end_px": [0.0, 0.0],
+                "real_length": -5.0,
+                "unit": "cm",
+            },
+        )
+        task = self.controller.task_from_snapshot(valid_roi_snapshot)
 
         self.assertIsNone(task.roi)
-        self.assertEqual(task.pipeline.roi.to_config()["type"], "rectangle")
         self.assertIsNone(task.calibration_rod.unit_per_pixel())
 
     def test_apply_roi_config_rejects_oversized_polygon_without_partial_application(self) -> None:
@@ -148,6 +160,50 @@ class ProjectTaskControllerTests(unittest.TestCase):
         }
         self.assertTrue(self.controller.apply_roi_config_to_task(task, allowed))
         self.assertEqual(len(task.roi["points"]), 4096)
+
+    def test_snapshot_open_rejects_oversized_task_roi_fail_closed(self) -> None:
+        base_snapshot = {
+            "media_path": None,
+            "pipeline_key": "color_marker",
+            "pipeline_config": self.registry["color_marker"].factory().to_config(),
+            "preview_frame_index": 0,
+            "media_info": None,
+            "results": [],
+            "edit_history": [],
+            "tracking_outcome": "",
+            "tracking_note": "",
+            "run_history": [],
+        }
+        oversized_polygon = {
+            "type": "polygon",
+            "points": [[float(index), 0.0] for index in range(4097)],
+        }
+        oversized_curve = {
+            "type": "curve_band",
+            "polyline": [[float(index), 0.0] for index in range(4097)],
+            "half_width": 1.0,
+        }
+        for roi in (oversized_polygon, oversized_curve):
+            with self.subTest(roi_type=roi["type"]):
+                snapshot = ProjectTaskSnapshot(**{**base_snapshot, "roi": roi})
+                with self.assertRaisesRegex(ValueError, r"project task \$\.roi is invalid"):
+                    self.controller.task_from_snapshot(snapshot)
+
+        allowed_polygon = {
+            "type": "polygon",
+            "points": [[float(index), 0.0] for index in range(4096)],
+        }
+        allowed_curve = {
+            "type": "curve_band",
+            "polyline": [[float(index), 0.0] for index in range(4096)],
+            "half_width": 1.0,
+        }
+        for roi in (allowed_polygon, allowed_curve):
+            with self.subTest(accepted_roi_type=roi["type"]):
+                snapshot = ProjectTaskSnapshot(**{**base_snapshot, "roi": roi})
+                task = self.controller.task_from_snapshot(snapshot)
+                points = task.roi.get("polyline") or task.roi.get("points")
+                self.assertEqual(len(points), 4096)
 
     def test_project_load_blocks_same_path_media_drift_until_explicit_relink(self) -> None:
         live = MediaInfo(
