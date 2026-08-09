@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Mapping
@@ -12,7 +13,14 @@ from neo_tracker.application.kinematics_coordinator import (
     KinematicsFitTask,
 )
 from neo_tracker.application.task_supervisor import TaskSupervisor
-from neo_tracker.kinematics import FitOperator, FitRequest, FitResult, FitStatus, SampleSeries
+from neo_tracker.kinematics import (
+    DerivativeConfig,
+    FitOperator,
+    FitRequest,
+    FitResult,
+    FitStatus,
+    SampleSeries,
+)
 
 
 @dataclass(frozen=True)
@@ -62,11 +70,41 @@ class AnalysisWorkspaceState:
     residual_visible: bool = False
 
 
+@dataclass(frozen=True)
+class KinematicsOperationRequest:
+    operation: str
+    series_id: str
+    source_revision: str
+    configuration: object
+
+    def __post_init__(self) -> None:
+        operation = str(self.operation).strip().lower()
+        series_id = str(self.series_id).strip()
+        source_revision = str(self.source_revision).strip()
+        if operation not in {"derivative", "smooth", "export"}:
+            raise ValueError(f"unknown kinematics operation: {operation}")
+        if not series_id or not source_revision:
+            raise ValueError("kinematics operation requires series and source revision")
+        configuration = self.configuration
+        if operation == "derivative":
+            if not isinstance(configuration, DerivativeConfig):
+                raise TypeError("derivative operation requires DerivativeConfig")
+        elif not isinstance(configuration, Mapping):
+            raise TypeError(f"{operation} operation requires a configuration mapping")
+        else:
+            configuration = MappingProxyType(dict(configuration))
+        object.__setattr__(self, "operation", operation)
+        object.__setattr__(self, "series_id", series_id)
+        object.__setattr__(self, "source_revision", source_revision)
+        object.__setattr__(self, "configuration", configuration)
+
+
 class AnalysisWorkspaceController(QObject):
     """Application boundary for immutable fit requests and background lifecycle."""
 
     stateChanged = Signal(object)
     fitResultReady = Signal(object)
+    operationRequested = Signal(object)
     idleReached = Signal()
 
     def __init__(
@@ -198,6 +236,85 @@ class AnalysisWorkspaceController(QObject):
     def set_residual_visible(self, visible: bool) -> None:
         self._replace_state(residual_visible=bool(visible))
 
+    def request_derivative(self, order: int) -> bool:
+        source = self._selected_series()
+        if source is None:
+            return False
+        config = DerivativeConfig(
+            method="nonuniform_finite_difference",
+            order=int(order),
+            edge_policy="invalid",
+            gap_policy="split",
+        )
+        self.operationRequested.emit(
+            KinematicsOperationRequest(
+                "derivative",
+                source.series_id,
+                source.source_revision,
+                config,
+            )
+        )
+        return True
+
+    def request_smoothing(
+        self,
+        *,
+        window_length: int = 11,
+        polyorder: int = 3,
+        uniformity_tolerance: float = 1e-3,
+    ) -> bool:
+        source = self._selected_series()
+        if source is None:
+            return False
+        window = int(window_length)
+        degree = int(polyorder)
+        tolerance = float(uniformity_tolerance)
+        if window < 3 or window % 2 == 0:
+            raise ValueError("smoothing window_length must be an odd integer of at least 3")
+        if degree < 0 or degree >= window:
+            raise ValueError("smoothing polyorder must be non-negative and smaller than window_length")
+        if not math.isfinite(tolerance) or not 0.0 <= tolerance < 1.0:
+            raise ValueError("uniformity_tolerance must be finite and in [0, 1)")
+        config = MappingProxyType(
+            {
+                "method": "savgol_uniform",
+                "window_length": window,
+                "polyorder": degree,
+                "uniformity_tolerance": tolerance,
+                "gap_policy": "split",
+                "resample": False,
+            }
+        )
+        self.operationRequested.emit(
+            KinematicsOperationRequest(
+                "smooth",
+                source.series_id,
+                source.source_revision,
+                config,
+            )
+        )
+        return True
+
+    def request_export(self) -> bool:
+        source = self._selected_series()
+        if source is None:
+            return False
+        config = MappingProxyType(
+            {
+                "formats": ("csv", "npz", "markdown"),
+                "fit_result": self._state.fit_result,
+            }
+        )
+        self.operationRequested.emit(
+            KinematicsOperationRequest(
+                "export",
+                source.series_id,
+                source.source_revision,
+                config,
+            )
+        )
+        return True
+
     def close(self) -> None:
         self._coordinator.close()
 
@@ -240,6 +357,9 @@ class AnalysisWorkspaceController(QObject):
             and request.series_id in self._series
             and self._series[request.series_id].source_revision == request.source_revision
         )
+
+    def _selected_series(self) -> SampleSeries | None:
+        return self._series.get(self._state.selected_series_id or "")
 
     def _replace_state(self, **changes: object) -> None:
         values = {
