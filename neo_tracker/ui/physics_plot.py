@@ -191,6 +191,10 @@ class PhysicsPlot(QWidget):
     def selected_sample_index(self) -> int | None:
         return self._selected_sample_index
 
+    @property
+    def selected_range(self) -> tuple[float, float] | None:
+        return self._range_s
+
     def set_series(self, series: Sequence[SampleSeries]) -> None:
         items = tuple(series)
         if len(items) > 8:

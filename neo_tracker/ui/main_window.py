@@ -103,6 +103,7 @@ from neo_tracker.ui.analysis_workspace_controller import (
     AnalysisWorkspaceController,
     AnalysisWorkspaceState,
     FitDraft,
+    KinematicsOperationRequest,
 )
 from neo_tracker.ui.analysis_worker import AnalysisWorker
 from neo_tracker.ui.calibration_editor import CalibrationEditor
@@ -152,6 +153,7 @@ from neo_tracker.ui.review_response import (
 from neo_tracker.ui.review_response_worker import ReviewResponseWorker
 from neo_tracker.ui.results_table_model import ResultsTableModel
 from neo_tracker.ui.fit_panel import FitPanel
+from neo_tracker.ui.inspectors import PhysicsInspector
 from neo_tracker.ui.action_registry import ActionRegistry
 from neo_tracker.ui.selection_session import (
     SelectionEvent,
@@ -219,6 +221,8 @@ class ElidingLabel(QLabel):
 
 
 class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
+    physicsOperationRequested = Signal(object)
+
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Neo-Tracker")
@@ -433,19 +437,25 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self._physics_series_by_id: dict[str, SampleSeries] = {}
         self.physics_workspace = PhysicsWorkspace()
         self.fit_panel = FitPanel()
+        self.physics_inspector = PhysicsInspector()
+        self.create_velocity_button = self.physics_inspector.create_velocity_button
+        self.create_acceleration_button = self.physics_inspector.create_acceleration_button
+        self.smooth_series_button = self.physics_inspector.smooth_series_button
+        self.fit_model_button = self.physics_inspector.fit_model_button
+        self.export_physics_analysis_button = self.physics_inspector.export_analysis_button
+        self.show_residual_button = self.physics_inspector.show_residual_button
         self.physics_workspace.set_fit_widget(self.fit_panel)
         self.physics_workspace.sampleActivated.connect(self._physics_sample_activated)
         self.physics_workspace.plotSampleActivated.connect(
             self._physics_plot_sample_activated
         )
         self.physics_workspace.pageRouteRequested.connect(self._physics_route_requested)
+        self.physics_workspace.pageChanged.connect(self._physics_workspace_page_changed)
         self.physics_workspace.layoutStateChanged.connect(
             self._physics_workspace_layout_changed
         )
         self.fit_panel.runRequested.connect(self._run_physics_fit)
         self.fit_panel.cancelRequested.connect(self._cancel_physics_fit)
-        self.fit_panel.residualToggled.connect(self._physics_residual_toggled)
-        self.fit_panel.exportRequested.connect(self._export_physics_analysis)
         self.fit_panel.draftChanged.connect(self._physics_fit_draft_changed)
         self.validate_json_button = QPushButton("Validate")
         self.apply_json_button = QPushButton("Apply JSON")
@@ -466,6 +476,9 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         )
         self.analysis_workspace_controller.fitResultReady.connect(
             self._physics_fit_ready
+        )
+        self.analysis_workspace_controller.operationRequested.connect(
+            self._physics_operation_requested
         )
         self.analysis_workspace_controller.idleReached.connect(
             self._schedule_close_if_workers_stopped
@@ -518,6 +531,9 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self._build_ui()
         self._reset_physics_context()
         self._application_shell = ApplicationShell(self)
+        self.action_registry.bind_button("physics.export", self.fit_panel.export_button)
+        self.action_registry.bind_button("physics.residual", self.fit_panel.residual_checkbox)
+        self._update_physics_actions(self.analysis_workspace_controller.state)
         self._apply_style()
         self._load_presets()
         self._render_task(refresh_project_state=False)
@@ -736,12 +752,13 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self._build_tracking_tab()
         self._build_review_tab()
         self._build_processing_tab()
+        self._build_physics_inspector_tab()
         self._build_calibration_tab()
         self._build_workflow_tab()
         self._build_advanced_tab()
         self.sidebar_tabs.setAccessibleName("Neo-Tracker workflow sections")
         self.sidebar_tabs.setAccessibleDescription(
-            "Choose Media, Tracking, Review, Signal, Calibration, Flow, or Pipeline JSON."
+            "Choose Media, Tracking, Review, Signal, Physics inspection, Calibration, Flow, or Pipeline JSON."
         )
         self.sidebar_tabs.tabBar().setAccessibleName("Neo-Tracker workflow section tabs")
         self.sidebar_tabs.currentChanged.connect(self._sidebar_tab_changed)
@@ -1456,6 +1473,13 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         elif current is not None and current.objectName() == "signalTab":
             self._hydrate_project_open_analysis_sources()
 
+    def _build_physics_inspector_tab(self) -> None:
+        self.physics_inspector_tab = self._add_sidebar_page(
+            self.physics_inspector,
+            "Inspect",
+            "physicsInspectorTab",
+        )
+
     @staticmethod
     def _physics_task_id(task: DesktopTask) -> str:
         return f"task:{id(task):x}"
@@ -1471,6 +1495,7 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self.physics_workspace.set_series(())
         self.fit_panel.set_series(())
         self.analysis_workspace_controller.set_series(task, ())
+        self.physics_inspector.clear()
         self.selection_session.activate_context(
             self._physics_task_id(task),
             self._physics_result_identity(task),
@@ -1516,6 +1541,7 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self.physics_workspace.set_series(items)
         self.fit_panel.set_series(items)
         self.analysis_workspace_controller.set_series(task, items)
+        self.physics_inspector.show_series(items[0])
         self.selection_session.select_frame(
             int(task.preview_frame_index),
             origin=SelectionOrigin.VIDEO,
@@ -1569,6 +1595,7 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
 
     def _physics_fit_state_changed(self, state: AnalysisWorkspaceState) -> None:
         self.fit_panel.apply_state(state)
+        self._update_physics_actions(state)
         source = self._physics_series_by_id.get(state.selected_series_id or "")
         if (
             source is None
@@ -1597,15 +1624,99 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
             origin=SelectionOrigin.FIT,
             expected_source_revision=result.source_revision,
         )
-
-    def _physics_residual_toggled(self, visible: bool) -> None:
-        self.analysis_workspace_controller.set_residual_visible(bool(visible))
+        self.physics_inspector.show_fit(result)
 
     def _export_physics_analysis(self) -> None:
-        self.statusBar().showMessage(
-            "Physics export is provided by the kinematics engine and will be connected during integration.",
-            7000,
+        if not self.analysis_workspace_controller.request_export():
+            self.statusBar().showMessage(
+                "Run a successful physics fit before exporting analysis.",
+                5000,
+            )
+
+    def _create_physics_velocity(self) -> None:
+        self.analysis_workspace_controller.request_derivative(1)
+
+    def _create_physics_acceleration(self) -> None:
+        self.analysis_workspace_controller.request_derivative(2)
+
+    def _smooth_physics_series(self) -> None:
+        self.analysis_workspace_controller.request_smoothing()
+
+    def _show_physics_fit(self) -> None:
+        self.physics_workspace.show_page("Fit")
+        self.fit_panel.series_combo.setFocus(Qt.FocusReason.ShortcutFocusReason)
+
+    def _toggle_physics_residual(self) -> None:
+        state = self.analysis_workspace_controller.state
+        self.analysis_workspace_controller.set_residual_visible(not state.residual_visible)
+
+    def _physics_operation_requested(self, request: object) -> None:
+        if not isinstance(request, KinematicsOperationRequest):
+            return
+        self.physicsOperationRequested.emit(request)
+        labels = {
+            "derivative": "Derivative request sent to the kinematics engine.",
+            "smooth": "Smoothing request sent to the kinematics engine.",
+            "export": "Physics export request sent to the kinematics engine.",
+        }
+        self.statusBar().showMessage(labels[request.operation], 5000)
+
+    def _update_physics_actions(self, state: AnalysisWorkspaceState) -> None:
+        has_series = bool(
+            state.selected_series_id
+            and state.selected_series_id in self._physics_series_by_id
         )
+        mutable = has_series and state.status != "running" and not self._background_tasks.closing
+        has_fit = bool(
+            state.fit_result is not None
+            and state.fit_result.status is FitStatus.OK
+        )
+        self._update_action(
+            "physics.velocity",
+            enabled=mutable,
+            tool_tip="Request a gap-aware first derivative from the kinematics engine.",
+        )
+        self._update_action(
+            "physics.acceleration",
+            enabled=mutable,
+            tool_tip="Request a gap-aware second derivative from the kinematics engine.",
+        )
+        self._update_action(
+            "physics.smooth",
+            enabled=mutable,
+            tool_tip="Request segment-aware smoothing without implicit resampling.",
+        )
+        self._update_action(
+            "physics.fit",
+            enabled=mutable,
+            tool_tip="Open model and true-time fit controls.",
+        )
+        self._update_action(
+            "physics.export",
+            enabled=has_fit,
+            tool_tip="Request CSV, safe NPZ, and Markdown physics analysis export.",
+        )
+        self._update_action(
+            "physics.residual",
+            enabled=has_fit,
+            text="Hide Residual" if state.residual_visible else "Show Residual",
+            tool_tip="Show or hide the current fit residual layer.",
+        )
+
+    def _physics_workspace_page_changed(self, page: str) -> None:
+        state = self.analysis_workspace_controller.state
+        source = self._physics_series_by_id.get(state.selected_series_id or "")
+        if page == "Plot":
+            self.physics_inspector.show_plot(
+                len(self._physics_series_by_id),
+                range_s=self.physics_workspace.plot.selected_range,
+            )
+        elif page == "Fit" and state.fit_result is not None:
+            self.physics_inspector.show_fit(state.fit_result)
+        elif source is not None:
+            self.physics_inspector.show_series(source)
+        else:
+            self.physics_inspector.clear()
 
     def _selection_session_changed(self, event: SelectionEvent) -> None:
         state = event.current
@@ -1618,6 +1729,16 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
             state.selected_time_s,
             state.match.value,
         )
+        source = self._physics_series_by_id.get(state.selected_series_id or "")
+        if source is not None and state.selected_sample_index is not None:
+            self.analysis_workspace_controller.select_series(source.series_id)
+            self.physics_inspector.show_sample(
+                source,
+                state.selected_sample_index,
+                match=state.match.value,
+            )
+        elif source is not None:
+            self.physics_inspector.show_series(source)
         if (
             event.origin is not SelectionOrigin.VIDEO
             and state.selected_frame_index is not None

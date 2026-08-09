@@ -34,6 +34,7 @@ class PhysicsWorkspace(QFrame):
     plotSampleActivated = Signal(str, int)
     rangeSelected = Signal(float, float)
     pageRouteRequested = Signal(str)
+    pageChanged = Signal(str)
     layoutStateChanged = Signal(object)
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -212,6 +213,10 @@ class PhysicsWorkspace(QFrame):
     @property
     def collapsed(self) -> bool:
         return self._collapsed
+
+    @property
+    def current_page(self) -> str:
+        return self.tabs.tabText(max(0, self.tabs.currentIndex())) or "Data"
 
     def set_series(self, series: Sequence[SampleSeries]) -> None:
         items = tuple(series)
@@ -414,6 +419,7 @@ class PhysicsWorkspace(QFrame):
         self.plotSampleActivated.emit(series_id, int(row))
 
     def _page_changed(self, _index: int) -> None:
+        self.pageChanged.emit(self.current_page)
         if not self._collapsed:
             self.layoutStateChanged.emit(self.layout_state())
 

@@ -180,8 +180,23 @@ ACTION_BINDINGS = (
     ActionBinding("tracking.export_report", "export_report_button", "_export_report", "file"),
     ActionBinding("analysis.export_csv", "analysis_export_csv_button", "_export_analysis_csv", "file"),
     ActionBinding("analysis.export_npz", "analysis_export_npz_button", "_export_analysis_npz", "file"),
+    ActionBinding(
+        "physics.export",
+        "export_physics_analysis_button",
+        "_export_physics_analysis",
+        "file",
+    ),
     ActionBinding("tracking.run", "run_tracking_button", "_run_tracking", "run"),
     ActionBinding("analysis.run", "run_analysis_button", "_run_analysis", "run"),
+    ActionBinding("physics.velocity", "create_velocity_button", "_create_physics_velocity", "run"),
+    ActionBinding(
+        "physics.acceleration",
+        "create_acceleration_button",
+        "_create_physics_acceleration",
+        "run",
+    ),
+    ActionBinding("physics.smooth", "smooth_series_button", "_smooth_physics_series", "run"),
+    ActionBinding("physics.fit", "fit_model_button", "_show_physics_fit", "run"),
     ActionBinding("playback.previous", "previous_frame_button", "_step_preview_frame", "run", -1),
     ActionBinding("playback.toggle", "play_button", "_toggle_playback", "run"),
     ActionBinding("playback.next", "next_frame_button", "_step_preview_frame", "run", 1),
@@ -189,6 +204,7 @@ ACTION_BINDINGS = (
     ActionBinding("review.mark_lost", "mark_lost_button", "_mark_current_result_lost", "review"),
     ActionBinding("review.rerun", "rerun_after_button", "_rerun_after_current_result", "review"),
     ActionBinding("review.jump", "jump_to_result_button", "_jump_to_selected_result", "review"),
+    ActionBinding("physics.residual", "show_residual_button", "_toggle_physics_residual", "review"),
 )
 
 PRIMARY_BUTTON_ATTRIBUTES = {
