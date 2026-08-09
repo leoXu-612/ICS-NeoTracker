@@ -311,6 +311,8 @@ python3 -m pip install -e ".[desktop]"
 python3 -m pip install -e ".[media]"
 ```
 
+`media` extra 只安装 OpenCV。产品不使用 PyAV：OpenCV 与 PyAV 各自捆绑不同 FFmpeg 版本，同一解释器同时加载会在 macOS 上报重复 `libavdevice` 类并带来崩溃风险，因此不把 `av` 列入依赖。
+
 STFT 推荐安装科学计算依赖：
 
 ```bash
