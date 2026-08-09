@@ -103,6 +103,24 @@ class NonlinearFitTests(unittest.TestCase):
         self.assertIn("optional science", unavailable.message)
         self.assertIs(linear.status, FitStatus.OK)
 
+    @unittest.skipUnless(fitting._load_least_squares() is not None, "SciPy is unavailable")
+    def test_builtin_initial_estimates_recover_exponential_and_sinusoidal_parameters(self) -> None:
+        for fixture, model in ((exponential(), "exponential"), (sinusoidal(), "sinusoidal")):
+            with self.subTest(model=model):
+                source = fixture.sample_series()
+                request = FitRequest(
+                    source.series_id,
+                    model,
+                    float(source.time_s[0]),
+                    float(source.time_s[-1]),
+                    source.source_revision,
+                )
+                result = fit_series(source, request)
+                self.assertIs(result.status, FitStatus.OK)
+                expected = np.array(list(fixture.parameters.values()), dtype=np.float64)
+                np.testing.assert_allclose(result.parameters, expected, rtol=2e-7, atol=2e-7)
+                self.assertLess(result.rmse, 1e-9)
+
     def test_nonconvergence_has_a_stable_failed_terminal_state(self) -> None:
         class FailedOptimization:
             success = False

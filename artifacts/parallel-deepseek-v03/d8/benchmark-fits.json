@@ -1,0 +1,46 @@
+{
+  "schema": "neo-tracker.kinematics-benchmark/v1",
+  "workload": "linear_quadratic_and_builtin_nonlinear_fits",
+  "sample_count": 100000,
+  "method": "centered_lstsq+scipy_least_squares_optional",
+  "iterations": 5,
+  "timing_ms": {
+    "median": 5.740292021073401,
+    "p95": 6.080949981696904,
+    "max": 6.165249971672893
+  },
+  "sinusoid_guess": {
+    "sample_count": 100000,
+    "frequency_candidates": 256,
+    "timing_ms": {
+      "median": 160.90295801404864,
+      "p95": 161.24930857331492,
+      "max": 161.28779196878895
+    },
+    "cancellation_latency_ms": 0.8953330107033253,
+    "cancellation_terminal": "KinematicsCancelled"
+  },
+  "peak_rss_mb": 124.28125,
+  "result_digest": "b17261e11020940578c5c4d71f6d6fbda1cf056dc627f80fd5a8d3be867c908f",
+  "accuracy_error": 1.1641532182693481e-10,
+  "accuracy": {
+    "linear_parameter_max_abs": 6.366462912410498e-12,
+    "quadratic_parameter_max_abs": 1.1641532182693481e-10,
+    "exponential_no_initial_max_abs": 2.233768725545815e-13,
+    "sinusoidal_no_initial_max_abs": 1.687538997430238e-14
+  },
+  "nonlinear_available": true,
+  "cancellation_latency_ms": 0.8953330107033253,
+  "gates": {
+    "linear_accuracy": true,
+    "quadratic_accuracy": true,
+    "builtin_exponential_guess": true,
+    "builtin_sinusoidal_guess": true,
+    "median_under_1000_ms": true,
+    "sinusoid_guess_100k_under_5000_ms": true,
+    "guess_cancellation_under_500_ms": true
+  },
+  "passed": true,
+  "exit_code": 0
+}
+

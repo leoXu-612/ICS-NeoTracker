@@ -1,0 +1,112 @@
+{
+  "schema": "neo-tracker.kinematics-benchmark/v1",
+  "workload": "end_to_end_100k_engine_pipeline",
+  "sample_count": 100000,
+  "method": "snapshot+series+derivatives+fits+exports",
+  "iterations": 5,
+  "timing_ms": {
+    "median": 74.9566670274362,
+    "p95": 75.56086672120728,
+    "max": 75.62800002051517
+  },
+  "stage_timing_ms": {
+    "snapshot": {
+      "median": 542.7191250491887,
+      "p95": 542.7191250491887,
+      "max": 542.7191250491887
+    },
+    "series_build": {
+      "median": 69.29245899664238,
+      "p95": 72.28244179859757,
+      "max": 72.34591699671
+    },
+    "derivatives": {
+      "median": 2.042209031060338,
+      "p95": 2.310616010800004,
+      "max": 2.369416004512459
+    },
+    "fits": {
+      "median": 6.293291982728988,
+      "p95": 6.607882981188595,
+      "max": 6.6194579703733325
+    },
+    "csv_export": {
+      "median": 588.9782500453293,
+      "p95": 588.9782500453293,
+      "max": 588.9782500453293
+    },
+    "npz_export": {
+      "median": 139.29383299546316,
+      "p95": 139.29383299546316,
+      "max": 139.29383299546316
+    },
+    "markdown_export": {
+      "median": 0.7520829676650465,
+      "p95": 0.7520829676650465,
+      "max": 0.7520829676650465
+    }
+  },
+  "peak_rss_mb": 275.78125,
+  "rss_stage_mb": {
+    "live_tracker_results": 141.859375,
+    "immutable_snapshot": 197.109375,
+    "final_series": 224.609375
+  },
+  "rss_repeat_mb": [
+    275.25,
+    275.296875,
+    275.296875,
+    275.296875,
+    275.296875
+  ],
+  "rss_repeat_growth_mb": 0.046875,
+  "result_digest": "87b78f03d212bad467226add0d78aec448fd557efa7f07cbdb0011c132606cfc",
+  "accuracy_error": 2.2737367544343885e-9,
+  "accuracy": {
+    "linear_slope_abs": 1.7763568394002505e-15,
+    "linear_acceleration_max_abs": 2.2737367544343885e-9,
+    "quadratic_parameter_max_abs": 1.1641532182693481e-10
+  },
+  "cancellation_latency_ms": 2.7827080339193344,
+  "cancellation": {
+    "series": {
+      "latency_ms": 2.7827080339193344,
+      "terminal": "KinematicsCancelled"
+    },
+    "derivative": {
+      "latency_ms": 0.21016597747802734,
+      "terminal": "KinematicsCancelled"
+    },
+    "fit": {
+      "latency_ms": 0.32533396733924747,
+      "terminal": "cancelled"
+    },
+    "export": {
+      "latency_ms": 0.02020795363932848,
+      "terminal": "KinematicsCancelled"
+    }
+  },
+  "export_sizes": {
+    "csv_bytes": 21893216,
+    "npz_bytes": 876044,
+    "markdown_bytes": 806
+  },
+  "gates": {
+    "series_aligned": true,
+    "fit_terminal_ok": true,
+    "accuracy": true,
+    "build_median_under_2500_ms": true,
+    "derivative_median_under_1000_ms": true,
+    "fit_median_under_1000_ms": true,
+    "pipeline_median_under_3500_ms": true,
+    "csv_under_5000_ms": true,
+    "npz_under_5000_ms": true,
+    "cancellation_under_500_ms": true,
+    "rss_repeat_growth_under_64_mb": true,
+    "snapshot_delta_under_128_mb": true,
+    "pipeline_peak_under_512_mb": true
+  },
+  "passed": true,
+  "exit_code": 0
+}
+

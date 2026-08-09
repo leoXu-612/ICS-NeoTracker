@@ -196,16 +196,34 @@ def _initial_sinusoidal(
     candidates = np.linspace(minimum_omega, maximum_omega, 256, dtype=np.float64)
     best_error = math.inf
     best = np.array([max(float(np.ptp(observed)) * 0.5, 1e-9), candidates[0], 0.0, float(np.mean(observed))])
-    ones = np.ones_like(time_s)
-    for index, omega in enumerate(candidates):
-        if index % 32 == 0:
-            check_cancelled(cancellation, phase="sinusoidal initial estimate")
-        design = np.column_stack((np.sin(omega * time_s), np.cos(omega * time_s), ones))
-        coefficients, _, rank, _ = np.linalg.lstsq(design, observed, rcond=None)
-        if rank != 3:
+    observed_sum = float(np.sum(observed))
+    observed_energy = float(np.dot(observed, observed))
+    sample_count = float(len(observed))
+    for omega in candidates:
+        check_cancelled(cancellation, phase="sinusoidal initial estimate")
+        sine = np.sin(omega * time_s)
+        cosine = np.cos(omega * time_s)
+        normal = np.array(
+            [
+                [np.dot(sine, sine), np.dot(sine, cosine), np.sum(sine)],
+                [np.dot(sine, cosine), np.dot(cosine, cosine), np.sum(cosine)],
+                [np.sum(sine), np.sum(cosine), sample_count],
+            ],
+            dtype=np.float64,
+        )
+        right_hand_side = np.array(
+            [np.dot(sine, observed), np.dot(cosine, observed), observed_sum],
+            dtype=np.float64,
+        )
+        if np.linalg.matrix_rank(normal) != 3:
             continue
-        predicted = design @ coefficients
-        error = float(np.dot(observed - predicted, observed - predicted))
+        coefficients = np.linalg.solve(normal, right_hand_side)
+        error = float(
+            observed_energy
+            - 2.0 * np.dot(coefficients, right_hand_side)
+            + coefficients @ normal @ coefficients
+        )
+        error = max(0.0, error)
         if error < best_error:
             sine_coefficient, cosine_coefficient, offset = coefficients
             amplitude = math.hypot(float(sine_coefficient), float(cosine_coefficient))

@@ -17,9 +17,10 @@ from .units import state_unit, velocity_unit
 
 _INVALID_STATUSES = frozenset({"lost", "failed", "invalid", "cancelled"})
 _PROGRESS_STRIDE = 1_024
+_EMPTY_NUMERIC_MAPPING: Mapping[str, float] = MappingProxyType({})
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class TrackingResultSnapshot:
     frame_index: int
     time_s: float
@@ -37,7 +38,7 @@ def _field(item: object, name: str, default: object = None) -> object:
 
 def _numeric_mapping(value: object, name: str) -> Mapping[str, float]:
     if value is None:
-        return MappingProxyType({})
+        return _EMPTY_NUMERIC_MAPPING
     if not isinstance(value, Mapping):
         raise TypeError(f"{name} must be a mapping")
     copied: dict[str, float] = {}
@@ -50,7 +51,7 @@ def _numeric_mapping(value: object, name: str) -> Mapping[str, float]:
             copied[key] = float(item)
         except (TypeError, ValueError, OverflowError):
             continue
-    return MappingProxyType(copied)
+    return MappingProxyType(copied) if copied else _EMPTY_NUMERIC_MAPPING
 
 
 def _snapshot_one(item: object) -> TrackingResultSnapshot:

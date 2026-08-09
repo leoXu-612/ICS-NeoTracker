@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 
 import numpy as np
 
@@ -37,6 +38,8 @@ def _first_derivative(
     if count < 2:
         return output, valid
     _, delta = _validate_segment_time(time_s)
+    if float(np.min(delta)) <= np.finfo(np.float64).tiny:
+        raise ValueError("time spacing is numerically unstable for first derivative")
     if count == 2:
         if edge_policy is EdgePolicy.ONE_SIDED:
             with np.errstate(over="ignore", divide="ignore", invalid="ignore"):
@@ -50,10 +53,9 @@ def _first_derivative(
     h0 = delta[:-1]
     h1 = delta[1:]
     with np.errstate(over="ignore", divide="ignore", invalid="ignore"):
-        c0 = -h1 / (h0 * (h0 + h1))
-        c1 = (h1 - h0) / (h0 * h1)
-        c2 = h0 / (h1 * (h0 + h1))
-        interior = c0 * values[:-2] + c1 * values[1:-1] + c2 * values[2:]
+        left_slope = (values[1:-1] - values[:-2]) / h0
+        right_slope = (values[2:] - values[1:-1]) / h1
+        interior = (h1 * left_slope + h0 * right_slope) / (h0 + h1)
     if not np.isfinite(interior).all():
         raise ValueError("time spacing is numerically unstable for first derivative")
     output[1:-1] = interior
@@ -63,16 +65,18 @@ def _first_derivative(
         first_h0, first_h1 = delta[0], delta[1]
         last_h0, last_h1 = delta[-2], delta[-1]
         with np.errstate(over="ignore", divide="ignore", invalid="ignore"):
+            first_left_slope = (values[1] - values[0]) / first_h0
+            first_right_slope = (values[2] - values[1]) / first_h1
             output[0] = (
-                -(2.0 * first_h0 + first_h1) / (first_h0 * (first_h0 + first_h1)) * values[0]
-                + (first_h0 + first_h1) / (first_h0 * first_h1) * values[1]
-                - first_h0 / (first_h1 * (first_h0 + first_h1)) * values[2]
-            )
+                (2.0 * first_h0 + first_h1) * first_left_slope
+                - first_h0 * first_right_slope
+            ) / (first_h0 + first_h1)
+            last_left_slope = (values[-2] - values[-3]) / last_h0
+            last_right_slope = (values[-1] - values[-2]) / last_h1
             output[-1] = (
-                last_h1 / (last_h0 * (last_h0 + last_h1)) * values[-3]
-                - (last_h0 + last_h1) / (last_h0 * last_h1) * values[-2]
-                + (last_h0 + 2.0 * last_h1) / (last_h1 * (last_h0 + last_h1)) * values[-1]
-            )
+                -last_h1 * last_left_slope
+                + (last_h0 + 2.0 * last_h1) * last_right_slope
+            ) / (last_h0 + last_h1)
         if not np.isfinite(output[[0, -1]]).all():
             raise ValueError("time spacing is numerically unstable for one-sided derivative")
         valid[[0, -1]] = True
@@ -91,13 +95,14 @@ def _second_derivative(
     if count < 3:
         return output, valid
     _, delta = _validate_segment_time(time_s)
+    if float(np.min(delta)) <= math.sqrt(np.finfo(np.float64).tiny):
+        raise ValueError("time spacing is numerically unstable for second derivative")
     h0 = delta[:-1]
     h1 = delta[1:]
     with np.errstate(over="ignore", divide="ignore", invalid="ignore"):
-        c0 = 2.0 / (h0 * (h0 + h1))
-        c1 = -2.0 / (h0 * h1)
-        c2 = 2.0 / (h1 * (h0 + h1))
-        interior = c0 * values[:-2] + c1 * values[1:-1] + c2 * values[2:]
+        left_slope = (values[1:-1] - values[:-2]) / h0
+        right_slope = (values[2:] - values[1:-1]) / h1
+        interior = 2.0 * (right_slope - left_slope) / (h0 + h1)
     if not np.isfinite(interior).all():
         raise ValueError("time spacing is numerically unstable for second derivative")
     output[1:-1] = interior

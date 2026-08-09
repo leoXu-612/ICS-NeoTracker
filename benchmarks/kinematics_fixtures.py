@@ -2,7 +2,15 @@ from __future__ import annotations
 
 """Deterministic analytic fixtures shared by kinematics tests and benchmarks."""
 
+import gc
+import hashlib
+import os
+import resource
+import subprocess
+import sys
 from dataclasses import dataclass, field
+from pathlib import Path
+from time import perf_counter
 from typing import Mapping
 
 import numpy as np
@@ -12,6 +20,77 @@ from neo_tracker.kinematics.types import SampleSeries
 
 
 FIXTURE_REVISION = "synthetic:kinematics-v0.3"
+
+
+class CancelAfterChecks:
+    def __init__(self, checks: int) -> None:
+        self._remaining = max(1, int(checks))
+
+    def is_cancelled(self) -> bool:
+        self._remaining -= 1
+        return self._remaining <= 0
+
+
+def timing_summary(operation, *, iterations: int = 5) -> tuple[object, dict[str, float]]:
+    rounds = max(1, int(iterations))
+    operation()
+    samples: list[float] = []
+    result: object = None
+    for _ in range(rounds):
+        gc.collect()
+        started = perf_counter()
+        result = operation()
+        samples.append((perf_counter() - started) * 1_000.0)
+    values = np.asarray(samples, dtype=np.float64)
+    return result, {
+        "median": float(np.median(values)),
+        "p95": float(np.percentile(values, 95)),
+        "max": float(np.max(values)),
+    }
+
+
+def cancellation_latency_ms(operation) -> tuple[float, str]:
+    started = perf_counter()
+    terminal = "completed"
+    try:
+        result = operation()
+        status = getattr(result, "status", None)
+        terminal = getattr(status, "value", str(status or "completed"))
+    except BaseException as exc:
+        terminal = type(exc).__name__
+    return (perf_counter() - started) * 1_000.0, terminal
+
+
+def digest_arrays(*arrays: np.ndarray) -> str:
+    digest = hashlib.sha256()
+    for value in arrays:
+        array = np.ascontiguousarray(value)
+        digest.update(array.dtype.str.encode("ascii"))
+        digest.update(repr(array.shape).encode("ascii"))
+        digest.update(array.tobytes(order="C"))
+    return digest.hexdigest()
+
+
+def peak_rss_mb() -> float:
+    usage = float(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+    byte_count = usage if sys.platform == "darwin" else usage * 1_024.0
+    return byte_count / (1_024.0 * 1_024.0)
+
+
+def current_rss_mb() -> float:
+    if sys.platform == "darwin":
+        completed = subprocess.run(
+            ["ps", "-o", "rss=", "-p", str(os.getpid())],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        return float(completed.stdout.strip()) / 1_024.0
+    status = Path("/proc/self/statm")
+    if status.exists():
+        resident_pages = int(status.read_text(encoding="ascii").split()[1])
+        return resident_pages * os.sysconf("SC_PAGE_SIZE") / (1_024.0 * 1_024.0)
+    return peak_rss_mb()
 
 
 @dataclass(frozen=True)
