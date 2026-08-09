@@ -3,9 +3,12 @@ from __future__ import annotations
 """Residual metrics with stable constant-series semantics."""
 
 import math
+import hashlib
 from dataclasses import dataclass
 
 import numpy as np
+
+from .types import FitResult, FitStatus, ProcessingStep, SampleSeries
 
 
 @dataclass(frozen=True)
@@ -42,13 +45,65 @@ def residual_metrics(
     rmse = math.sqrt(sum_squared_error / count)
     centered = y - float(np.mean(y))
     total_sum_squares = float(np.dot(centered, centered))
-    scale = max(1.0, float(np.dot(y, y)))
-    threshold = np.finfo(np.float64).eps * scale * max(1, count)
-    if total_sum_squares <= threshold:
-        r_squared = 1.0 if sum_squared_error <= threshold else 0.0
+    maximum_magnitude = float(np.max(np.abs(y)))
+    ulp = abs(float(np.spacing(maximum_magnitude)))
+    amplitude_tolerance = 8.0 * ulp
+    constant = float(np.ptp(y)) <= amplitude_tolerance
+    if constant:
+        error_tolerance = amplitude_tolerance**2 * count
+        r_squared = 1.0 if sum_squared_error <= error_tolerance else 0.0
     else:
         r_squared = 1.0 - sum_squared_error / total_sum_squares
     return ResidualMetrics(rmse, r_squared, count, sum_squared_error)
 
 
-__all__ = ["ResidualMetrics", "residual_metrics"]
+def residual_series(series: SampleSeries, fit: FitResult) -> SampleSeries:
+    if not isinstance(series, SampleSeries):
+        raise TypeError("series must be a SampleSeries")
+    if not isinstance(fit, FitResult):
+        raise TypeError("fit must be a FitResult")
+    if fit.status is not FitStatus.OK:
+        raise ValueError("residual series requires a successful fit result")
+    if fit.series_id != series.series_id:
+        raise ValueError("fit result series_id does not match the source series")
+    if fit.source_revision != series.source_revision:
+        raise ValueError("fit result source revision is stale")
+    if len(fit.residuals) != len(series):
+        raise ValueError("fit residuals must remain frame aligned")
+    mask = np.asarray(fit.valid_mask & series.valid_mask, dtype=bool)
+    values = np.full(len(series), np.nan, dtype=np.float64)
+    values[mask] = fit.residuals[mask]
+    digest = hashlib.sha256(
+        b"\0".join(
+            (
+                fit.model.value.encode("utf-8"),
+                fit.parameters.tobytes(),
+                repr((fit.range_start_s, fit.range_end_s)).encode("ascii"),
+            )
+        )
+    ).hexdigest()[:12]
+    parameters = {
+        "model": fit.model.value,
+        "range_start_s": fit.range_start_s,
+        "range_end_s": fit.range_end_s,
+        "rmse": fit.rmse,
+        "r_squared": fit.r_squared,
+        "sample_count": fit.sample_count,
+    }
+    return SampleSeries(
+        series_id=f"{series.series_id}:residual:{digest}",
+        name=f"Residual {series.name}",
+        frame_indices=series.frame_indices,
+        time_s=series.time_s,
+        values=values,
+        valid_mask=mask,
+        unit=series.unit,
+        source_kind="fit_residual",
+        source_revision=series.source_revision,
+        processing_chain=series.processing_chain
+        + (ProcessingStep("fit_residual", parameters),),
+        metadata={"source_series_id": series.series_id, **parameters},
+    )
+
+
+__all__ = ["ResidualMetrics", "residual_metrics", "residual_series"]
