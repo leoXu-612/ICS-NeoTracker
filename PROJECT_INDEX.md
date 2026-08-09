@@ -72,8 +72,9 @@ build/                 历史构建产物，不是源码权威来源
 ```
 
 最新证据状态（2026-08-09）：P1-A 第 1–6 项安全审计全部闭环；P0-B 真实媒体
-矩阵可执行部分（H.264/HEVC 1080p、取消、来源替换、截断、重开）通过，VFR/4K/
-≥10 分钟长会话/功耗缺口 `BLOCKED`；heartbeat 多轮复核见
+矩阵：H.264 640×360 与 HEVC/1080p 转码、**真实 SloMo VFR HEVC 1080p 240fps
+原采集（4 素材 92,288 帧 ×2 轮确定性通过）**、取消/来源替换/截断/重开均闭环；
+4K 原采集、单会话 ≥10 分钟、功耗缺口 `BLOCKED`；heartbeat 多轮复核见
 `artifacts/deepseek-2026-08-09/heartbeat-rounds/`（宿主满载下偶发超限，
 跨负载稳定性 `PARTIAL`）；P1-B 键盘遍历（Qt 焦点链正/反向闭环、键盘激活、
 媒体态 16 控件焦点链）见 `artifacts/deepseek-2026-08-09/p1b-keyboard-traversal/`；

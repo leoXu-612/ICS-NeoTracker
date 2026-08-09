@@ -1,0 +1,320 @@
+{
+  "environment": {
+    "os": "macOS 15.7.7",
+    "python": "3.12.6",
+    "media_dir": "/Users/leo.xu/Desktop/PHY-EE-\u5bfc\u51fa",
+    "unique_sources": [
+      "PMR00054.mov",
+      "PMR00055.mov",
+      "PMR00056.mov",
+      "PMR00057.mov"
+    ]
+  },
+  "sources": {
+    "PMR00054.mov": {
+      "codec": "hevc",
+      "width": 1920,
+      "height": 1080,
+      "nominal_fps": 240.0,
+      "avg_fps": 240.17938079729012,
+      "vfr": true,
+      "frame_count": 26926,
+      "duration_s": 112.107875,
+      "app_probe": {
+        "available": true,
+        "error": "",
+        "fps": 240.17938079729012,
+        "frame_count": 26926,
+        "width": 1080,
+        "height": 1920
+      }
+    },
+    "PMR00055.mov": {
+      "codec": "hevc",
+      "width": 1920,
+      "height": 1080,
+      "nominal_fps": 240.0,
+      "avg_fps": 240.23190390012618,
+      "vfr": true,
+      "frame_count": 36029,
+      "duration_s": 149.975917,
+      "app_probe": {
+        "available": true,
+        "error": "",
+        "fps": 240.23190390012618,
+        "frame_count": 36029,
+        "width": 1080,
+        "height": 1920
+      }
+    },
+    "PMR00056.mov": {
+      "codec": "hevc",
+      "width": 1920,
+      "height": 1080,
+      "nominal_fps": 240.0,
+      "avg_fps": 240.26213571165073,
+      "vfr": true,
+      "frame_count": 5536,
+      "duration_s": 23.0415,
+      "app_probe": {
+        "available": true,
+        "error": "",
+        "fps": 240.26213571165073,
+        "frame_count": 5536,
+        "width": 1080,
+        "height": 1920
+      }
+    },
+    "PMR00057.mov": {
+      "codec": "hevc",
+      "width": 1920,
+      "height": 1080,
+      "nominal_fps": 240.0,
+      "avg_fps": 240.05679370292674,
+      "vfr": true,
+      "frame_count": 23797,
+      "duration_s": 99.130708,
+      "app_probe": {
+        "available": true,
+        "error": "",
+        "fps": 240.05679370292674,
+        "frame_count": 23797,
+        "width": 1080,
+        "height": 1920
+      }
+    }
+  },
+  "runs": [
+    {
+      "source": "PMR00054.mov",
+      "run": {
+        "label": "PMR00054",
+        "elapsed_s": 135.5,
+        "completed": 26926,
+        "cancelled": false,
+        "ended_early": false,
+        "note": "",
+        "failures": [],
+        "results": 26926,
+        "result_digest": "a01ce9adbec4f46c633734c2d9d68454d461f3b45858f18b3979edf82567f872",
+        "input_s": 6193.678,
+        "processing_s": 1512.575,
+        "throughput_fps": 198.715,
+        "peak_parent_rss_kb": 219168768,
+        "peak_child_rss_kb": 510592,
+        "peak_parent_cpu_percent": 33.1,
+        "median_parent_cpu_percent": 23.4,
+        "cpu_samples": 2178,
+        "progress_samples": 101,
+        "residual_processes": []
+      },
+      "deterministic": true,
+      "run2": {
+        "label": "PMR00054-run2",
+        "elapsed_s": 123.972,
+        "completed": 26926,
+        "cancelled": false,
+        "ended_early": false,
+        "note": "",
+        "failures": [],
+        "results": 26926,
+        "result_digest": "a01ce9adbec4f46c633734c2d9d68454d461f3b45858f18b3979edf82567f872",
+        "input_s": 5791.822,
+        "processing_s": 1387.603,
+        "throughput_fps": 217.194,
+        "peak_parent_rss_kb": 219168768,
+        "peak_child_rss_kb": 501920,
+        "peak_parent_cpu_percent": 28.2,
+        "median_parent_cpu_percent": 20.9,
+        "cpu_samples": 1983,
+        "progress_samples": 101,
+        "residual_processes": []
+      }
+    },
+    {
+      "source": "PMR00055.mov",
+      "run": {
+        "label": "PMR00055",
+        "elapsed_s": 175.918,
+        "completed": 36029,
+        "cancelled": false,
+        "ended_early": false,
+        "note": "",
+        "failures": [],
+        "results": 36029,
+        "result_digest": "880c821b28fcf14e0b1fbb16c412d7af5929efdef3005ba3d3c106a916179dc8",
+        "input_s": 7824.657,
+        "processing_s": 1938.434,
+        "throughput_fps": 204.805,
+        "peak_parent_rss_kb": 219168768,
+        "peak_child_rss_kb": 543008,
+        "peak_parent_cpu_percent": 32.8,
+        "median_parent_cpu_percent": 22.0,
+        "cpu_samples": 2835,
+        "progress_samples": 101,
+        "residual_processes": []
+      },
+      "deterministic": true,
+      "run2": {
+        "label": "PMR00055-run2",
+        "elapsed_s": 172.848,
+        "completed": 36029,
+        "cancelled": false,
+        "ended_early": false,
+        "note": "",
+        "failures": [],
+        "results": 36029,
+        "result_digest": "880c821b28fcf14e0b1fbb16c412d7af5929efdef3005ba3d3c106a916179dc8",
+        "input_s": 7458.454,
+        "processing_s": 1746.377,
+        "throughput_fps": 208.443,
+        "peak_parent_rss_kb": 219168768,
+        "peak_child_rss_kb": 455280,
+        "peak_parent_cpu_percent": 30.1,
+        "median_parent_cpu_percent": 24.6,
+        "cpu_samples": 2803,
+        "progress_samples": 101,
+        "residual_processes": []
+      }
+    },
+    {
+      "source": "PMR00056.mov",
+      "run": {
+        "label": "PMR00056",
+        "elapsed_s": 26.192,
+        "completed": 5536,
+        "cancelled": false,
+        "ended_early": false,
+        "note": "",
+        "failures": [],
+        "results": 5536,
+        "result_digest": "87b77eb574719f3d2f6bae6693bce1c257977965eb1d4b91b157554d5e4a9a5a",
+        "input_s": 1131.765,
+        "processing_s": 248.327,
+        "throughput_fps": 211.366,
+        "peak_parent_rss_kb": 219168768,
+        "peak_child_rss_kb": 462096,
+        "peak_parent_cpu_percent": 31.2,
+        "median_parent_cpu_percent": 27.7,
+        "cpu_samples": 432,
+        "progress_samples": 101,
+        "residual_processes": []
+      },
+      "deterministic": true,
+      "run2": {
+        "label": "PMR00056-run2",
+        "elapsed_s": 24.266,
+        "completed": 5536,
+        "cancelled": false,
+        "ended_early": false,
+        "note": "",
+        "failures": [],
+        "results": 5536,
+        "result_digest": "87b77eb574719f3d2f6bae6693bce1c257977965eb1d4b91b157554d5e4a9a5a",
+        "input_s": 1033.986,
+        "processing_s": 218.358,
+        "throughput_fps": 228.136,
+        "peak_parent_rss_kb": 219168768,
+        "peak_child_rss_kb": 456064,
+        "peak_parent_cpu_percent": 31.6,
+        "median_parent_cpu_percent": 28.2,
+        "cpu_samples": 404,
+        "progress_samples": 101,
+        "residual_processes": []
+      }
+    },
+    {
+      "source": "PMR00057.mov",
+      "run": {
+        "label": "PMR00057",
+        "elapsed_s": 105.122,
+        "completed": 23797,
+        "cancelled": false,
+        "ended_early": false,
+        "note": "",
+        "failures": [],
+        "results": 23797,
+        "result_digest": "210a4919f41dc38c082c8177f82be07ee5a26bbacd2bd9c9786fff941d6a1786",
+        "input_s": 4599.489,
+        "processing_s": 1101.4,
+        "throughput_fps": 226.376,
+        "peak_parent_rss_kb": 219168768,
+        "peak_child_rss_kb": 583088,
+        "peak_parent_cpu_percent": 31.0,
+        "median_parent_cpu_percent": 26.8,
+        "cpu_samples": 1739,
+        "progress_samples": 101,
+        "residual_processes": []
+      },
+      "deterministic": true,
+      "run2": {
+        "label": "PMR00057-run2",
+        "elapsed_s": 103.399,
+        "completed": 23797,
+        "cancelled": false,
+        "ended_early": false,
+        "note": "",
+        "failures": [],
+        "results": 23797,
+        "result_digest": "210a4919f41dc38c082c8177f82be07ee5a26bbacd2bd9c9786fff941d6a1786",
+        "input_s": 4543.536,
+        "processing_s": 1037.441,
+        "throughput_fps": 230.148,
+        "peak_parent_rss_kb": 219168768,
+        "peak_child_rss_kb": 557680,
+        "peak_parent_cpu_percent": 30.0,
+        "median_parent_cpu_percent": 25.3,
+        "cpu_samples": 1670,
+        "progress_samples": 101,
+        "residual_processes": []
+      }
+    }
+  ],
+  "cancel": {
+    "cancel_requested_after_s": 0.5,
+    "cancel_latency_s": 0.052,
+    "finished": true,
+    "completions": [
+      [
+        56,
+        true,
+        false,
+        ""
+      ]
+    ],
+    "failures": [],
+    "results": 56,
+    "peak_parent_cpu_percent": 14.7,
+    "median_parent_cpu_percent": 7.9,
+    "cpu_samples": 10,
+    "residual_processes": []
+  },
+  "source_replacement": {
+    "replace_after_s": 0.4,
+    "finished": true,
+    "source_changed_detected": true,
+    "completions": [],
+    "failures": [
+      "TRACKING_SOURCE_CHANGED: Media source changed after isolated processing; the source could no longer be verified: artifacts/deepseek-2026-08-09/slomo-matrix/PMR0"
+    ],
+    "results": 44,
+    "residual_processes": []
+  },
+  "truncated": {
+    "probe": {
+      "available": false,
+      "error": "Could not open media file: artifacts/deepseek-2026-08-09/slomo-matrix/PMR00056-truncated.mov",
+      "frame_count": 0
+    }
+  },
+  "reopen": {
+    "cycles": 10,
+    "all_ok": true,
+    "residual_processes": []
+  },
+  "gaps": {
+    "4k_original_acquisition": "BLOCKED: SloMo captures are 1080p; no 4K original in the album copy.",
+    "long_session_10min": "BLOCKED: longest clip is 2.5 min; four clips total ~6.4 min of real footage. No single >=10 min acquisition available.",
+    "power_temperature": "powermetrics requires root; not measured. CPU sampled via ps."
+  }
+}

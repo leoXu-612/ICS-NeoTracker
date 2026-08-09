@@ -499,3 +499,35 @@ OS 级真实按键与 AX/VoiceOver 复核因本会话宿主占用前台 + AX 服
 
 - P0-B 真实素材（VFR/4K/长会话）与功耗/温度、VoiceOver/文本缩放/AX 复核仍
   需外部解锁；满载下 heartbeat 偶发超限为宿主调度延迟，未宣称跨负载稳定。
+
+---
+
+# P0-B 真实 SloMo 素材矩阵（2026-08-09 续，素材到位）
+
+## Conclusion
+
+用户提供照片相簿“PHY-EE实验视频”副本（桌面 `PHY-EE-导出/`）：4 个真实
+iPhone SloMo 原片（HEVC 1080p、nominal 240 fps、avg 240.06–240.26 →
+**VFR 原采集**，92,288 帧 ≈6.4 分钟）。新脚本
+`benchmarks/benchmark_real_slomo_matrix.py` 完成 4 素材 ×2 轮 Full Run
+（184,576 帧、约 14 分钟真实处理）：全部完成、digest 确定性一致、0 失败、
+无残留；吞吐 198.7–226.4 fps、CPU peak 31–33%、parent RSS 恒定 219 MB；
+Cancel 52 ms、来源替换 fail-closed、截断 probe fail-closed、重开 ×10 OK。
+**VFR 原采集与真实 HEVC 1080p 高帧率长时运行 CLOSED**；4K 原采集、
+单会话 ≥10 分钟、功耗/温度仍 `BLOCKED`。
+
+## Changes Made / Files Modified / Testing
+
+- 新增 `benchmarks/benchmark_real_slomo_matrix.py`；证据
+  `benchmark-slomo-round1.json`（+`.stderr.txt`）、`p0b-real-slomo-matrix.md`；
+  夹具默认写 `/tmp/nt-slomo-matrix/`（不入库）。
+- 素材 8 GB 曾因 `git add -A` 误入提交，已撤销并移出工作区（桌面
+  `PHY-EE-导出/`），`.gitignore` 增加素材目录；`.git` 由 4.1 GB 清理至
+  81 MB（删除误提交的宿主 checkpoint ref 后 `git gc --prune=now`）。
+- 更新 `交接.md`（3.85）、`PROJECT_INDEX.md`；全量 479 tests OK、
+  compileall、pip check、SHA-256 索引通过。
+
+## Remaining Risks
+
+- 4K 原采集、单会话 ≥10 分钟、功耗/温度、VoiceOver/文本缩放/AX 复核仍需
+  外部解锁；跨负载 heartbeat 仍 `PARTIAL`（宿主满载偶发调度延迟）。

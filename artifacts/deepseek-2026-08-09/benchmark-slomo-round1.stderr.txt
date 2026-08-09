@@ -1,0 +1,2 @@
+[mov,mp4,m4a,3gp,3g2,mj2 @ 0x114104760] moov atom not found
+OpenCV: Couldn't read video stream from file "artifacts/deepseek-2026-08-09/slomo-matrix/PMR00056-truncated.mov"
