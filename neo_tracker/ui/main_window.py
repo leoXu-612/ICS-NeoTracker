@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import json
 import sys
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 from functools import partial
 from pathlib import Path
 from time import monotonic
 
 import numpy as np
-from PySide6.QtCore import Qt, QThread, QTimer, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtGui import QIcon
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (
     QApplication,
@@ -40,6 +41,38 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from neo_tracker.application.job_state import (
+    AnalysisJob,
+    MediaProbeJob,
+    PreviewDecodeJob,
+    ProjectOpenJob,
+    ProjectSaveJob,
+    ReviewResponseJob,
+    TrackingJob,
+)
+from neo_tracker.application.analysis_coordinator import (
+    AnalysisCoordinator,
+    AnalysisRequest,
+)
+from neo_tracker.application.media_import_coordinator import (
+    MediaImportCoordinator,
+    MediaImportRequest,
+)
+from neo_tracker.application.playback_coordinator import PlaybackCoordinator
+from neo_tracker.application.preview_coordinator import PreviewCoordinator, PreviewRequest
+from neo_tracker.application.project_io_coordinator import (
+    ProjectIOCoordinator,
+    ProjectOpenRequest,
+    ProjectSaveRequest,
+)
+from neo_tracker.application.review_response_coordinator import (
+    ReviewResponseCoordinator,
+)
+from neo_tracker.application.task_supervisor import TaskSupervisor
+from neo_tracker.application.tracking_coordinator import (
+    TrackingCoordinator,
+    TrackingRequest,
+)
 from neo_tracker.config import apply_pipeline_config, validate_roi_config
 from neo_tracker.core import TrackingPipeline, TrackerResult
 from neo_tracker.coordinates import AnnularCoordinate, LinearWorldCoordinate, PathCoordinate, PolarCoordinate
@@ -61,30 +94,23 @@ from neo_tracker.presets import PresetDescriptor, default_preset_registry
 from neo_tracker.project import (
     NeoTrackerProject,
     ProjectTaskSnapshot,
-    TrackingRunRecord,
-    TRACKING_NOTE_LIMIT,
-    append_tracking_run,
     project_content_fingerprint,
-    utc_timestamp,
 )
 from neo_tracker.ui.analysis_controller import AnalysisController, AnalysisRun, AnalysisSource
 from neo_tracker.ui.analysis_worker import AnalysisWorker
-from neo_tracker.ui.background_tasks import BackgroundTaskCoordinator, BackgroundTaskToken
 from neo_tracker.ui.calibration_editor import CalibrationEditor
 from neo_tracker.ui.edit_history_panel import EditHistoryPanel, EditHistorySelection
 from neo_tracker.ui.media_relink_panel import MediaRelinkPanel
-from neo_tracker.ui.media_probe_worker import MediaProbeWorker, probe_media_for_ui
+from neo_tracker.ui.media_probe_worker import probe_media_for_ui
 from neo_tracker.ui.isolated_media import PreviewDecoderSession
-from neo_tracker.ui.playback_controller import PlaybackClock
 from neo_tracker.ui.preview_canvas import PreviewCanvas
 from neo_tracker.ui.preview_decode_worker import (
     PreviewDecodeRequest,
     PreviewDecodeResult,
-    PreviewDecodeWorker,
     same_preview_request,
 )
-from neo_tracker.ui.project_open_worker import PreparedProjectOpen, ProjectOpenWorker
-from neo_tracker.ui.project_save_worker import CompletedProjectSave, ProjectSaveWorker, save_project
+from neo_tracker.ui.project_open_worker import PreparedProjectOpen
+from neo_tracker.ui.project_save_worker import CompletedProjectSave, save_project
 from neo_tracker.ui.project_status_panel import (
     ProjectStatusPanel,
     build_rerun_replacement_dialog,
@@ -118,11 +144,18 @@ from neo_tracker.ui.review_response import (
 )
 from neo_tracker.ui.review_response_worker import ReviewResponseWorker
 from neo_tracker.ui.results_table_model import ResultsTableModel
+from neo_tracker.ui.action_registry import ActionRegistry
+from neo_tracker.ui.shell import ApplicationShell
+from neo_tracker.ui.shell.bindings import (
+    CoordinatorCompatibilityMixin,
+    PRIMARY_BUTTON_ATTRIBUTES,
+)
 from neo_tracker.ui.tracking_worker import (
     TRACKING_SOURCE_CHANGED_PREFIX,
     TrackingProgress,
     TrackingWorker,
 )
+from neo_tracker.ui.view_state import ViewState
 
 
 _PROJECT_OPEN_DEFERRED_RESULTS_THRESHOLD = 10_000
@@ -133,99 +166,6 @@ class PipelineStep:
     title: str
     module: str
     purpose: str
-
-
-@dataclass
-class TrackingJob:
-    token: BackgroundTaskToken
-    task: DesktopTask
-    mode: str
-    start_frame: int
-    prefix: list[TrackerResult] = field(default_factory=list)
-    anchor_frame: int | None = None
-    completed: int = 0
-    cancelled: bool = False
-    failed: bool = False
-    ended_early: bool = False
-    completion_note: str = ""
-    started_at: str = ""
-    started_monotonic: float = 0.0
-    pipeline_config: dict[str, object] = field(default_factory=dict)
-    previous_results: list[TrackerResult] = field(default_factory=list)
-    previous_edit_history: list[dict[str, object]] = field(default_factory=list)
-    previous_tracking_outcome: str = ""
-    previous_tracking_note: str = ""
-    previous_analysis_run: AnalysisRun | None = None
-    previous_result_state_restored: bool = False
-    result_replacement_committed: bool = False
-    superseded_edit_count: int = 0
-    tracking_elapsed_s: float = 0.0
-    tracking_input_s: float = 0.0
-    tracking_processing_s: float = 0.0
-    tracking_peak_debug_bytes: int = 0
-    tracking_prefetch_frames: int = 0
-    source_path: str = ""
-    source_identity: MediaIdentity | None = None
-    source_changed: bool = False
-
-
-@dataclass
-class AnalysisJob:
-    token: BackgroundTaskToken
-    task: DesktopTask
-    source: AnalysisSource
-    config: AnalysisConfig
-    cancelled: bool = False
-    cancel_message: str = "Processing canceled."
-    cancel_state: str = "canceled"
-
-
-@dataclass
-class MediaProbeJob:
-    token: BackgroundTaskToken
-    paths: tuple[str, ...]
-    pipeline_key: str
-    cancelled: bool = False
-    completed: bool = False
-    failure_detail: str = ""
-
-
-@dataclass
-class ProjectOpenJob:
-    token: BackgroundTaskToken
-    path: Path
-    cancelled: bool = False
-    completed: bool = False
-    failure_detail: str = ""
-
-
-@dataclass
-class ProjectSaveJob:
-    token: BackgroundTaskToken
-    path: Path
-    content_revision: int
-    completed: bool = False
-    failure_detail: str = ""
-
-
-@dataclass
-class ReviewResponseJob:
-    token: BackgroundTaskToken
-    request: ReviewResponseRequest
-    cancelled: bool = False
-    completed: bool = False
-    failure_detail: str = ""
-
-
-@dataclass
-class PreviewDecodeJob:
-    token: BackgroundTaskToken
-    task: DesktopTask
-    request: PreviewDecodeRequest
-    session: PreviewDecoderSession
-    cancelled: bool = False
-    result: PreviewDecodeResult | None = None
-    failure_detail: str = ""
 
 
 class ElidingLabel(QLabel):
@@ -264,7 +204,7 @@ class ElidingLabel(QLabel):
             QLabel.setText(self, displayed)
 
 
-class NeoTrackerWindow(QMainWindow):
+class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Neo-Tracker")
@@ -312,10 +252,8 @@ class NeoTrackerWindow(QMainWindow):
         self._last_project_open_apply_ms = 0.0
         self._retired_project_tasks: list[DesktopTask] = []
 
-        self.play_timer = QTimer(self)
-        self.play_timer.setTimerType(Qt.TimerType.PreciseTimer)
-        self.play_timer.timeout.connect(self._advance_playback)
-        self.playback_clock = PlaybackClock()
+        self._playback_coordinator = PlaybackCoordinator()
+        self._playback_coordinator.advance_requested.connect(self._advance_playback)
         self._project_open_diagnostics_timer = QTimer(self)
         self._project_open_diagnostics_timer.setSingleShot(True)
         self._project_open_diagnostics_timer.timeout.connect(
@@ -478,48 +416,103 @@ class NeoTrackerWindow(QMainWindow):
         self.json_status_label = QLabel("Synced")
         self.json_validation_message = QLabel()
         self._syncing_advanced_config = False
-        self._tracking_thread: QThread | None = None
-        self._tracking_worker: TrackingWorker | None = None
-        self._tracking_job: TrackingJob | None = None
-        self._analysis_thread: QThread | None = None
-        self._analysis_worker: AnalysisWorker | None = None
-        self._analysis_job: AnalysisJob | None = None
-        self._media_probe_thread: QThread | None = None
-        self._media_probe_worker: MediaProbeWorker | None = None
-        self._media_probe_job: MediaProbeJob | None = None
-        self._project_open_thread: QThread | None = None
-        self._project_open_worker: ProjectOpenWorker | None = None
-        self._project_open_job: ProjectOpenJob | None = None
         self.project_loader = NeoTrackerProject.load
-        self._project_save_thread: QThread | None = None
-        self._project_save_worker: ProjectSaveWorker | None = None
-        self._project_save_job: ProjectSaveJob | None = None
         self.project_saver = save_project
-        self._review_response_thread: QThread | None = None
-        self._review_response_worker: ReviewResponseWorker | None = None
-        self._review_response_job: ReviewResponseJob | None = None
-        self._pending_review_response: ReviewResponseRequest | None = None
-        self._preview_decode_thread: QThread | None = None
-        self._preview_decode_worker: PreviewDecodeWorker | None = None
-        self._preview_decode_job: PreviewDecodeJob | None = None
-        self._pending_preview_decode: tuple[DesktopTask, PreviewDecodeRequest] | None = None
-        self._preview_decode_cache: PreviewDecodeResult | None = None
-        self._preview_decoder_session: PreviewDecoderSession | None = None
         self._response_mode_routing_requested = False
-        self._background_tasks = BackgroundTaskCoordinator()
-        self._review_responses = ReviewResponseService(max_entries=4)
+        self._task_supervisor = TaskSupervisor()
+        self._background_tasks = self._task_supervisor
+        self._media_import_coordinator = MediaImportCoordinator(self._task_supervisor)
+        self._media_import_coordinator.progressed.connect(self._media_probe_progressed)
+        self._media_import_coordinator.completed.connect(self._media_import_completed)
+        self._media_import_coordinator.failed.connect(self._media_import_failed)
+        self._media_import_coordinator.canceled.connect(self._media_import_canceled)
+        self._media_import_coordinator.idle_reached.connect(self._media_import_idle)
+        self._project_io_coordinator = ProjectIOCoordinator(self._task_supervisor)
+        self._project_io_coordinator.open_progressed.connect(self._project_open_progressed)
+        self._project_io_coordinator.open_prepared.connect(self._project_io_open_prepared)
+        self._project_io_coordinator.open_failed.connect(self._project_io_open_failed)
+        self._project_io_coordinator.open_canceled.connect(self._project_io_open_canceled)
+        self._project_io_coordinator.save_completed.connect(self._project_io_save_completed)
+        self._project_io_coordinator.save_failed.connect(self._project_io_save_failed)
+        self._project_io_coordinator.idle_reached.connect(self._project_io_idle)
+        self._tracking_coordinator = TrackingCoordinator(self._task_supervisor)
+        self._tracking_coordinator.started.connect(self._tracking_started)
+        self._tracking_coordinator.progressed.connect(self._tracking_progressed)
+        self._tracking_coordinator.terminal_ready.connect(self._tracking_terminal_ready)
+        self._tracking_coordinator.state_changed.connect(
+            self._tracking_coordinator_state_changed
+        )
+        self._tracking_coordinator.idle_reached.connect(self._tracking_idle)
+        self._preview_coordinator = PreviewCoordinator(self._task_supervisor)
+        self._preview_coordinator.result_ready.connect(self._preview_coordinator_completed)
+        self._preview_coordinator.failed.connect(self._preview_coordinator_failed)
+        self._preview_coordinator.idle_reached.connect(self._preview_coordinator_idle)
+        self._analysis_coordinator = AnalysisCoordinator(self._task_supervisor)
+        self._analysis_coordinator.started.connect(self._analysis_started)
+        self._analysis_coordinator.stage_changed.connect(self._analysis_stage_changed)
+        self._analysis_coordinator.result_ready.connect(self._analysis_completed)
+        self._analysis_coordinator.failed.connect(self._analysis_failed)
+        self._analysis_coordinator.finished.connect(self._analysis_thread_finished)
+        self._analysis_coordinator.idle_reached.connect(self._analysis_idle)
+        self._review_response_coordinator = ReviewResponseCoordinator(
+            self._task_supervisor,
+            service=ReviewResponseService(max_entries=4),
+        )
+        self._review_response_coordinator.response_ready.connect(
+            self._review_response_completed
+        )
+        self._review_response_coordinator.failed.connect(self._review_response_failed)
+        self._review_response_coordinator.idle_reached.connect(
+            self._review_response_idle
+        )
 
         self._build_ui()
+        self._application_shell = ApplicationShell(self)
         self._apply_style()
         self._load_presets()
         self._render_task(refresh_project_state=False)
         self._set_project_clean()
 
     @property
-    def _close_when_workers_stop(self) -> bool:
-        """Compatibility name for tests and older collaboration notes."""
+    def action_registry(self) -> ActionRegistry:
+        return self._application_shell.registry
 
-        return self._background_tasks.closing
+    @property
+    def view_state(self) -> ViewState:
+        return self._application_shell.view_state
+
+    def _update_action(
+        self,
+        key: str,
+        *,
+        enabled: bool | None = None,
+        text: str | None = None,
+        tool_tip: str | None = None,
+        icon: QIcon | None = None,
+    ) -> None:
+        shell = getattr(self, "_application_shell", None)
+        if shell is not None:
+            shell.update_action(
+                key,
+                enabled=enabled,
+                text=text,
+                tool_tip=tool_tip,
+            )
+            if icon is not None:
+                shell.set_icon(key, icon)
+            return
+        button = getattr(self, PRIMARY_BUTTON_ATTRIBUTES[key])
+        if enabled is not None:
+            button.setEnabled(enabled)
+        if text is not None:
+            button.setText(text)
+        if tool_tip is not None:
+            button.setToolTip(tool_tip)
+        if icon is not None:
+            button.setIcon(icon)
+
+    def _set_action_enabled(self, key: str, enabled: bool) -> None:
+        self._update_action(key, enabled=enabled)
 
     def _build_ui(self) -> None:
         root = QWidget()
@@ -573,9 +566,6 @@ class NeoTrackerWindow(QMainWindow):
         )
         self.tracking_status_label.setAccessibleName("Tracking status")
         self.tracking_summary_label.setAccessibleName("Tracking progress and result summary")
-        self.run_tracking_button.clicked.connect(self._run_tracking)
-        self.export_tracking_csv_button.clicked.connect(self._export_tracking_csv)
-        self.export_report_button.clicked.connect(self._export_report)
         app_header.addWidget(app_title)
         app_header.addWidget(self.global_project_dirty_label)
         app_header.addWidget(self.global_draft_label)
@@ -628,9 +618,6 @@ class NeoTrackerWindow(QMainWindow):
         preview_controls = QHBoxLayout(transport_bar)
         preview_controls.setContentsMargins(10, 8, 10, 8)
         preview_controls.setSpacing(8)
-        self.previous_frame_button.clicked.connect(lambda: self._step_preview_frame(-1))
-        self.play_button.clicked.connect(self._toggle_playback)
-        self.next_frame_button.clicked.connect(lambda: self._step_preview_frame(1))
         self.previous_frame_button.setObjectName("transportButton")
         self.play_button.setObjectName("transportButton")
         self.next_frame_button.setObjectName("transportButton")
@@ -1417,9 +1404,6 @@ class NeoTrackerWindow(QMainWindow):
         self.save_project_button.setToolTip("Save media paths, settings, calibration, and results.")
         self.open_project_button.setObjectName("openProjectButton")
         self.save_project_button.setObjectName("saveProjectButton")
-        self.add_media_button.clicked.connect(self._add_media)
-        self.open_project_button.clicked.connect(self._open_project)
-        self.save_project_button.clicked.connect(self._save_project)
         self.open_project_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogOpenButton))
         self.save_project_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton))
         project_row = QHBoxLayout()
@@ -1562,10 +1546,6 @@ class NeoTrackerWindow(QMainWindow):
             "Review the affected later Results/Edits, then rerun tracking after the selected result."
         )
         self.jump_to_result_button.setToolTip("Move the preview to the selected result frame.")
-        self.correct_point_button.clicked.connect(self._start_manual_correction)
-        self.mark_lost_button.clicked.connect(self._mark_current_result_lost)
-        self.rerun_after_button.clicked.connect(self._rerun_after_current_result)
-        self.jump_to_result_button.clicked.connect(self._jump_to_selected_result)
         self.show_response_checkbox.setToolTip(
             "Show an image-space heatmap, or use the retained angular profile for polar detectors without "
             "recomputing the source frame."
@@ -1727,7 +1707,6 @@ class NeoTrackerWindow(QMainWindow):
         self.run_analysis_button.setObjectName("runAnalysisButton")
         self.run_analysis_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
         self.run_analysis_button.setToolTip("Run FFT or STFT on the selected signal source.")
-        self.run_analysis_button.clicked.connect(self._run_analysis)
         self.analysis_status_label.setObjectName("analysisStatusLabel")
         self.analysis_status_label.setAccessibleName("Signal processing status")
         action_row = QHBoxLayout()
@@ -1736,8 +1715,6 @@ class NeoTrackerWindow(QMainWindow):
         export_row = QHBoxLayout()
         self.analysis_export_csv_button.setToolTip("Export the latest processing result as CSV.")
         self.analysis_export_npz_button.setToolTip("Export the latest processing result as NPZ.")
-        self.analysis_export_csv_button.clicked.connect(self._export_analysis_csv)
-        self.analysis_export_npz_button.clicked.connect(self._export_analysis_npz)
         self._set_analysis_export_enabled(False)
         export_row.addWidget(self.analysis_export_csv_button)
         export_row.addWidget(self.analysis_export_npz_button)
@@ -1932,40 +1909,20 @@ class NeoTrackerWindow(QMainWindow):
         selected_paths = tuple(str(path) for path in paths if str(path))
         if not selected_paths or self._media_probe_thread is not None:
             return False
-        token = self._background_tasks.start("media-probe")
-        if token is None:
+        accepted = self._media_import_coordinator.start(
+            MediaImportRequest(
+                paths=selected_paths,
+                pipeline_key=self.current_task.pipeline_key,
+                media_probe=self.project_controller.media_probe,
+            )
+        )
+        if not accepted:
             return False
-        job = MediaProbeJob(
-            token=token,
-            paths=selected_paths,
-            pipeline_key=self.current_task.pipeline_key,
-        )
-        thread = QThread(self)
-        worker = MediaProbeWorker(
-            selected_paths,
-            media_probe=self.project_controller.media_probe,
-        )
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.progressed.connect(self._media_probe_progressed)
-        worker.completed.connect(self._media_probe_completed)
-        worker.failed.connect(self._media_probe_failed)
-        worker.canceled.connect(self._media_probe_canceled)
-        worker.completed.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        worker.canceled.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(self._media_probe_thread_finished)
-        self._media_probe_job = job
-        self._media_probe_thread = thread
-        self._media_probe_worker = worker
         self._set_media_probe_busy(
             True,
             total=len(selected_paths),
             operation="add",
         )
-        thread.start()
         return True
 
     def _media_probe_progressed(self, completed: int, total: int, filename: str) -> None:
@@ -1977,28 +1934,14 @@ class NeoTrackerWindow(QMainWindow):
         self.media_probe_status_label.setAccessibleDescription(detail)
         self.statusBar().showMessage(detail)
 
-    def _media_probe_completed(self, payload: object) -> None:
-        job = self._media_probe_job
-        if (
-            job is None
-            or job.cancelled
-            or not self._background_tasks.is_current(job.token)
-        ):
+    def _media_import_completed(
+        self,
+        job: MediaProbeJob,
+        validated_results: tuple[tuple[str, MediaInfo], ...],
+    ) -> None:
+        if self._background_tasks.closing:
             return
-        results = tuple(payload) if isinstance(payload, (list, tuple)) else ()
-        if len(results) != len(job.paths):
-            job.failure_detail = "Media inspection returned an incomplete result batch."
-            return
-        validated_results: list[tuple[str, MediaInfo]] = []
-        for expected_path, result in zip(job.paths, results):
-            if not isinstance(result, (list, tuple)) or len(result) != 2:
-                job.failure_detail = "Media inspection returned an invalid result."
-                return
-            path, media_info = result
-            if str(path) != expected_path or not isinstance(media_info, MediaInfo):
-                job.failure_detail = "Media inspection returned an invalid result."
-                return
-            validated_results.append((expected_path, media_info))
+        self._set_media_probe_busy(False)
         self._discard_removed_task_undo()
         self._explicit_empty_project = False
         if not self.tasks:
@@ -2023,34 +1966,42 @@ class NeoTrackerWindow(QMainWindow):
         else:
             self._render_task_actions(self.current_task)
         self._mark_project_changed()
-        job.completed = True
-        summary = f"Added {len(results)} media task{'s' if len(results) != 1 else ''} to this project."
+        result_count = len(validated_results)
+        summary = f"Added {result_count} media task{'s' if result_count != 1 else ''} to this project."
         if unavailable_count:
             summary += f" {unavailable_count} need source attention."
         self.statusBar().showMessage(summary, 8000)
 
-    def _media_probe_failed(self, message: str) -> None:
-        job = self._media_probe_job
-        if job is None or not self._background_tasks.is_current(job.token):
+    def _media_import_failed(self, _job: MediaProbeJob, message: str) -> None:
+        if self._background_tasks.closing:
             return
-        job.failure_detail = str(message) or "Media inspection failed."
+        self._set_media_probe_busy(False)
+        QMessageBox.warning(
+            self,
+            "Add media",
+            f"Could not inspect the selected media:\n{message}",
+        )
 
-    def _media_probe_canceled(self) -> None:
-        job = self._media_probe_job
-        if job is None or not self._background_tasks.is_current(job.token):
+    def _media_import_canceled(self, _job: MediaProbeJob) -> None:
+        if self._background_tasks.closing:
             return
-        job.cancelled = True
+        self._set_media_probe_busy(False)
+        self.statusBar().showMessage(
+            "Media import canceled. No selected files were added.",
+            6000,
+        )
+
+    def _media_import_idle(self) -> None:
+        self._schedule_close_if_workers_stopped()
 
     def _cancel_media_probe(self) -> None:
         worker = self._media_probe_worker
         job = self._media_probe_job
         if worker is None or job is None:
             return
-        job.cancelled = True
-        worker.request_cancel()
-        self.add_media_button.setEnabled(False)
-        self.open_project_button.setEnabled(False)
-        self.add_media_button.setText("Cancelling…")
+        self._media_import_coordinator.cancel("user")
+        self._update_action("media.add", enabled=False, text="Cancelling…")
+        self._set_action_enabled("project.open", False)
         self.media_probe_status_label.setText("Cancelling media import…")
         self.media_probe_status_label.setAccessibleDescription(
             "Cancel requested. Waiting for the current media file inspection to finish safely."
@@ -2063,9 +2014,9 @@ class NeoTrackerWindow(QMainWindow):
         total: int = 0,
         operation: str = "add",
     ) -> None:
-        self.open_project_button.setEnabled(not busy)
-        self.save_project_button.setEnabled(not busy)
-        self.add_media_button.setEnabled(not busy)
+        self._set_action_enabled("project.open", not busy)
+        self._set_action_enabled("project.save", not busy)
+        self._set_action_enabled("media.add", not busy)
         project_open_busy = bool(busy and operation == "open")
         self.task_list.setEnabled(not project_open_busy)
         self.task_actions_panel.setEnabled(not project_open_busy)
@@ -2073,27 +2024,33 @@ class NeoTrackerWindow(QMainWindow):
         for tab_index in range(1, self.sidebar_tabs.count()):
             self.sidebar_tabs.setTabEnabled(tab_index, not project_open_busy)
         if project_open_busy:
-            self.run_tracking_button.setEnabled(False)
-            self.export_tracking_csv_button.setEnabled(False)
-            self.export_report_button.setEnabled(False)
+            self._set_action_enabled("tracking.run", False)
+            self._set_action_enabled("tracking.export_csv", False)
+            self._set_action_enabled("tracking.export_report", False)
         if busy:
             if operation == "open":
                 detail = "Opening project · reading project file…"
-                self.open_project_button.setEnabled(True)
-                self.open_project_button.setText("Cancel Open")
-                self.open_project_button.setIcon(
-                    self.style().standardIcon(QStyle.StandardPixmap.SP_DialogCancelButton)
-                )
-                self.open_project_button.setToolTip(
-                    "Cancel opening this project after the current media inspection finishes."
+                self._update_action(
+                    "project.open",
+                    enabled=True,
+                    text="Cancel Open",
+                    icon=self.style().standardIcon(
+                        QStyle.StandardPixmap.SP_DialogCancelButton
+                    ),
+                    tool_tip=(
+                        "Cancel opening this project after the current media inspection finishes."
+                    ),
                 )
                 self.open_project_button.setAccessibleName("Cancel project open")
             else:
                 detail = f"Inspecting 0/{max(0, int(total))} media files…"
-                self.add_media_button.setEnabled(True)
-                self.add_media_button.setText("Cancel Import")
-                self.add_media_button.setToolTip(
-                    "Cancel this media import after the current file inspection finishes."
+                self._update_action(
+                    "media.add",
+                    enabled=True,
+                    text="Cancel Import",
+                    tool_tip=(
+                        "Cancel this media import after the current file inspection finishes."
+                    ),
                 )
                 self.add_media_button.setAccessibleName("Cancel media import")
             self.media_probe_status_label.setText(detail)
@@ -2107,70 +2064,35 @@ class NeoTrackerWindow(QMainWindow):
             self.media_probe_status_label.show()
             self.statusBar().showMessage(detail)
             return
-        self.add_media_button.setText("Add media")
-        self.add_media_button.setToolTip("Add video or WAV files to the current project.")
-        self.add_media_button.setAccessibleName("Add media")
-        self.open_project_button.setText("Open Project")
-        self.open_project_button.setIcon(
-            self.style().standardIcon(QStyle.StandardPixmap.SP_DialogOpenButton)
+        self._update_action(
+            "media.add",
+            text="Add media",
+            tool_tip="Add video or WAV files to the current project.",
         )
-        self.open_project_button.setToolTip("Open a saved Neo-Tracker project.")
+        self.add_media_button.setAccessibleName("Add media")
+        self._update_action(
+            "project.open",
+            text="Open Project",
+            icon=self.style().standardIcon(QStyle.StandardPixmap.SP_DialogOpenButton),
+            tool_tip="Open a saved Neo-Tracker project.",
+        )
         self.open_project_button.setAccessibleName("Open project")
         self.media_probe_status_label.hide()
-
-    def _media_probe_thread_finished(self) -> None:
-        job = self._media_probe_job
-        self._media_probe_thread = None
-        self._media_probe_worker = None
-        self._media_probe_job = None
-        if job is not None:
-            self._background_tasks.finish(job.token)
-        if not self._background_tasks.closing:
-            self._set_media_probe_busy(False)
-            if job is not None and job.failure_detail:
-                QMessageBox.warning(
-                    self,
-                    "Add media",
-                    f"Could not inspect the selected media:\n{job.failure_detail}",
-                )
-            elif job is not None and job.cancelled:
-                self.statusBar().showMessage(
-                    "Media import canceled. No selected files were added.",
-                    6000,
-                )
-        self._schedule_close_if_workers_stopped()
 
     def _start_project_open(self, path: str | Path) -> bool:
         project_path = Path(path)
         if self._project_open_thread is not None:
             return False
-        token = self._background_tasks.start("project-open")
-        if token is None:
-            return False
-        job = ProjectOpenJob(token=token, path=project_path)
-        thread = QThread(self)
-        worker = ProjectOpenWorker(
-            project_path,
-            self.project_controller,
-            project_loader=self.project_loader,
+        accepted = self._project_io_coordinator.start_open(
+            ProjectOpenRequest(
+                path=project_path,
+                controller=self.project_controller,
+                project_loader=self.project_loader,
+            )
         )
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.progressed.connect(self._project_open_progressed)
-        worker.completed.connect(self._project_open_completed)
-        worker.failed.connect(self._project_open_failed)
-        worker.canceled.connect(self._project_open_canceled)
-        worker.completed.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        worker.canceled.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(self._project_open_thread_finished)
-        self._project_open_job = job
-        self._project_open_thread = thread
-        self._project_open_worker = worker
+        if not accepted:
+            return False
         self._set_media_probe_busy(True, operation="open")
-        thread.start()
         return True
 
     def _project_open_progressed(
@@ -2210,17 +2132,11 @@ class NeoTrackerWindow(QMainWindow):
         )
         self.statusBar().showMessage(detail)
 
-    def _project_open_completed(self, payload: object) -> None:
-        job = self._project_open_job
-        if (
-            job is None
-            or job.cancelled
-            or not self._background_tasks.is_current(job.token)
-        ):
-            return
-        if not isinstance(payload, PreparedProjectOpen) or payload.path != job.path:
-            job.failure_detail = "Project loading returned an invalid prepared project."
-            return
+    def _project_io_open_prepared(
+        self,
+        job: ProjectOpenJob,
+        payload: PreparedProjectOpen,
+    ) -> None:
         defer_heavy_views = bool(
             payload.tasks
             and len(payload.tasks[0].pipeline.results)
@@ -2246,61 +2162,50 @@ class NeoTrackerWindow(QMainWindow):
             )
         except Exception as exc:
             job.failure_detail = str(exc)
-            return
+            job.completed = False
         finally:
             self._last_project_open_apply_ms = (monotonic() - apply_started) * 1000.0
-        job.completed = True
+        self._finish_project_open_ui(job)
 
-    def _project_open_failed(self, message: str) -> None:
-        job = self._project_open_job
-        if job is None or not self._background_tasks.is_current(job.token):
-            return
-        job.failure_detail = str(message) or "Project loading failed."
+    def _project_io_open_failed(self, job: ProjectOpenJob, _message: str) -> None:
+        self._finish_project_open_ui(job)
 
-    def _project_open_canceled(self) -> None:
-        job = self._project_open_job
-        if job is None or not self._background_tasks.is_current(job.token):
+    def _project_io_open_canceled(self, job: ProjectOpenJob) -> None:
+        self._finish_project_open_ui(job)
+
+    def _finish_project_open_ui(self, job: ProjectOpenJob) -> None:
+        if self._background_tasks.closing:
             return
-        job.cancelled = True
+        self._set_media_probe_busy(False)
+        if not job.completed:
+            self._render_task(refresh_project_state=False)
+        if job.failure_detail:
+            QMessageBox.warning(
+                self,
+                "Open project",
+                f"Could not open project:\n{job.failure_detail}",
+            )
+        elif job.cancelled:
+            self.statusBar().showMessage(
+                "Project open canceled. The current project is unchanged.",
+                6000,
+            )
+
+    def _project_io_idle(self) -> None:
+        self._schedule_close_if_workers_stopped()
 
     def _cancel_project_open(self) -> None:
         worker = self._project_open_worker
         job = self._project_open_job
         if worker is None or job is None:
             return
-        job.cancelled = True
-        worker.request_cancel()
-        self.open_project_button.setEnabled(False)
-        self.add_media_button.setEnabled(False)
-        self.open_project_button.setText("Cancelling…")
+        self._project_io_coordinator.cancel_open("user")
+        self._update_action("project.open", enabled=False, text="Cancelling…")
+        self._set_action_enabled("media.add", False)
         self.media_probe_status_label.setText("Cancelling project open…")
         self.media_probe_status_label.setAccessibleDescription(
             "Cancel requested. Waiting for the current project-read or media-inspection step to finish safely."
         )
-
-    def _project_open_thread_finished(self) -> None:
-        job = self._project_open_job
-        self._project_open_thread = None
-        self._project_open_worker = None
-        self._project_open_job = None
-        if job is not None:
-            self._background_tasks.finish(job.token)
-        if not self._background_tasks.closing:
-            self._set_media_probe_busy(False)
-            if job is None or not job.completed:
-                self._render_task(refresh_project_state=False)
-            if job is not None and job.failure_detail:
-                QMessageBox.warning(
-                    self,
-                    "Open project",
-                    f"Could not open project:\n{job.failure_detail}",
-                )
-            elif job is not None and job.cancelled:
-                self.statusBar().showMessage(
-                    "Project open canceled. The current project is unchanged.",
-                    6000,
-                )
-        self._schedule_close_if_workers_stopped()
 
     def _choose_media_relink(self) -> None:
         task = self.current_task
@@ -2479,38 +2384,28 @@ class NeoTrackerWindow(QMainWindow):
         except Exception as exc:
             QMessageBox.warning(self, "Save project", f"Could not save project:\n{exc}")
             return False
-        token = self._background_tasks.start("project-save")
-        if token is None:
-            return False
-        job = ProjectSaveJob(
-            token=token,
-            path=path,
-            content_revision=self._project_content_revision,
+        accepted = self._project_io_coordinator.start_save(
+            ProjectSaveRequest(
+                project=project,
+                path=path,
+                content_revision=self._project_content_revision,
+                project_saver=self.project_saver,
+            )
         )
-        thread = QThread(self)
-        worker = ProjectSaveWorker(project, path, project_saver=self.project_saver)
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.completed.connect(self._project_save_completed)
-        worker.failed.connect(self._project_save_failed)
-        worker.completed.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(self._project_save_thread_finished)
-        self._project_save_job = job
-        self._project_save_thread = thread
-        self._project_save_worker = worker
+        if not accepted:
+            return False
         self._set_project_save_busy(True)
-        thread.start()
         return True
 
     def _set_project_save_busy(self, busy: bool) -> None:
-        self.save_project_button.setEnabled(not busy)
-        self.open_project_button.setEnabled(not busy)
+        self._set_action_enabled("project.save", not busy)
+        self._set_action_enabled("project.open", not busy)
         if busy:
-            self.save_project_button.setText("Saving…")
-            self.save_project_button.setToolTip("Saving a stable project snapshot in the background.")
+            self._update_action(
+                "project.save",
+                text="Saving…",
+                tool_tip="Saving a stable project snapshot in the background.",
+            )
             self.save_project_button.setAccessibleDescription(
                 "A stable project snapshot is being saved. You can continue editing."
             )
@@ -2518,12 +2413,12 @@ class NeoTrackerWindow(QMainWindow):
         else:
             self._apply_project_state(self._project_dirty)
 
-    def _project_save_completed(self, payload: object) -> None:
-        job = self._project_save_job
-        if job is None or not self._background_tasks.is_current(job.token):
-            return
-        if not isinstance(payload, CompletedProjectSave) or payload.path != job.path:
-            job.failure_detail = "Project saving returned an invalid result."
+    def _project_io_save_completed(
+        self,
+        job: ProjectSaveJob,
+        payload: CompletedProjectSave,
+    ) -> None:
+        if self._background_tasks.closing:
             return
         self.project_path = payload.path
         if self._project_content_revision == job.content_revision:
@@ -2535,38 +2430,24 @@ class NeoTrackerWindow(QMainWindow):
             self._saved_project_fingerprint = payload.fingerprint
             self._current_project_fingerprint = None
             self._apply_project_state(True)
-        job.completed = True
+        self._set_project_save_busy(False)
+        if self._project_dirty:
+            self.statusBar().showMessage(
+                f"Saved snapshot: {job.path}. Newer edits still need saving.",
+                8000,
+            )
+        else:
+            self.statusBar().showMessage(f"Saved project: {job.path}", 6000)
 
-    def _project_save_failed(self, message: str) -> None:
-        job = self._project_save_job
-        if job is None or not self._background_tasks.is_current(job.token):
+    def _project_io_save_failed(self, _job: ProjectSaveJob, message: str) -> None:
+        if self._background_tasks.closing:
             return
-        job.failure_detail = str(message) or "Project saving failed."
-
-    def _project_save_thread_finished(self) -> None:
-        job = self._project_save_job
-        self._project_save_thread = None
-        self._project_save_worker = None
-        self._project_save_job = None
-        if job is not None:
-            self._background_tasks.finish(job.token)
-        if not self._background_tasks.closing:
-            self._set_project_save_busy(False)
-            if job is not None and job.failure_detail:
-                QMessageBox.warning(
-                    self,
-                    "Save project",
-                    f"Could not save project:\n{job.failure_detail}",
-                )
-            elif job is not None and job.completed:
-                if self._project_dirty:
-                    self.statusBar().showMessage(
-                        f"Saved snapshot: {job.path}. Newer edits still need saving.",
-                        8000,
-                    )
-                else:
-                    self.statusBar().showMessage(f"Saved project: {job.path}", 6000)
-        self._schedule_close_if_workers_stopped()
+        self._set_project_save_busy(False)
+        QMessageBox.warning(
+            self,
+            "Save project",
+            f"Could not save project:\n{message}",
+        )
 
     def _project_transition_dialog(self, action: str) -> QMessageBox:
         project_name = self.project_path.name if self.project_path is not None else "this project"
@@ -3118,13 +2999,13 @@ class NeoTrackerWindow(QMainWindow):
         self.global_project_dirty_label.setVisible(self._project_dirty)
         self.save_project_button.setProperty("projectDirty", self._project_dirty)
         if self._project_save_thread is not None:
-            self.save_project_button.setText("Saving…")
+            action_text = "Saving…"
         elif self._project_dirty and self.project_path is not None:
-            self.save_project_button.setText("Save Changes")
+            action_text = "Save Changes"
         elif self._project_dirty:
-            self.save_project_button.setText("Save Project…")
+            action_text = "Save Project…"
         else:
-            self.save_project_button.setText("Save Project")
+            action_text = "Save Project"
         if self._project_save_thread is not None:
             detail = "Saving a stable project snapshot in the background. You can continue editing."
         else:
@@ -3133,7 +3014,7 @@ class NeoTrackerWindow(QMainWindow):
                 if self._project_dirty
                 else "Save media paths, settings, calibration, and results."
             )
-        self.save_project_button.setToolTip(detail)
+        self._update_action("project.save", text=action_text, tool_tip=detail)
         self.save_project_button.setAccessibleDescription(detail)
         if self._project_dirty != previous_dirty:
             self.save_project_button.style().unpolish(self.save_project_button)
@@ -3884,27 +3765,34 @@ class NeoTrackerWindow(QMainWindow):
             else:
                 self.tracking_status_label.setText("No media")
                 self.tracking_summary_label.setText("Results: none")
-            self.run_tracking_button.setEnabled(False)
-            self.export_tracking_csv_button.setEnabled(has_results)
-            self.export_report_button.setEnabled(has_results)
-            self.correct_point_button.setEnabled(False)
-            self.mark_lost_button.setEnabled(bool(has_results and not analysis_busy))
-            self.rerun_after_button.setEnabled(False)
-            self.jump_to_result_button.setEnabled(has_results)
+            self._set_action_enabled("tracking.run", False)
+            self._set_action_enabled("tracking.export_csv", has_results)
+            self._set_action_enabled("tracking.export_report", has_results)
+            self._set_action_enabled("review.correct", False)
+            self._set_action_enabled(
+                "review.mark_lost", bool(has_results and not analysis_busy)
+            )
+            self._set_action_enabled("review.rerun", False)
+            self._set_action_enabled("review.jump", has_results)
             return
         info = task.media_info or probe_media_for_ui(task.media_path)
         task.media_info = info
         is_audio = info.kind == "audio"
         can_track = bool(info.available and info.kind == "video" and info.frame_count > 0)
-        self.run_tracking_button.setEnabled(bool(can_track and not analysis_busy))
-        self.export_tracking_csv_button.setEnabled(has_results)
-        self.export_report_button.setEnabled(True)
-        self.correct_point_button.setEnabled(
+        self._set_action_enabled("tracking.run", bool(can_track and not analysis_busy))
+        self._set_action_enabled("tracking.export_csv", has_results)
+        self._set_action_enabled("tracking.export_report", True)
+        self._set_action_enabled(
+            "review.correct",
             bool(has_results and self.preview_label.has_frame() and not analysis_busy)
         )
-        self.mark_lost_button.setEnabled(bool(has_results and not analysis_busy))
-        self.rerun_after_button.setEnabled(bool(has_results and can_track and not analysis_busy))
-        self.jump_to_result_button.setEnabled(has_results)
+        self._set_action_enabled(
+            "review.mark_lost", bool(has_results and not analysis_busy)
+        )
+        self._set_action_enabled(
+            "review.rerun", bool(has_results and can_track and not analysis_busy)
+        )
+        self._set_action_enabled("review.jump", has_results)
         if task.media_identity_requires_review:
             detail = (
                 "The file at the saved media path does not match the project snapshot. "
@@ -3917,13 +3805,13 @@ class NeoTrackerWindow(QMainWindow):
             result_text = self._tracking_summary_text(task.pipeline.results)
             self.tracking_summary_label.setText(f"{result_text} · source review required")
             self.tracking_summary_label.setToolTip(detail)
-            self.run_tracking_button.setEnabled(False)
-            self.export_tracking_csv_button.setEnabled(False)
-            self.export_report_button.setEnabled(False)
-            self.correct_point_button.setEnabled(False)
-            self.mark_lost_button.setEnabled(False)
-            self.rerun_after_button.setEnabled(False)
-            self.jump_to_result_button.setEnabled(False)
+            self._set_action_enabled("tracking.run", False)
+            self._set_action_enabled("tracking.export_csv", False)
+            self._set_action_enabled("tracking.export_report", False)
+            self._set_action_enabled("review.correct", False)
+            self._set_action_enabled("review.mark_lost", False)
+            self._set_action_enabled("review.rerun", False)
+            self._set_action_enabled("review.jump", False)
             return
         if is_audio:
             if not info.available:
@@ -4268,9 +4156,7 @@ class NeoTrackerWindow(QMainWindow):
                 # Route it before any source-frame decode or relink early return.
                 self._tracking_overlay_for_task(task, None)
         if task.media_path is None:
-            self._cancel_preview_decode(clear_pending=True)
-            self._discard_preview_decoder_session()
-            self._preview_decode_cache = None
+            self._preview_coordinator.invalidate()
             self._cancel_review_response_requests(clear_pending=True)
             self.candidate_summary_label.setText("Candidates: none")
             self.preview_label.clear_message("No media loaded\nAdd a video or WAV file from the Media tab.")
@@ -4279,9 +4165,7 @@ class NeoTrackerWindow(QMainWindow):
         info = task.media_info or probe_media_for_ui(task.media_path)
         task.media_info = info
         if not info.available:
-            self._cancel_preview_decode(clear_pending=True)
-            self._discard_preview_decoder_session()
-            self._preview_decode_cache = None
+            self._preview_coordinator.invalidate()
             self._cancel_review_response_requests(clear_pending=True)
             self.candidate_summary_label.setText("Candidates: unavailable")
             detail = f"{task.title()}\nPreview unavailable\n{info.error}"
@@ -4304,9 +4188,7 @@ class NeoTrackerWindow(QMainWindow):
             self._sync_preview_dependent_actions(task)
             return
         if info.kind == "audio":
-            self._cancel_preview_decode(clear_pending=True)
-            self._discard_preview_decoder_session()
-            self._preview_decode_cache = None
+            self._preview_coordinator.invalidate()
             self._cancel_review_response_requests(clear_pending=True)
             self.candidate_summary_label.setText("Candidates: not used for audio")
             self.preview_label.clear_message(f"{task.title()}\nAudio file loaded\nReady for signal processing.")
@@ -4392,170 +4274,71 @@ class NeoTrackerWindow(QMainWindow):
         task: DesktopTask,
         request: PreviewDecodeRequest,
     ) -> None:
-        if self._background_tasks.closing:
-            self._pending_preview_decode = None
-            return
-        job = self._preview_decode_job
-        if self._preview_decode_thread is not None and job is not None:
-            if same_preview_request(job.request, request) and not job.cancelled:
-                return
-            self._pending_preview_decode = (task, request)
-            self._cancel_preview_decode(clear_pending=False)
-            return
-        self._start_preview_decode(task, request)
+        self._preview_coordinator.start(PreviewRequest(task, request))
 
     def _start_preview_decode(
         self,
         task: DesktopTask,
         request: PreviewDecodeRequest,
     ) -> None:
-        if self._preview_decode_thread is not None:
-            return
-        token = self._background_tasks.start("preview-decode")
-        if token is None:
-            return
-        try:
-            session = self._preview_decoder_session_for(request)
-        except Exception as exc:
-            self._background_tasks.finish(token)
-            self._show_preview_decode_failure(task, request.frame_index, str(exc))
-            return
-        thread = QThread(self)
-        worker = PreviewDecodeWorker(request, session=session)
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.completed.connect(self._preview_decode_completed)
-        worker.failed.connect(self._preview_decode_failed)
-        worker.canceled.connect(self._preview_decode_canceled)
-        worker.completed.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        worker.canceled.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(self._preview_decode_thread_finished)
-        self._preview_decode_job = PreviewDecodeJob(token, task, request, session)
-        self._preview_decode_thread = thread
-        self._preview_decode_worker = worker
-        thread.start()
+        self._preview_coordinator.start(PreviewRequest(task, request))
 
     def _preview_decoder_session_for(
         self,
         request: PreviewDecodeRequest,
     ) -> PreviewDecoderSession:
-        session = self._preview_decoder_session
-        if session is not None and session.matches(
-            request.media_path,
-            expected_width=request.expected_width,
-            expected_height=request.expected_height,
-            expected_identity=request.expected_identity,
-        ):
-            return session
-        if session is not None:
-            session.close()
-        session = PreviewDecoderSession(
-            request.media_path,
-            expected_width=request.expected_width,
-            expected_height=request.expected_height,
-            expected_identity=request.expected_identity,
-        )
-        self._preview_decoder_session = session
-        return session
+        return self._preview_coordinator.session_for(request)
 
     def _discard_preview_decoder_session(self) -> None:
-        session = self._preview_decoder_session
-        self._preview_decoder_session = None
-        if session is None:
-            return
-        if self._preview_decode_thread is None:
-            session.close()
+        self._preview_coordinator.discard_session()
 
     def _cancel_preview_decode(self, *, clear_pending: bool) -> None:
-        if clear_pending:
-            self._pending_preview_decode = None
-        job = self._preview_decode_job
-        worker = self._preview_decode_worker
-        if job is None or worker is None or job.cancelled:
-            return
-        job.cancelled = True
-        worker.request_cancel()
+        self._preview_coordinator.cancel(clear_pending=clear_pending)
 
     def _preview_decode_completed(self, result_object: object) -> None:
-        job = self._preview_decode_job
-        if (
-            job is None
-            or job.cancelled
-            or not self._background_tasks.is_current(job.token)
-            or not isinstance(result_object, PreviewDecodeResult)
-            or not same_preview_request(job.request, result_object.request)
-        ):
-            return
-        job.result = result_object
+        self._preview_coordinator.handle_completed(result_object)
 
     def _preview_decode_failed(self, request_object: object, message: str) -> None:
-        job = self._preview_decode_job
-        if (
-            job is None
-            or job.cancelled
-            or not self._background_tasks.is_current(job.token)
-            or not isinstance(request_object, PreviewDecodeRequest)
-            or not same_preview_request(job.request, request_object)
-        ):
-            return
-        job.failure_detail = str(message) or "Preview decoder helper failed."
+        self._preview_coordinator.handle_failed(request_object, message)
 
     def _preview_decode_canceled(self, request_object: object) -> None:
-        job = self._preview_decode_job
-        if (
-            job is not None
-            and isinstance(request_object, PreviewDecodeRequest)
-            and same_preview_request(job.request, request_object)
-        ):
-            job.cancelled = True
+        self._preview_coordinator.handle_canceled(request_object)
 
     def _preview_decode_thread_finished(self) -> None:
-        job = self._preview_decode_job
-        pending = self._pending_preview_decode
-        job_is_current = bool(
-            job is not None
-            and self._preview_decode_request_is_current(job.task, job.request)
-        )
-        self._preview_decode_worker = None
-        self._preview_decode_thread = None
-        self._preview_decode_job = None
-        self._pending_preview_decode = None
-        if job is not None:
-            self._background_tasks.finish(job.token)
-            if (
-                self._background_tasks.closing
-                or job.cancelled
-                or bool(job.failure_detail)
-                or job.result is None
-                or not job_is_current
-            ):
-                # The QThread is now stopped, so deterministic session cleanup
-                # cannot race its decoder call. Pending work may reuse this
-                # closed object and will explicitly spawn a fresh helper.
-                job.session.close()
+        if self._preview_coordinator.thread is None:
+            self._preview_coordinator.handle_thread_finished()
+
+    def _preview_coordinator_completed(self, task_object: object, result_object: object) -> None:
+        if (
+            not isinstance(task_object, DesktopTask)
+            or not isinstance(result_object, PreviewDecodeResult)
+            or not self._preview_decode_request_is_current(task_object, result_object.request)
+        ):
+            self._preview_coordinator.clear_cache()
+            self._preview_coordinator.discard_session()
+            return
+        self._render_preview()
+
+    def _preview_coordinator_failed(
+        self,
+        task_object: object,
+        request_object: object,
+        message: str,
+    ) -> None:
+        if (
+            isinstance(task_object, DesktopTask)
+            and isinstance(request_object, PreviewDecodeRequest)
+            and self._preview_decode_request_is_current(task_object, request_object)
+        ):
+            self._show_preview_decode_failure(
+                task_object,
+                request_object.frame_index,
+                message,
+            )
+
+    def _preview_coordinator_idle(self) -> None:
         if self._background_tasks.closing:
             self._schedule_close_if_workers_stopped()
-            return
-        if pending is not None:
-            pending_task, pending_request = pending
-            if self._preview_decode_request_is_current(pending_task, pending_request):
-                self._start_preview_decode(pending_task, pending_request)
-                return
-        if job is None or not job_is_current:
-            return
-        if job.result is not None and not job.cancelled:
-            self._preview_decode_cache = job.result
-            self._render_preview()
-            return
-        if job.failure_detail and not job.cancelled:
-            self._show_preview_decode_failure(
-                job.task,
-                job.request.frame_index,
-                job.failure_detail,
-            )
 
     def _preview_decode_request_is_current(
         self,
@@ -4588,7 +4371,10 @@ class NeoTrackerWindow(QMainWindow):
     def _sync_preview_dependent_actions(self, task: DesktopTask) -> None:
         if task is not self.current_task:
             return
-        self.correct_point_button.setEnabled(bool(task.pipeline.results and self.preview_label.has_frame()))
+        self._set_action_enabled(
+            "review.correct",
+            bool(task.pipeline.results and self.preview_label.has_frame()),
+        )
 
     def _set_response_status(self, text: str, state: str, detail: str) -> None:
         self.response_status_label.setText(text)
@@ -4645,60 +4431,10 @@ class NeoTrackerWindow(QMainWindow):
         first: ReviewResponseRequest,
         second: ReviewResponseRequest,
     ) -> bool:
-        return bool(
-            first.owner is second.owner
-            and first.pipeline_token == second.pipeline_token
-            and first.result is second.result
-        )
+        return ReviewResponseCoordinator.same_request(first, second)
 
     def _queue_review_response(self, request: ReviewResponseRequest) -> None:
-        if self._background_tasks.closing:
-            self._pending_review_response = None
-            return
-        job = self._review_response_job
-        if self._review_response_thread is not None and job is not None:
-            if self._same_review_response_request(job.request, request) and not job.cancelled:
-                return
-            pending = self._pending_review_response
-            if pending is None or not self._same_review_response_request(pending, request):
-                self._pending_review_response = request
-            self._cancel_active_review_response()
-            return
-        self._start_review_response(request)
-
-    def _start_review_response(self, request: ReviewResponseRequest) -> None:
-        if self._review_response_thread is not None:
-            return
-        token = self._background_tasks.start("review-response")
-        if token is None:
-            return
-        thread = QThread(self)
-        worker = ReviewResponseWorker(request)
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.completed.connect(self._review_response_completed)
-        worker.failed.connect(self._review_response_failed)
-        worker.canceled.connect(self._review_response_cancelled)
-        worker.completed.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        worker.canceled.connect(thread.quit)
-        worker.completed.connect(worker.deleteLater)
-        worker.failed.connect(worker.deleteLater)
-        worker.canceled.connect(worker.deleteLater)
-        thread.finished.connect(self._review_response_thread_finished)
-        thread.finished.connect(thread.deleteLater)
-        self._review_response_job = ReviewResponseJob(token=token, request=request)
-        self._review_response_thread = thread
-        self._review_response_worker = worker
-        thread.start()
-
-    def _cancel_active_review_response(self) -> None:
-        job = self._review_response_job
-        worker = self._review_response_worker
-        if job is None or worker is None or job.cancelled:
-            return
-        job.cancelled = True
-        worker.request_cancel()
+        self._review_response_coordinator.queue(request)
 
     def _cancel_review_response_requests(
         self,
@@ -4707,88 +4443,41 @@ class NeoTrackerWindow(QMainWindow):
         first_frame: int | None = None,
         clear_pending: bool,
     ) -> None:
-        threshold = int(first_frame) if first_frame is not None else None
-
-        def matches(request: ReviewResponseRequest) -> bool:
-            return bool(
-                (owner is None or request.owner is owner)
-                and (threshold is None or request.result.frame_index >= threshold)
-            )
-
-        if self._review_response_job is not None and matches(self._review_response_job.request):
-            self._cancel_active_review_response()
-        if clear_pending and self._pending_review_response is not None and matches(self._pending_review_response):
-            self._pending_review_response = None
+        self._review_response_coordinator.cancel_requests(
+            owner=owner,
+            first_frame=first_frame,
+            clear_pending=clear_pending,
+        )
 
     def _invalidate_review_responses(
         self,
         owner: object | None = None,
         first_frame: int | None = None,
     ) -> None:
-        if owner is None:
-            self._review_responses.clear()
-        else:
-            self._review_responses.invalidate(owner, first_frame)
-        self._cancel_review_response_requests(
-            owner=owner,
-            first_frame=first_frame,
-            clear_pending=True,
-        )
+        self._review_response_coordinator.invalidate(owner, first_frame)
 
-    def _review_response_completed(self, response_object: object) -> None:
-        job = self._review_response_job
-        if (
-            job is None
-            or not self._background_tasks.is_current(job.token)
-            or job.cancelled
-            or not isinstance(response_object, ReviewResponse)
-        ):
-            return
-        if not self._review_response_request_is_valid(job.request):
-            job.cancelled = True
-            return
-        self._review_responses.commit(job.request, response_object, fresh_for_lookup=True)
-        job.completed = True
+    def _review_response_completed(
+        self,
+        request: ReviewResponseRequest,
+        _response: ReviewResponse,
+    ) -> None:
+        if self._review_response_request_is_current(request):
+            self._render_preview()
 
-    def _review_response_failed(self, message: str) -> None:
-        job = self._review_response_job
-        if job is not None and self._background_tasks.is_current(job.token) and not job.cancelled:
-            job.failure_detail = f"Could not recompute the response map: {message}"
+    def _review_response_failed(
+        self,
+        request: ReviewResponseRequest,
+        message: str,
+    ) -> None:
+        if self._review_response_request_is_current(request):
+            self._set_response_status("Response: unavailable", "unavailable", message)
 
-    def _review_response_cancelled(self) -> None:
-        job = self._review_response_job
-        if job is not None and self._background_tasks.is_current(job.token):
-            job.cancelled = True
-
-    def _review_response_thread_finished(self) -> None:
-        job = self._review_response_job
-        pending = self._pending_review_response
-        self._review_response_worker = None
-        self._review_response_thread = None
-        self._review_response_job = None
-        self._pending_review_response = None
-        if job is not None:
-            self._background_tasks.finish(job.token)
-
+    def _review_response_idle(self) -> None:
         if self._background_tasks.closing:
             self._schedule_close_if_workers_stopped()
-            return
-        if pending is not None and self._review_response_request_is_current(pending):
-            self._start_review_response(pending)
-            return
-        if job is not None and job.completed and self._review_response_request_is_current(job.request):
-            self._render_preview()
-        elif job is not None and job.failure_detail and self._review_response_request_is_current(job.request):
-            self._set_response_status("Response: unavailable", "unavailable", job.failure_detail)
 
     def _review_response_request_is_valid(self, request: ReviewResponseRequest) -> bool:
-        pipeline = getattr(request.owner, "pipeline", None)
-        results = getattr(pipeline, "results", ())
-        return bool(
-            pipeline is not None
-            and id(pipeline) == request.pipeline_token
-            and any(result is request.result for result in results)
-        )
+        return self._review_response_coordinator.request_is_valid(request)
 
     def _review_response_request_is_current(self, request: ReviewResponseRequest) -> bool:
         return bool(
@@ -4859,45 +4548,49 @@ class NeoTrackerWindow(QMainWindow):
         return max(0, min(int(frame_index), max_frame))
 
     def _set_playback_enabled(self, enabled: bool) -> None:
-        self.play_button.setEnabled(enabled)
-        self.previous_frame_button.setEnabled(enabled)
-        self.next_frame_button.setEnabled(enabled)
+        self._set_action_enabled("playback.toggle", enabled)
+        self._set_action_enabled("playback.previous", enabled)
+        self._set_action_enabled("playback.next", enabled)
         self.frame_slider.setEnabled(enabled)
         self.preview_frame_spin.setEnabled(enabled)
         if not enabled:
             self._stop_playback()
 
     def _toggle_playback(self) -> None:
-        if self.play_timer.isActive():
+        if self._playback_coordinator.active:
             self._stop_playback()
             return
         task = self.current_task
         if not task.media_info or not task.media_info.available:
             return
         info = task.media_info
-        self.playback_clock.start(
+        if not self._playback_coordinator.start(
             current_frame=task.preview_frame_index,
             frame_count=info.frame_count,
             fps=info.fps,
+        ):
+            return
+        self._update_action(
+            "playback.toggle",
+            text="Pause",
+            icon=self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPause),
         )
-        self.play_button.setText("Pause")
-        self.play_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPause))
         self.play_button.setAccessibleName("Pause video preview")
         self._set_playback_status(
-            f"Playing · Source {self._format_source_fps(self.playback_clock.fps)} fps",
+            f"Playing · Source {self._format_source_fps(self._playback_coordinator.fps)} fps",
             state="smooth",
             skipped_total=0,
         )
-        self.play_timer.start(self._playback_interval_ms(task))
 
     def _stop_playback(self, *, reached_end: bool = False, failure_detail: str = "") -> None:
-        was_active = self.play_timer.isActive() or self.playback_clock.active
-        skipped_total = self.playback_clock.skipped_total
-        if self.play_timer.isActive():
-            self.play_timer.stop()
-        self.playback_clock.stop()
-        self.play_button.setText("Play")
-        self.play_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
+        was_active = self._playback_coordinator.active
+        skipped_total = self._playback_coordinator.skipped_total
+        self._playback_coordinator.stop()
+        self._update_action(
+            "playback.toggle",
+            text="Play",
+            icon=self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay),
+        )
         self.play_button.setAccessibleName("Play video preview")
         if failure_detail:
             self._set_playback_error(int(self.current_task.preview_frame_index), failure_detail, skipped_total)
@@ -4923,20 +4616,20 @@ class NeoTrackerWindow(QMainWindow):
         if not info or not info.available:
             self._stop_playback()
             return
-        if not self._has_injected_preview_reader(task) and self._preview_decode_thread is not None:
+        if not self._has_injected_preview_reader(task) and self._preview_coordinator.busy:
             # Do not continuously supersede a bounded decoder request at the
             # source frame rate. Advance again after the isolated frame lands.
             return
-        tick = self.playback_clock.tick(task.preview_frame_index)
+        tick = self._playback_coordinator.tick(task.preview_frame_index)
         if tick.frame_index <= int(task.preview_frame_index):
             if tick.reached_end:
                 self._stop_playback(reached_end=True)
             return
         self._preview_frame_changed(tick.frame_index)
-        if not self.play_timer.isActive() or not self.playback_clock.active:
+        if not self._playback_coordinator.active:
             return
         self._set_playback_status(
-            f"Playing · Source {self._format_source_fps(self.playback_clock.fps)} fps"
+            f"Playing · Source {self._format_source_fps(self._playback_coordinator.fps)} fps"
             + (f" · Preview skips {tick.skipped_total}" if tick.skipped_total else ""),
             state="catchup" if tick.skipped_total else "smooth",
             skipped_total=tick.skipped_total,
@@ -4950,7 +4643,7 @@ class NeoTrackerWindow(QMainWindow):
 
     def _set_playback_status(self, text: str, *, state: str, skipped_total: int) -> None:
         detail = (
-            f"Video preview is playing at the source rate of {self._format_source_fps(self.playback_clock.fps)} "
+            f"Video preview is playing at the source rate of {self._format_source_fps(self._playback_coordinator.fps)} "
             f"frames per second. {skipped_total} preview display frame"
             f"{'s have' if skipped_total != 1 else ' has'} been skipped to stay aligned with source time. "
             "Tracking results and source data are unchanged."
@@ -5002,7 +4695,7 @@ class NeoTrackerWindow(QMainWindow):
     @staticmethod
     def _playback_interval_ms(task: DesktopTask) -> int:
         fps = task.media_info.fps if task.media_info and task.media_info.fps > 0 else 30.0
-        return PlaybackClock.timer_interval_ms(fps)
+        return PlaybackCoordinator.timer_interval_ms(fps)
 
     def _start_roi_selection(self) -> None:
         if not self.preview_label.begin_roi_selection():
@@ -5701,10 +5394,7 @@ class NeoTrackerWindow(QMainWindow):
         prefix: list[TrackerResult] | None = None,
         anchor_frame: int | None = None,
     ) -> None:
-        if self._tracking_thread is not None:
-            return
-        token = self._background_tasks.start("tracking")
-        if token is None:
+        if not self._tracking_coordinator.can_start:
             return
         previous_analysis_run = self.analysis_controller.current_run
         if self.analysis_controller.has_result or self._analysis_thread is not None:
@@ -5714,60 +5404,37 @@ class NeoTrackerWindow(QMainWindow):
             )
         self._invalidate_review_responses(task, start_frame if mode == "rerun" else None)
         task.close_reader()
-        job = TrackingJob(
-            token=token,
-            task=task,
-            mode=mode,
-            start_frame=start_frame,
-            prefix=list(prefix or []),
-            anchor_frame=anchor_frame,
-            completed=start_frame,
-            started_at=utc_timestamp(),
-            started_monotonic=monotonic(),
-            pipeline_config=task.pipeline.to_config(),
-            previous_results=list(task.pipeline.results),
-            previous_edit_history=[dict(entry) for entry in task.edit_history],
-            previous_tracking_outcome=task.tracking_outcome,
-            previous_tracking_note=task.tracking_note,
-            previous_analysis_run=previous_analysis_run,
-            source_path=str(task.media_path or ""),
-            source_identity=task.media_info.source_identity if task.media_info is not None else None,
-        )
-        thread = QThread(self)
         source_path = str(task.media_path)
         tracking_reader_overridden = (
             self._tracking_reader_for_path is not NeoTrackerWindow._tracking_reader_for_path
         )
-        worker = TrackingWorker(
-            pipeline=task.pipeline,
-            reader_factory=lambda source_path=source_path: self._tracking_reader_for_path(source_path),
-            frame_count=frame_count,
-            fps=fps,
-            start_frame=start_frame,
-            prefix=prefix,
-            process_isolation=not tracking_reader_overridden,
-            isolated_reader_factory=(
-                None if tracking_reader_overridden else partial(MediaReader, source_path)
-            ),
-            expected_source_path=source_path,
-            expected_source_identity=job.source_identity,
+        self._tracking_coordinator.start(
+            TrackingRequest(
+                task=task,
+                frame_count=frame_count,
+                fps=fps,
+                mode=mode,
+                start_frame=start_frame,
+                prefix=tuple(prefix or ()),
+                anchor_frame=anchor_frame,
+                previous_analysis_run=previous_analysis_run,
+                reader_factory=partial(self._tracking_reader_for_path, source_path),
+                process_isolation=not tracking_reader_overridden,
+                isolated_reader_factory=(
+                    None if tracking_reader_overridden else partial(MediaReader, source_path)
+                ),
+            )
         )
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.progress.connect(self._tracking_progressed)
-        worker.completed.connect(self._tracking_completed)
-        worker.failed.connect(self._tracking_failed)
-        worker.completed.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        worker.completed.connect(worker.deleteLater)
-        worker.failed.connect(worker.deleteLater)
-        thread.finished.connect(self._tracking_thread_finished)
-        thread.finished.connect(thread.deleteLater)
-        self._tracking_job = job
-        self._tracking_thread = thread
-        self._tracking_worker = worker
-        self._set_tracking_busy(True, mode)
-        thread.start()
+
+    def _tracking_started(self, job: TrackingJob) -> None:
+        self._set_tracking_busy(True, job.mode)
+
+    def _tracking_coordinator_state_changed(self, state: str) -> None:
+        if state == "finishing":
+            self._set_tracking_finishing()
+
+    def _tracking_idle(self) -> None:
+        self._schedule_close_if_workers_stopped()
 
     def _set_tracking_busy(self, busy: bool, mode: str = "full") -> None:
         if busy and self.tracking_tab is not None:
@@ -5775,9 +5442,18 @@ class NeoTrackerWindow(QMainWindow):
                 self._tracking_previous_sidebar_tab = self.sidebar_tabs.currentWidget()
             self.sidebar_tabs.setCurrentWidget(self.tracking_tab)
         self.sidebar_tabs.setEnabled(not busy)
-        self.export_tracking_csv_button.setEnabled(False if busy else bool(self.current_task.pipeline.results))
-        self.export_report_button.setEnabled(not busy and self.current_task.media_path is not None)
-        self.rerun_after_button.setEnabled(False if busy else bool(self.current_task.pipeline.results))
+        self._set_action_enabled(
+            "tracking.export_csv",
+            False if busy else bool(self.current_task.pipeline.results),
+        )
+        self._set_action_enabled(
+            "tracking.export_report",
+            bool(not busy and self.current_task.media_path is not None),
+        )
+        self._set_action_enabled(
+            "review.rerun",
+            False if busy else bool(self.current_task.pipeline.results),
+        )
         self._set_playback_enabled(False if busy else self._current_task_can_play())
         self.run_tracking_button.setProperty("trackingBusy", busy)
         self.run_tracking_button.style().unpolish(self.run_tracking_button)
@@ -5817,11 +5493,14 @@ class NeoTrackerWindow(QMainWindow):
             self.tracking_summary_label.setAccessibleDescription(
                 "Preparing video frames. Throughput and estimated remaining time are not available yet."
             )
-            self.run_tracking_button.setText("Cancel")
-            self.run_tracking_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaStop))
-            self.run_tracking_button.setToolTip(f"Cancel the active {verb.lower()} job.")
+            self._update_action(
+                "tracking.run",
+                enabled=True,
+                text="Cancel",
+                icon=self.style().standardIcon(QStyle.StandardPixmap.SP_MediaStop),
+                tool_tip=f"Cancel the active {verb.lower()} job.",
+            )
             self.run_tracking_button.setAccessibleName(f"Cancel {verb.lower()}")
-            self.run_tracking_button.setEnabled(True)
             return
         previous_tab = self._tracking_previous_sidebar_tab
         self._tracking_previous_sidebar_tab = None
@@ -5835,9 +5514,12 @@ class NeoTrackerWindow(QMainWindow):
             self.playback_status_label.hide()
         self.tracking_performance_title_label.hide()
         self.tracking_performance_label.hide()
-        self.run_tracking_button.setText("Run Tracking")
-        self.run_tracking_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
-        self.run_tracking_button.setToolTip("Run the selected video tracking pipeline in the background.")
+        self._update_action(
+            "tracking.run",
+            text="Run Tracking",
+            icon=self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay),
+            tool_tip="Run the selected video tracking pipeline in the background.",
+        )
         self.run_tracking_button.setAccessibleName("Run video tracking")
         self._render_tracking_status(self.current_task)
 
@@ -5845,25 +5527,15 @@ class NeoTrackerWindow(QMainWindow):
         info = self.current_task.media_info
         return bool(info and info.available and info.kind == "video" and info.frame_count > 0)
 
-    def _tracking_progressed(self, progress: TrackingProgress) -> None:
-        job = self._tracking_job
-        if job is None or not self._background_tasks.is_current(job.token):
-            return
+    def _tracking_progressed(
+        self,
+        job: TrackingJob,
+        progress: TrackingProgress,
+    ) -> None:
         completed = int(progress.completed)
         total = int(progress.total)
-        job.completed = int(completed)
-        job.tracking_elapsed_s = max(0.0, float(progress.elapsed_s))
-        job.tracking_input_s = max(0.0, float(progress.input_s))
-        job.tracking_processing_s = max(0.0, float(progress.processing_s))
-        job.tracking_peak_debug_bytes = max(
-            job.tracking_peak_debug_bytes,
-            max(0, int(progress.peak_retained_debug_bytes)),
-        )
-        job.tracking_prefetch_frames = max(0, int(progress.prefetch_frames))
         span = max(1, int(total) - job.start_frame)
         processed = max(0, int(completed) - job.start_frame)
-        if processed > 0:
-            self._commit_tracking_replacement(job)
         percent = min(100, int(round(processed * 100 / span)))
         verb = "Rerunning" if job.mode == "rerun" else "Tracking"
         self.tracking_status_label.setText(f"{verb} {percent}%")
@@ -5941,9 +5613,8 @@ class NeoTrackerWindow(QMainWindow):
         worker = self._tracking_worker
         if worker is None:
             return
-        worker.request_cancel()
-        self.run_tracking_button.setEnabled(False)
-        self.run_tracking_button.setText("Cancelling…")
+        self._tracking_coordinator.cancel("user")
+        self._update_action("tracking.run", enabled=False, text="Cancelling…")
         self.tracking_status_label.setText("Cancelling…")
         self.tracking_summary_label.setText("Finishing the current frame safely.")
         current_lines = self.tracking_performance_label.text().splitlines()
@@ -5984,42 +5655,23 @@ class NeoTrackerWindow(QMainWindow):
         else:
             self.statusBar().showMessage("Cancellation requested · finishing the current frame safely…")
 
-    def _tracking_completed(self, completed: int, cancelled: bool, ended_early: bool, note: str) -> None:
-        job = self._tracking_job
-        if job is None or not self._background_tasks.is_current(job.token):
-            return
-        job.completed = int(completed)
-        job.cancelled = bool(cancelled)
-        job.ended_early = bool(ended_early)
-        job.completion_note = self._bounded_tracking_note(note)
-        self._finish_tracking_job(job)
-
-    def _tracking_failed(self, message: str, completed: int) -> None:
-        job = self._tracking_job
-        if job is None or not self._background_tasks.is_current(job.token):
-            return
-        job.completed = int(completed)
-        job.failed = True
-        job.source_changed = str(message).startswith(TRACKING_SOURCE_CHANGED_PREFIX)
-        if job.source_changed:
-            detail = str(message)[len(TRACKING_SOURCE_CHANGED_PREFIX) :].strip()
-            job.completion_note = self._bounded_tracking_note(
-                "Media source changed during tracking. All newly produced results from this run "
-                f"were discarded. {detail}"
-            )
-        else:
-            job.completion_note = self._bounded_tracking_note(message)
-        job.task.tracking_outcome = "failed"
+    def _tracking_terminal_ready(self, job: TrackingJob) -> None:
         if job.source_changed:
             self._quarantine_changed_tracking_source(job)
-        if job.mode == "rerun" and not job.source_changed:
-            job.task.pipeline.results = list(job.prefix)
-            job.task.pipeline.rebuild_debug_history()
-            job.task.pipeline.tracker_filter.prime(job.prefix[-1] if job.prefix else None)
-        if not self._background_tasks.closing:
+        if job.failed and not self._background_tasks.closing:
             title = "Rerun after" if job.mode == "rerun" else "Run tracking"
             QMessageBox.warning(self, title, f"Tracking failed:\n{job.completion_note}")
         self._finish_tracking_job(job)
+        if not self._background_tasks.closing:
+            self._set_tracking_busy(False)
+            if job.source_changed and self.media_tab is not None:
+                self.sidebar_tabs.setCurrentWidget(self.media_tab)
+                recovery_button = (
+                    self.media_relink_panel.apply_button
+                    if self.media_relink_panel.apply_button.isEnabled()
+                    else self.media_relink_panel.browse_button
+                )
+                recovery_button.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def _quarantine_changed_tracking_source(self, job: TrackingJob) -> None:
         """Stage the current path for review without touching restored result state."""
@@ -6060,90 +5712,10 @@ class NeoTrackerWindow(QMainWindow):
                 assessment=assessment,
             )
 
-    @staticmethod
-    def _bounded_tracking_note(value: object) -> str:
-        text = str(value)
-        if len(text) <= TRACKING_NOTE_LIMIT:
-            return text
-        suffix = "\n[truncated to fit the project tracking-note limit]"
-        return text[: TRACKING_NOTE_LIMIT - len(suffix)].rstrip() + suffix
-
     def _finish_tracking_job(self, job: TrackingJob) -> None:
         task = job.task
-        task.media_reader = None
-        if job.failed:
-            run_outcome = "failed"
-        elif job.cancelled:
-            run_outcome = "canceled"
-        elif job.ended_early:
-            run_outcome = "partial"
-        else:
-            run_outcome = "complete"
-        if job.failed:
-            run_note = job.completion_note or "Tracking failed."
-        elif job.cancelled:
-            run_note = job.completion_note or f"Tracking canceled after {job.completed} frames."
-        elif job.ended_early:
-            run_note = job.completion_note or f"Source ended early after {job.completed} frames."
-        else:
-            run_note = ""
-        processed_frames = max(0, int(job.completed) - int(job.start_frame))
-        restore_previous = job.source_changed or (
-            processed_frames == 0
-            and bool(
-                job.previous_results
-                or job.previous_edit_history
-                or job.previous_tracking_outcome
-                or job.previous_tracking_note
-            )
-        )
-        if restore_previous:
-            task.pipeline.results = list(job.previous_results)
-            task.pipeline.rebuild_debug_history()
-            task.pipeline.tracker_filter.prime(task.pipeline.results[-1] if task.pipeline.results else None)
-            task.edit_history = [dict(entry) for entry in job.previous_edit_history]
-            task.tracking_outcome = job.previous_tracking_outcome
-            task.tracking_note = job.previous_tracking_note
-            job.previous_result_state_restored = True
-            restored_suffix = (
-                "Previous current Results/Edits, outcome, and analysis were restored because the "
-                "media source changed during this run."
-                if job.source_changed
-                else "Previous current Results/Edits were restored because no new frame completed."
-            )
-            prefix_limit = max(0, 4096 - len(restored_suffix) - 1)
-            run_note = f"{run_note[:prefix_limit]} {restored_suffix}".strip()
-            if job.previous_analysis_run is not None:
-                self.analysis_controller.accept_run(job.previous_analysis_run)
-        else:
-            if processed_frames > 0:
-                self._commit_tracking_replacement(job)
-            task.tracking_outcome = run_outcome
-            task.tracking_note = run_note
-        end_frame = int(job.completed) - 1 if processed_frames else None
-        append_tracking_run(
-            task.run_history,
-            TrackingRunRecord(
-                started_at=job.started_at,
-                duration_s=max(0.0, monotonic() - job.started_monotonic),
-                mode=job.mode,
-                outcome=run_outcome,
-                start_frame=int(job.start_frame),
-                end_frame=end_frame,
-                processed_frames=processed_frames,
-                result_count=len(task.pipeline.results),
-                note=run_note,
-                pipeline_config=dict(job.pipeline_config),
-                tracking_elapsed_s=job.tracking_elapsed_s,
-                input_s=job.tracking_input_s,
-                processing_s=job.tracking_processing_s,
-                peak_debug_bytes=job.tracking_peak_debug_bytes,
-                prefetch_frames=job.tracking_prefetch_frames,
-                compute_backend=observation_backend_info(task.pipeline.observation_model).label,
-                source_path=job.source_path,
-                source_identity=job.source_identity,
-            ),
-        )
+        if job.previous_result_state_restored and job.previous_analysis_run is not None:
+            self.analysis_controller.accept_run(job.previous_analysis_run)
         self._render_observation_backend(task.pipeline)
         if task.pipeline.results:
             last_frame = task.pipeline.results[-1].frame_index
@@ -6240,21 +5812,6 @@ class NeoTrackerWindow(QMainWindow):
         ):
             self.sidebar_tabs.setCurrentWidget(self.review_tab)
         self._mark_project_changed()
-        self._set_tracking_finishing()
-
-    @staticmethod
-    def _commit_tracking_replacement(job: TrackingJob) -> None:
-        if job.result_replacement_committed:
-            return
-        if job.mode == "full":
-            job.task.edit_history.clear()
-        elif job.mode == "rerun":
-            job.superseded_edit_count = ReviewController.supersede_manual_edits_from_frame(
-                job.task.edit_history,
-                job.start_frame,
-                superseded_at=job.started_at,
-            )
-        job.result_replacement_committed = True
 
     def _set_tracking_finishing(self) -> None:
         closing = self._background_tasks.closing
@@ -6289,32 +5846,16 @@ class NeoTrackerWindow(QMainWindow):
         self.tracking_performance_label.setAccessibleDescription(detail)
         self.tracking_performance_label.style().unpolish(self.tracking_performance_label)
         self.tracking_performance_label.style().polish(self.tracking_performance_label)
-        self.run_tracking_button.setEnabled(False)
-        self.run_tracking_button.setText("Finishing…")
-        self.run_tracking_button.setToolTip(detail)
+        self._update_action(
+            "tracking.run",
+            enabled=False,
+            text="Finishing…",
+            tool_tip=detail,
+        )
         self.run_tracking_button.setAccessibleName(
             "Closing Neo-Tracker" if closing else "Finishing video tracking"
         )
         self.run_tracking_button.setAccessibleDescription(detail)
-
-    def _tracking_thread_finished(self) -> None:
-        job = self._tracking_job
-        self._tracking_worker = None
-        self._tracking_thread = None
-        self._tracking_job = None
-        if job is not None:
-            self._background_tasks.finish(job.token)
-        if not self._background_tasks.closing:
-            self._set_tracking_busy(False)
-            if job is not None and job.source_changed and self.media_tab is not None:
-                self.sidebar_tabs.setCurrentWidget(self.media_tab)
-                recovery_button = (
-                    self.media_relink_panel.apply_button
-                    if self.media_relink_panel.apply_button.isEnabled()
-                    else self.media_relink_panel.browse_button
-                )
-                recovery_button.setFocus(Qt.FocusReason.OtherFocusReason)
-        self._schedule_close_if_workers_stopped()
 
     def _export_tracking_csv(self) -> None:
         results = self.current_task.pipeline.results
@@ -6858,9 +6399,12 @@ class NeoTrackerWindow(QMainWindow):
         self.refresh_analysis_sources_button.setToolTip(refresh_detail)
         self.refresh_analysis_sources_button.setAccessibleDescription(refresh_detail)
         if self._analysis_thread is None:
-            self.run_analysis_button.setEnabled(source.available)
+            self._set_action_enabled("analysis.run", source.available)
         else:
-            self.run_analysis_button.setEnabled(bool(self._analysis_job and not self._analysis_job.cancelled))
+            self._set_action_enabled(
+                "analysis.run",
+                bool(self._analysis_job and not self._analysis_job.cancelled),
+            )
         return inventory
 
     def _clear_analysis_result(self, message: str | None = None, state: str | None = None) -> None:
@@ -6910,8 +6454,8 @@ class NeoTrackerWindow(QMainWindow):
         self.analysis_status_label.style().polish(self.analysis_status_label)
 
     def _set_analysis_export_enabled(self, enabled: bool) -> None:
-        self.analysis_export_csv_button.setEnabled(enabled)
-        self.analysis_export_npz_button.setEnabled(enabled)
+        self._set_action_enabled("analysis.export_csv", enabled)
+        self._set_action_enabled("analysis.export_npz", enabled)
 
     def _analysis_method_changed(self, method: str) -> None:
         is_stft = method.upper() == "STFT"
@@ -6994,66 +6538,55 @@ class NeoTrackerWindow(QMainWindow):
             self._show_analysis_failure(str(exc))
             return
 
-        token = self._background_tasks.start("analysis")
-        if token is None:
-            return
+        self._analysis_coordinator.start(
+            AnalysisRequest(
+                owner=task,
+                source=source,
+                config=config,
+                series_loader=series_loader,
+            )
+        )
+
+    def _analysis_started(self, job: AnalysisJob) -> None:
         self.analysis_controller.clear()
         self._set_analysis_export_enabled(False)
-        thread = QThread(self)
-        worker = AnalysisWorker(
-            source=source,
-            config=config,
-            owner_token=id(task),
-            series_loader=series_loader,
-        )
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.completed.connect(self._analysis_completed)
-        worker.failed.connect(self._analysis_failed)
-        worker.canceled.connect(self._analysis_cancelled)
-        worker.stage_changed.connect(self._analysis_stage_changed)
-        worker.completed.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        worker.canceled.connect(thread.quit)
-        worker.completed.connect(worker.deleteLater)
-        worker.failed.connect(worker.deleteLater)
-        worker.canceled.connect(worker.deleteLater)
-        thread.finished.connect(self._analysis_thread_finished)
-        thread.finished.connect(thread.deleteLater)
-        self._analysis_job = AnalysisJob(token=token, task=task, source=source, config=config)
-        self._analysis_thread = thread
-        self._analysis_worker = worker
-        self._set_analysis_busy(True, source)
-        thread.start()
+        self._set_analysis_busy(True)
 
-    def _set_analysis_busy(self, busy: bool, source: AnalysisSource | None = None) -> None:
+    def _set_analysis_busy(self, busy: bool) -> None:
         self._set_analysis_export_enabled(False if busy else self.analysis_controller.has_result)
         if busy:
-            active_source = source or self._current_analysis_source()
-            self.run_analysis_button.setText("Cancel")
-            self.run_analysis_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaStop))
-            self.run_analysis_button.setToolTip("Cancel the active background signal-processing job.")
+            self._update_action(
+                "analysis.run",
+                enabled=True,
+                text="Cancel",
+                icon=self.style().standardIcon(QStyle.StandardPixmap.SP_MediaStop),
+                tool_tip="Cancel the active background signal-processing job.",
+            )
             self.run_analysis_button.setAccessibleName("Cancel signal processing")
-            self.run_analysis_button.setEnabled(True)
-            self.run_tracking_button.setEnabled(False)
-            self.correct_point_button.setEnabled(False)
-            self.mark_lost_button.setEnabled(False)
-            self.rerun_after_button.setEnabled(False)
-            self._analysis_stage_changed("loading")
+            self._set_action_enabled("tracking.run", False)
+            self._set_action_enabled("review.correct", False)
+            self._set_action_enabled("review.mark_lost", False)
+            self._set_action_enabled("review.rerun", False)
+            job = self._analysis_job
+            if job is not None:
+                self._analysis_stage_changed(job, "loading")
             return
         source = self._current_analysis_source()
-        self.run_analysis_button.setText("Run processing")
-        self.run_analysis_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
-        self.run_analysis_button.setToolTip("Run FFT or STFT on the selected signal source in the background.")
+        self._update_action(
+            "analysis.run",
+            enabled=source.available,
+            text="Run processing",
+            icon=self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay),
+            tool_tip=(
+                "Run FFT or STFT on the selected signal source in the background."
+            ),
+        )
         self.run_analysis_button.setAccessibleName("Run signal processing")
-        self.run_analysis_button.setEnabled(source.available)
         self._render_tracking_status(self.current_task)
 
-    def _analysis_stage_changed(self, stage: str) -> None:
-        job = self._analysis_job
+    def _analysis_stage_changed(self, job: AnalysisJob, stage: str) -> None:
         if (
-            job is None
-            or not self._background_tasks.is_current(job.token)
+            not self._background_tasks.is_current(job.token)
             or job.cancelled
         ):
             return
@@ -7083,31 +6616,16 @@ class NeoTrackerWindow(QMainWindow):
         self._set_analysis_status(label, "running", detail)
 
     def _cancel_analysis(self, message: str, *, state: str) -> None:
-        job = self._analysis_job
-        worker = self._analysis_worker
-        if job is None or worker is None or job.cancelled:
+        if not self._analysis_coordinator.cancel(message, state=state):
             return
-        job.cancelled = True
-        job.cancel_message = message
-        job.cancel_state = state
-        worker.request_cancel()
         self.analysis_controller.clear()
         self._set_analysis_export_enabled(False)
-        self.run_analysis_button.setText("Cancelling…")
-        self.run_analysis_button.setEnabled(False)
+        self._update_action("analysis.run", enabled=False, text="Cancelling…")
         detail = f"{message} Finishing the active background operation safely."
         self.analysis_result_view.setPlainText(detail)
         self._set_analysis_status("Cancelling…", "running", detail)
 
-    def _analysis_completed(self, run_object: object) -> None:
-        job = self._analysis_job
-        if (
-            job is None
-            or not self._background_tasks.is_current(job.token)
-            or job.cancelled
-            or not isinstance(run_object, AnalysisRun)
-        ):
-            return
+    def _analysis_completed(self, job: AnalysisJob, run_object: AnalysisRun) -> None:
         source = self._current_analysis_source()
         context_matches = bool(
             job.task is self.current_task
@@ -7116,9 +6634,10 @@ class NeoTrackerWindow(QMainWindow):
             and run_object.config == self._analysis_config()
         )
         if not context_matches:
-            job.cancelled = True
-            job.cancel_message = "Task, source, or settings changed before processing finished. Run processing again."
-            job.cancel_state = "dirty" if source.available else "empty"
+            self._analysis_coordinator.cancel(
+                AnalysisCoordinator.STALE_MESSAGE,
+                state="dirty" if source.available else "empty",
+            )
             return
         self.analysis_controller.accept_run(run_object)
         self.analysis_result_view.setPlainText(run_object.summary)
@@ -7128,17 +6647,21 @@ class NeoTrackerWindow(QMainWindow):
         self._set_analysis_status(label, "complete", detail)
         self._set_analysis_finishing()
 
-    def _analysis_failed(self, message: str) -> None:
-        job = self._analysis_job
-        if job is None or not self._background_tasks.is_current(job.token) or job.cancelled:
+    def _analysis_failed(self, job: AnalysisJob, message: str) -> None:
+        if job.cancelled:
             return
         self._show_analysis_failure(message)
         self._set_analysis_finishing()
 
     def _set_analysis_finishing(self) -> None:
-        self.run_analysis_button.setText("Finishing…")
-        self.run_analysis_button.setEnabled(False)
-        self.run_analysis_button.setToolTip("Waiting for the background signal-processing thread to exit safely.")
+        self._update_action(
+            "analysis.run",
+            enabled=False,
+            text="Finishing…",
+            tool_tip=(
+                "Waiting for the background signal-processing thread to exit safely."
+            ),
+        )
         self.run_analysis_button.setAccessibleName("Finishing signal processing")
 
     def _show_analysis_failure(self, message: str) -> None:
@@ -7148,25 +6671,8 @@ class NeoTrackerWindow(QMainWindow):
         self.analysis_result_view.setPlainText(detail)
         self._set_analysis_status("Failed", "failed", detail)
 
-    def _analysis_cancelled(self) -> None:
-        job = self._analysis_job
-        if (
-            job is not None
-            and self._background_tasks.is_current(job.token)
-            and not job.cancelled
-        ):
-            job.cancelled = True
-            job.cancel_message = "Processing canceled."
-            job.cancel_state = "canceled"
-
-    def _analysis_thread_finished(self) -> None:
-        job = self._analysis_job
-        self._analysis_worker = None
-        self._analysis_thread = None
-        self._analysis_job = None
-        if job is not None:
-            self._background_tasks.finish(job.token)
-        if job is not None and job.cancelled:
+    def _analysis_thread_finished(self, job: AnalysisJob) -> None:
+        if job.cancelled:
             self.analysis_controller.clear()
             self._set_analysis_export_enabled(False)
             labels = {
@@ -7182,6 +6688,8 @@ class NeoTrackerWindow(QMainWindow):
             )
         if not self._background_tasks.closing:
             self._set_analysis_busy(False)
+
+    def _analysis_idle(self) -> None:
         self._schedule_close_if_workers_stopped()
 
     def _export_analysis_csv(self) -> None:
@@ -7279,8 +6787,11 @@ class NeoTrackerWindow(QMainWindow):
         for task in self._retired_project_tasks:
             task.close_reader()
         self._retired_project_tasks.clear()
-        self._discard_preview_decoder_session()
-        self._review_responses.clear()
+        self._analysis_coordinator.close()
+        self._review_response_coordinator.close()
+        self._preview_coordinator.close()
+        self._playback_coordinator.close()
+        self._application_shell.close()
         super().closeEvent(event)
 
     @staticmethod

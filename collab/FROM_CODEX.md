@@ -576,3 +576,407 @@ Codex 已在权威工作区完成：
 5. 运行 `PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen python3 -m unittest discover -s tests -q`，并复核 `artifacts/code-review-ui-2026-07-22/runtime-evidence.json`；不要把 offscreen/synthetic 结果外推为原生 macOS、VoiceOver、Retina 或真实硬件解码保证。
 
 请按 P0-P3 排序报告具体 findings，包含文件、行号、复现/逻辑证据、最小修复与缺失测试；若没有确定缺陷，也请明确列出检查范围和剩余风险。当前 Codex 基线是 364 tests 全通过，但 passing tests 不能替代数据绑定、取消与资源生命周期审计。
+
+## [2026-08-09 20:22 Asia/Taipei] G0 冻结架构基线 — DONE
+
+### Base
+
+- Branch: `refactor/gpt-application-shell`
+- Base SHA: `9ccc14baedaf19ad5160efdc325fb151d49c3199`
+- Head SHA: `9ccc14baedaf19ad5160efdc325fb151d49c3199`（G0 只记录证据，尚未提交）
+
+### Conclusion
+
+- 固定基线与工作清单一致，GPT 专属 worktree 从 clean `main` 创建。
+- `neo_tracker/ui/main_window.py` 当前为 7,311 行、303 个类/方法入口，直接拥有 7 类 Job、7 组主要 worker/thread、Preview session/pending request 与 Review Response pending request。
+- 生命周期职责和目标 Coordinator 已记录于 `artifacts/parallel-gpt-2026-08-09/baseline/architecture-inventory.md`。
+
+### Files Changed
+
+- `artifacts/parallel-gpt-2026-08-09/baseline/**`（新增基线证据）
+- `collab/FROM_CODEX.md`（追加本状态）
+- 未修改产品源码、测试或共享集成文件。
+
+### Tests
+
+- 定向生命周期：199/199，62.558 秒，PASS。
+- 全量：458/458，63.508 秒，PASS。
+- `compileall`：PASS。
+- `pip check`：PASS，`No broken requirements found.`
+
+### Performance
+
+- 10 万结果 5 次 heartbeat：91.43 / 69.25 / 70.85 / 77.16 / 51.15 ms；median 70.85、P95/max 91.43 ms；2/5 超过 75 ms，退出码 1。
+- GUI apply：42.70 / 66.69 / 66.41 / 74.93 / 47.93 ms。
+- fully usable：5527.65 / 4823.05 / 4207.75 / 3965.49 / 3835.96 ms。
+- `payload_equal=True`、`results_exact=True`，前后台 fingerprint 均为 `d9c2dd5992ccbd437da8cf320d4422a3137a6b7ef8ec815999f0947051c250b0`。
+- 原始合法 JSON 与 stderr 分离保存；历史波动明确保留，未宣称跨负载稳定。
+
+### Compatibility
+
+- Public API changes: none。
+- Project format changes: none。
+- User-visible behavior changes: none。
+
+### Remaining Risks
+
+- 基线自身存在 heartbeat 波动；后续关键阶段必须比较完整分布，不能只比较最好值。
+- 原生 macOS/Retina/VoiceOver、真实长时媒体和全进程资源仍不在本次 offscreen G0 证据范围内。
+
+### Next Integration Step
+
+- 进入 G1：只提取 Job/request/result 状态与 `TaskSupervisor`，保留 `BackgroundTaskCoordinator`、窗口兼容属性和现有用户流程。
+
+## [2026-08-09 20:31 Asia/Taipei] G1 Application 状态与任务监督器 — DONE
+
+### Base
+
+- Branch: `refactor/gpt-application-shell`
+- Base SHA: `dbd7016`
+- Head SHA: G1 单一提交（以最终 `git log` 为准）
+
+### Conclusion
+
+- 7 个后台 Job dataclass 已移出 `NeoTrackerWindow`，Application 层现在拥有纯生命周期状态。
+- 新 `TaskSupervisor` 统一 active kind、generation/current token、stale finish 与 close gate；窗口保留 `_background_tasks` 兼容引用。
+- `neo_tracker.ui.background_tasks` 继续提供旧类名和 token import，现有调用和测试注入点不变。
+
+### Files Changed
+
+- `neo_tracker/application/__init__.py`
+- `neo_tracker/application/task_supervisor.py`
+- `neo_tracker/application/job_state.py`
+- `neo_tracker/ui/background_tasks.py`
+- `neo_tracker/ui/main_window.py`
+- `tests/test_application_task_supervisor.py`
+- `tests/test_main_window_architecture.py`
+- `collab/FROM_CODEX.md`
+
+### Tests
+
+- 红：旧基线缺少 `neo_tracker.application`，且 7 个 Job 仍定义在 Window；2 个架构检查按预期失败。
+- 绿：TaskSupervisor/架构/旧兼容定向 8/8，PASS。
+- 主窗口相关定向 151/151，55.713 秒，PASS。
+- 全量 462/462，60.065 秒，PASS。
+- `compileall` 与 `pip check`，PASS。
+
+### Performance
+
+- G1 只移动纯状态与复用原逻辑，没有改变项目打开路径；按清单本阶段不重复关键 benchmark。
+
+### Compatibility
+
+- Public API changes: none；旧 `BackgroundTaskCoordinator` / `BackgroundTaskToken` 路径继续可用。
+- Project format changes: none。
+- User-visible behavior changes: none。
+
+### Remaining Risks
+
+- Window 仍直接构造所有 Worker/QThread；本阶段只建立所有权边界。
+- Job 状态仍由 Window 方法变更，直到相应 G2–G5 Coordinator 接管。
+
+### Next Integration Step
+
+- 进入 G2：提取 Preview request/session/thread 所有权及 Playback 协调，保留 `PreviewCanvas`、测试 reader 注入和现有状态文案。
+
+## [2026-08-09 20:44 Asia/Taipei] G2 Preview 与 Playback Coordinator — DONE
+
+### Base
+
+- Branch: `refactor/gpt-application-shell`
+- Base SHA: `c6470c8`
+- Head SHA: G2 单一提交（以最终 `git log` 为准）
+
+### Conclusion
+
+- `PreviewCoordinator` 现统一拥有 request coalescing、generation token、QThread/Worker、pending request、decoder session、cache 与终态提交；只在 thread 停止后提交当前 owner 的结果。
+- `PlaybackCoordinator` 现统一拥有 `PlaybackClock`、PreciseTimer、source-time tick、generation 与幂等 stop/close。
+- Window 不再构造 `PreviewDecodeWorker`/`PreviewDecoderSession`，也不再保存 preview thread/job/pending/session；`PreviewCanvas` 和用户可见状态仍由 UI Shell 拥有。
+
+### Files Changed
+
+- `neo_tracker/application/preview_coordinator.py`
+- `neo_tracker/application/playback_coordinator.py`
+- `neo_tracker/ui/main_window.py`
+- `tests/test_preview_coordinator.py`
+- `tests/test_playback_coordinator.py`
+- `tests/test_main_window_architecture.py`
+- `collab/FROM_CODEX.md`
+
+### Tests
+
+- 红：旧 G1 状态不存在两个 Coordinator，2 个测试模块导入失败。
+- Coordinator/架构定向：7/7，PASS；覆盖快速 scrub、旧 owner late result、close-during-decode、幂等 close、source-time skip 与 1 fps interval。
+- 原有主窗口 Preview/Playback/close/隔离 decoder：143/143，63.046 秒，PASS。
+- 全量：468/468，60.914 秒，PASS。
+- `compileall` 与 `pip check`，PASS。
+
+### Performance
+
+- G2 不属于清单要求的关键 benchmark 阶段；未声称性能改善。QThread 与 decoder helper 边界、request 合并及单 session 复用语义保持。
+
+### Compatibility
+
+- Public API changes: none。
+- Project format changes: none。
+- User-visible behavior changes: none；按钮文案、状态文案、source-time skips 与测试 reader 注入路径保持。
+- Window 暂时提供只读/测试用兼容属性，真实所有权只在 Coordinator。
+
+### Remaining Risks
+
+- Preview 的 UI current-task 判定仍由窗口在语义信号入口二次验证；G6 可在测试迁移完成后移除兼容 adapter。
+- 原生 decoder、Retina/compositor 与长时媒体稳定性不由 offscreen 回归证明。
+
+### Next Integration Step
+
+- 进入 G3：分别提取 Media Import 和 Project Open/Save 生命周期，保持 prepared → validate → atomic apply、取消不替换当前项目及 save revision/path guard。
+
+## [2026-08-09 21:21 Asia/Taipei] G3 Media Import 与 Project IO Coordinator — DONE
+
+### Conclusion
+
+- `MediaImportCoordinator` 统一拥有批量 probe 的 QThread/Worker、generation、取消、批次顺序/类型校验和 thread-stop 后终态提交。
+- `ProjectIOCoordinator` 统一拥有 staged Project Open 与后台 Project Save 生命周期；Window 只接收验证后的 `PreparedProjectOpen` / `CompletedProjectSave` 并执行 UI 原子提交与 revision dirty-state 呈现。
+- Window 不再构造或保存 MediaProbe、ProjectOpen、ProjectSave Worker/QThread/Job；只读兼容属性暂时保留给旧测试与关闭门禁。
+
+### Files Changed
+
+- `neo_tracker/application/media_import_coordinator.py`
+- `neo_tracker/application/project_io_coordinator.py`
+- `neo_tracker/ui/main_window.py`
+- `tests/test_media_import_coordinator.py`
+- `tests/test_project_io_coordinator.py`
+- `tests/test_main_window_architecture.py`
+- `tests/test_ui_main_window.py`
+- `artifacts/parallel-gpt-2026-08-09/g3/**`
+- `collab/FROM_CODEX.md`
+
+### Tests
+
+- 红：两个 Coordinator 模块缺失，Window 仍直接拥有三组 Worker/QThread，预期失败。
+- Coordinator/架构定向：11/11，PASS；覆盖 invalid/reordered payload、late result、cancel open、stale save revision/path 与 close during save。
+- 全量：477/477，77.659 秒，PASS。
+- `compileall` 与 `pip check`：PASS。
+- 定向测试中发现的 Qt 原生退出已归因于 MP4 probe fixture 意外启动独立 Preview 后立即遍历顶层窗口；该 probe 专项 fixture 改用 WAV 隔离职责，真实视频 Preview/isolated-decoder 回归未删除。
+
+### Performance
+
+- 10 万结果 5 次 heartbeat：38.21 / 50.87 / 52.27 / 52.38 / 53.69 ms；P50 52.27、P95/max 53.69 ms；0/5 超过 75 ms，退出码 0。
+- GUI apply：36.01 / 48.63 / 50.00 / 48.58 / 51.39 ms；P50 48.63、P95/max 51.39 ms。
+- fully usable：3974.59 / 4000.90 / 3993.12 / 4032.11 / 4038.62 ms；P50 4000.90、P95/max 4038.62 ms。
+- `payload_equal=True`、`results_exact=True`，fingerprint 保持 `d9c2dd5992ccbd437da8cf320d4422a3137a6b7ef8ec815999f0947051c250b0`；无稳定 >20% 回退，不将单组 5 轮结果外推为跨负载提升。
+
+### Compatibility
+
+- Public API changes: none。
+- Project format/limits changes: none。
+- Open 失败/取消不替换当前项目；保存期间可继续编辑且旧 revision 完成后仍 dirty；close during save 等待原子保存终止。
+
+### Remaining Risks
+
+- UI atomic apply 内部仍由 Window 执行；Coordinator 只保证 prepared payload 验证及 thread-stop 后交付，G6 前不移动项目渲染职责。
+- offscreen benchmark 不证明原生 macOS、VoiceOver、真实磁盘压力或长时媒体稳定。
+
+### Next Integration Step
+
+- 进入 G4：提取 Tracking Full/Rerun 生命周期；在首个有效新帧之前不得替换旧 Results/Edits，保留 source drift 隔离、checkpoint/prefetch 与 spawn 进程终止语义。
+
+## [2026-08-09 21:40 Asia/Taipei] G4 Tracking Coordinator — DONE
+
+### Conclusion
+
+- `TrackingCoordinator` 已接管 Full/Rerun Job 快照、QThread/Worker、取消、progress 性能采样、首个有效新帧 replacement gate、source drift/零帧恢复、superseded edits 与 `TrackingRunRecord`。
+- Window 不再构造或保存 Tracking Worker/QThread/Job；仅保留用户确认、source-review UI、progress 呈现和稳定终态渲染。
+- Worker 的 spawn 子进程、16 帧 checkpoint、bounded prefetch、cancel grace、terminate/kill 与前后 source identity 校验未改动。
+
+### Files Changed
+
+- `neo_tracker/application/tracking_coordinator.py`
+- `neo_tracker/application/job_state.py`
+- `neo_tracker/ui/main_window.py`
+- `tests/test_tracking_coordinator.py`
+- `tests/test_main_window_architecture.py`
+- `artifacts/parallel-gpt-2026-08-09/g4/**`
+- `collab/FROM_CODEX.md`
+
+### Tests
+
+- 红：Coordinator 模块不存在，Window 仍直接拥有/构造 Tracking 生命周期，预期失败。
+- 新 Coordinator 状态测试覆盖 Full 首帧 replacement、Rerun edit supersede、零帧取消恢复、late progress 拒绝、active Rerun cancel/failure、source drift 分类与 close gate。
+- 原 TrackingWorker + MainWindow + Coordinator/架构定向：178/178，57.426 秒，PASS（最终额外增加两个纯 Rerun matrix case）。
+- 最终全量：485/485，68.187 秒，PASS；compileall 与 pip check 通过。原始证据位于 G4 artifacts；状态映射见 `tracking-state-matrix.md`。
+
+### Performance
+
+- 首组 heartbeat：35.16 / 50.61 / 52.23 / 51.71 / 111.84 ms，1/5 超 75 ms，退出码 1；outlier 位于 decoding validated records。
+- 确认组 heartbeat：36.59 / 108.09 / 54.87 / 45.95 / 47.40 ms，1/5 超 75 ms，退出码 1；outlier 位于 finished → finished。
+- 10 轮合计 2/10 超限；中位数未相对 G0/G3 回退，但孤立 outlier 仍存在并完整保留，未宣称解决。
+- 两组均 `payload_equal=True`、`results_exact=True`，fingerprint 不变，deferred views 全部完成。
+
+### Compatibility
+
+- Public API/project format/scientific outputs: unchanged。
+- Tracking domain terminal 仍可在线程退出前稳定写入；按钮和 sidebar 必须等 QThread 真正退出才解锁。
+- Full/Rerun 零帧恢复、source changed 丢弃新结果、Rerun failure 只留 prefix 与 canceled checkpoint 语义保持。
+
+### Remaining Risks
+
+- 10 万结果打开仍有 20% 样本级 outlier；不是 G4 Tracking 路径的功能回归，但也不能视为已稳定。
+- Window 仍负责 source quarantine UI 与终态渲染；G6 只应收口 action/view state，不应再移动 Tracking 科学结果所有权。
+
+### Next Integration Step
+
+- 进入 G5：分别提取 Analysis 与 Review Response 生命周期，保留 context/revision stale-result gate、pending request 合并、取消与 close 行为。
+
+## [2026-08-09 22:08 Asia/Taipei] G5 Analysis 与 Review Response Coordinator — DONE
+
+### Base
+
+- Branch: `refactor/gpt-application-shell`
+- Base SHA: `c921eee`
+- Head SHA: `99681ee`
+
+### Conclusion
+
+- `AnalysisCoordinator` 已接管 FFT/STFT Worker、阶段状态、取消与 owner/source/settings stale-result gate。
+- `ReviewResponseCoordinator` 已接管 latest-only pending request、worker 生命周期、有效性复验与有界 LRU 提交。
+- Window 不再构造或保存 Analysis/Review Response QThread、Worker、Job 或 pending request；数学实现与 Observation response 计算未修改。
+
+### Files Changed
+
+- `neo_tracker/application/analysis_coordinator.py`
+- `neo_tracker/application/review_response_coordinator.py`
+- `neo_tracker/ui/main_window.py`
+- `tests/test_analysis_coordinator.py`
+- `tests/test_review_response_coordinator.py`
+- `tests/test_main_window_architecture.py`
+- `artifacts/parallel-gpt-2026-08-09/g5/**`
+
+### Tests
+
+- Coordinator/架构定向：15/15，PASS。
+- Analysis/Review/Application 定向：63/63，PASS。
+- 既有 `test_ui_main_window`：143/143，PASS。
+- 全量：495/495，68.267 秒，PASS。
+- `compileall`、`pip check` 与 `git diff --check`：PASS。
+
+### Performance
+
+- G5 未改变项目打开路径；按工单只在关键 G6 再运行 10 万结果基准。
+
+### Compatibility
+
+- Public API changes: none。
+- Project format/scientific outputs: unchanged。
+- Analysis 导出只在 context-valid result 接受后启用；取消、失败、stale 或运行中保持禁用。
+
+### Remaining Risks
+
+- 原生音视频解码、系统负载与 VoiceOver 不由本阶段的 offscreen 生命周期测试证明。
+
+### Next Integration Step
+
+- 进入 G6：统一 Action Registry、不可变 ViewState 与 Application Shell，完成结构审计和关键基准。
+
+## [2026-08-09 22:39 Asia/Taipei] G6 Action Registry 与 Window Shell — DONE
+
+### Base
+
+- Branch: `refactor/gpt-application-shell`
+- Base SHA: `99681ee`
+- Head SHA: `a7491be`
+
+### Conclusion
+
+- 16 个主要命令现在由一个 `ActionRegistry` 注册，按钮与菜单共享同一 QAction/处理入口。
+- 主要命令的 enabled/text/tooltip 由不可变 `ViewState` 驱动，`ApplicationShell` 负责绑定和投影。
+- Window 内 7 个 Job dataclass、7 组主要 Worker/QThread 构造和 Preview/Review pending/session 存储均已移除；剩余旧字段名只是 Coordinator 状态的只读测试适配器。
+
+### Files Changed
+
+- `neo_tracker/ui/action_registry.py`
+- `neo_tracker/ui/view_state.py`
+- `neo_tracker/ui/shell/__init__.py`
+- `neo_tracker/ui/shell/main_shell.py`
+- `neo_tracker/ui/shell/bindings.py`
+- `neo_tracker/ui/main_window.py`
+- `tests/test_action_registry.py`
+- `tests/test_view_state.py`
+- `tests/test_application_shell.py`
+- `tests/test_main_window_architecture.py`
+- `artifacts/parallel-gpt-2026-08-09/g6/**`
+
+### Tests
+
+- G6 Action/ViewState/Shell/architecture：13/13，PASS。
+- 全量：502/502，60.590 秒，PASS。
+- `compileall`、`pip check` 与 `git diff --check`：PASS。
+
+### Performance
+
+- 首组 5 次 heartbeat：38.16 / 76.56 / 50.01 / 45.60 / 51.50 ms，1/5 超 75 ms，退出码 1。
+- 确认组：40.34 / 45.02 / 50.02 / 45.23 / 46.62 ms，0/5 超限，退出码 0。
+- 两组均 `payload_equal=true`、`results_exact=true`、deferred views 完成且 fingerprint 不变；相对 G0 没有稳定 >20% 回退。
+- 76.56 ms outlier 原样保留，不宣称跨负载稳定性已解决。
+
+### Compatibility
+
+- Public API/project format/scientific outputs/user-visible workflow: unchanged。
+- 未添加大规模快捷键、布局改版或 QSS 迁移。
+
+### Remaining Risks
+
+- `main_window.py` 仍承担复杂 Widget 构建和渲染；本工单只提取应用协调、状态与命令边界。
+- offscreen 回归不证明原生 Retina、VoiceOver、真实长时媒体或所有系统负载窗口。
+
+### Next Integration Step
+
+- 仅交付分支和提交；由集成人审查后决定合并，GPT 不直接修改 `main`。
+
+## [2026-08-10 01:14 Asia/Taipei] 最终工单验收与 Qt harness 修正 — DONE
+
+### Base
+
+- Branch: `refactor/gpt-application-shell`
+- Base SHA: `a7491be`
+- Head SHA: 本节对应独立收尾提交。
+
+### Conclusion
+
+- 逐项复核工作清单时，定向模块组合首次复现退出码 134：Preview/Playback 测试先创建 `QCoreApplication`，后续 QWidget 测试无法再创建 `QApplication`，Qt 直接 abort。
+- 两处测试改为统一创建 `QApplication`；相同顺序的 12 模块组合现稳定通过。
+- 同时补齐此前遗漏的 G5/G6 `FROM_CODEX` 阶段记录；产品源码、项目格式和科学结果均未改变。
+
+### Files Changed
+
+- `tests/test_preview_coordinator.py`
+- `tests/test_playback_coordinator.py`
+- `artifacts/parallel-gpt-2026-08-09/final-audit/README.md`
+- `collab/FROM_CODEX.md`
+
+### Tests
+
+- 顺序回归：44/44，1.665 秒，PASS。
+- 全量：502/502，63.586 秒，PASS。
+- `compileall`：PASS。
+- `pip check`：PASS，`No broken requirements found.`
+- `git diff --check` 与所有权/禁区检查：PASS。
+
+### Performance
+
+- 8 核、load 3.96 下 10 万结果 5 次 heartbeat：63.45 / 49.08 / 48.58 / 48.85 / 47.40 ms；0/5 超 75 ms，退出码 0。
+- GUI apply：59.89 / 46.81 / 44.97 / 45.27 / 45.06 ms；fully usable：3860.66 / 3837.36 / 3861.27 / 3910.11 / 3810.41 ms。
+- payload/results/fingerprint 一致，deferred views 完成；历史 outlier 保留，未外推为所有负载稳定。
+
+### Compatibility
+
+- Public API changes: none。
+- Project format/scientific/user-visible behavior changes: none。
+
+### Remaining Risks
+
+- 原生系统无障碍、真实长时媒体、系统满载调度与部署签名不属于本架构工单的 offscreen 完成证据。
+
+### Next Integration Step
+
+- 交付 `refactor/gpt-application-shell` 分支及全部独立提交；不直接合并 `main`。

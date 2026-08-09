@@ -1,0 +1,83 @@
+[
+  {
+    "results": 100000,
+    "file_mib": 44.39827632904053,
+    "synchronous": {
+      "call_ms": 2126.593374996446,
+      "batch_ms": 2126.594416971784,
+      "max_heartbeat_ms": 2130.4872920154594,
+      "max_gap_phase_before": "",
+      "max_gap_phase_after": ""
+    },
+    "background": {
+      "call_ms": 0.44008297845721245,
+      "batch_ms": 4038.6225000256673,
+      "max_heartbeat_ms": 53.69183298898861,
+      "max_gap_phase_before": "Opening project \u00b7 verifying the saved baseline\u2026",
+      "max_gap_phase_after": "finished",
+      "apply_ms": 51.3910410227254
+    },
+    "results_exact": true,
+    "synchronous_signature": {
+      "project_path": "/var/folders/hf/vzc3ptl17dv1r73k0yw4zt180000gn/T/tmp4vd5jqkz/large-100000.ntproj",
+      "tasks": 1,
+      "results": 100000,
+      "fingerprint": "d9c2dd5992ccbd437da8cf320d4422a3137a6b7ef8ec815999f0947051c250b0",
+      "dirty": false
+    },
+    "background_signature": {
+      "project_path": "/var/folders/hf/vzc3ptl17dv1r73k0yw4zt180000gn/T/tmp4vd5jqkz/large-100000.ntproj",
+      "tasks": 1,
+      "results": 100000,
+      "fingerprint": "d9c2dd5992ccbd437da8cf320d4422a3137a6b7ef8ec815999f0947051c250b0",
+      "dirty": false
+    },
+    "payload_equal": true,
+    "deferred_state": {
+      "diagnostics_pending": false,
+      "analysis_pending": false
+    },
+    "background_runs": [
+      {
+        "call_ms": 0.8854159968905151,
+        "batch_ms": 3974.5884999865666,
+        "max_heartbeat_ms": 38.209375052247196,
+        "max_gap_phase_before": "Opening project \u00b7 verifying the saved baseline\u2026",
+        "max_gap_phase_after": "finished",
+        "apply_ms": 36.009958013892174
+      },
+      {
+        "call_ms": 0.42516598477959633,
+        "batch_ms": 4000.8989999769256,
+        "max_heartbeat_ms": 50.86916696745902,
+        "max_gap_phase_before": "Opening project \u00b7 verifying the saved baseline\u2026",
+        "max_gap_phase_after": "finished",
+        "apply_ms": 48.632790974806994
+      },
+      {
+        "call_ms": 0.4964160034433007,
+        "batch_ms": 3993.1249159853905,
+        "max_heartbeat_ms": 52.268417028244585,
+        "max_gap_phase_before": "Opening project \u00b7 verifying the saved baseline\u2026",
+        "max_gap_phase_after": "finished",
+        "apply_ms": 50.00345897860825
+      },
+      {
+        "call_ms": 0.47208304749801755,
+        "batch_ms": 4032.111958018504,
+        "max_heartbeat_ms": 52.3765420075506,
+        "max_gap_phase_before": "Opening project \u00b7 verifying the saved baseline\u2026",
+        "max_gap_phase_after": "finished",
+        "apply_ms": 48.57554199406877
+      },
+      {
+        "call_ms": 0.44008297845721245,
+        "batch_ms": 4038.6225000256673,
+        "max_heartbeat_ms": 53.69183298898861,
+        "max_gap_phase_before": "Opening project \u00b7 verifying the saved baseline\u2026",
+        "max_gap_phase_after": "finished",
+        "apply_ms": 51.3910410227254
+      }
+    ]
+  }
+]
