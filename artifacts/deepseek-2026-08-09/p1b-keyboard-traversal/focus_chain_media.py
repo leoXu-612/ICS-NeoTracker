@@ -45,6 +45,31 @@ def main() -> int:
         for _ in range(10):
             app.processEvents()
         QTest.keyClick(window.add_media_button, Qt.Key.Key_Space)
+
+        # Evidence: while the media probe is running, the Cancel Import control
+        # must be keyboard-reachable. Walk Tab from the current focus briefly.
+        importing_focus: list[dict] = []
+        importing_seen: set[tuple] = set()
+        for _ in range(12):
+            current = QApplication.focusWidget()
+            entry = describe(current)
+            if entry is None:
+                break
+            key = (
+                entry["class"],
+                entry["object_name"],
+                entry["text"],
+                entry["accessible_name"],
+            )
+            entry["step"] = len(importing_focus)
+            importing_focus.append(entry)
+            if key in importing_seen:
+                break
+            importing_seen.add(key)
+            QTest.keyClick(current, Qt.Key.Key_Tab)
+            for _ in range(4):
+                app.processEvents()
+
         deadline = 800
         while deadline > 0 and (
             window._media_probe_thread is not None or not window.tasks
@@ -95,6 +120,11 @@ def main() -> int:
         "media_added_via_keyboard": task_created,
         "media_available": media_available,
         "task_title": window.tasks[0].title() if window.tasks else None,
+        "importing_focus_steps": importing_focus,
+        "cancel_import_reachable": any(
+            "Cancel Import" in (e.get("text") or "")
+            for e in importing_focus
+        ),
         "steps": visited,
         "loop_closed": first_key is not None and any(
             (e["class"], e["object_name"], e["text"], e["accessible_name"]) == first_key

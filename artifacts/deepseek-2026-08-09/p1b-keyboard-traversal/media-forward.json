@@ -3,6 +3,59 @@
   "media_added_via_keyboard": true,
   "media_available": true,
   "task_title": "red-dot-tracking.mp4",
+  "importing_focus_steps": [
+    {
+      "class": "QListWidget",
+      "object_name": "taskList",
+      "text": "",
+      "accessible_name": "Media tasks",
+      "enabled": true,
+      "visible": true,
+      "has_focus": true,
+      "step": 0
+    },
+    {
+      "class": "PreviewCanvas",
+      "object_name": "previewCanvas",
+      "text": "No media loaded\nAdd a video or WAV file from the Media tab.",
+      "accessible_name": "Video preview and ROI editor",
+      "enabled": true,
+      "visible": true,
+      "has_focus": true,
+      "step": 1
+    },
+    {
+      "class": "QTabBar",
+      "object_name": "qt_tabwidget_tabbar",
+      "text": "",
+      "accessible_name": "Neo-Tracker workflow section tabs",
+      "enabled": true,
+      "visible": true,
+      "has_focus": true,
+      "step": 2
+    },
+    {
+      "class": "QPushButton",
+      "object_name": "addMediaButton",
+      "text": "Cancel Import",
+      "accessible_name": "Cancel media import",
+      "enabled": true,
+      "visible": true,
+      "has_focus": true,
+      "step": 3
+    },
+    {
+      "class": "QListWidget",
+      "object_name": "taskList",
+      "text": "",
+      "accessible_name": "Media tasks",
+      "enabled": true,
+      "visible": true,
+      "has_focus": true,
+      "step": 4
+    }
+  ],
+  "cancel_import_reachable": true,
   "steps": [
     {
       "class": "QListWidget",

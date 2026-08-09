@@ -39,6 +39,9 @@ PreviewCanvas(视频预览和 ROI 编辑器) → workflow section tabs(QTabBar) 
 - 键盘激活 Add media（patch 文件对话框返回
   `artifacts/experiment-videos/red-dot-tracking.mp4`）→ 媒体 probe 完成 →
   `media_added_via_keyboard=True`、`media_available=True`、task 创建。
+- 加载中状态：probe 进行期间 Tab 遍历可见 `Cancel Import` 按钮
+  （`cancel_import_reachable=True`，`importing_focus_steps` 5 步）——运行中
+  状态控件的键盘可达性有证据。
 - 遍历（`media-forward.json`）：Media tasks → Remove Task → Relink Media →
   Run Tracking → Report → PreviewCanvas → Previous → Play → Next →
   帧号 QSpinBox → 时间线 QSlider → workflow tabs → Add media → Open Project →
