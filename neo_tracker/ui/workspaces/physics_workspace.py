@@ -96,6 +96,7 @@ class PhysicsWorkspace(QFrame):
         self.series_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.series_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.series_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.series_table.setTabKeyNavigation(False)
         self.series_table.setAlternatingRowColors(True)
         self.series_table.verticalHeader().setVisible(False)
         self.series_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
@@ -149,6 +150,8 @@ class PhysicsWorkspace(QFrame):
                 "Open Review diagnostics",
             ),
         )
+
+        QWidget.setTabOrder(self.series_combo, self.series_table)
         self._add_page(
             "Runs",
             self._route_page(
@@ -202,6 +205,10 @@ class PhysicsWorkspace(QFrame):
                 color: #20272C;
                 selection-background-color: #DCEAF4;
                 selection-color: #20272C;
+            }
+            QToolButton:focus {
+                border: 2px solid #2F6F9F;
+                border-radius: 4px;
             }
             """
         )

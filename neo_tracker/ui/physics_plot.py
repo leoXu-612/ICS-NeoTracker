@@ -289,7 +289,12 @@ class PhysicsPlot(QWidget):
 
     def export_image(self, path: str | Path) -> bool:
         target = Path(path)
-        image = QPixmap(max(1, self.width()), max(1, self.height()))
+        scale = max(1.0, float(self.devicePixelRatioF()))
+        image = QPixmap(
+            max(1, int(math.ceil(self.width() * scale))),
+            max(1, int(math.ceil(self.height() * scale))),
+        )
+        image.setDevicePixelRatio(scale)
         image.fill(QColor("#FBFCFC"))
         self.render(image)
         return bool(image.save(str(target), "PNG"))
@@ -306,6 +311,7 @@ class PhysicsPlot(QWidget):
         if bounds is None:
             painter.setPen(QColor("#626A70"))
             painter.drawText(plot_rect, Qt.AlignmentFlag.AlignCenter, "Choose a physical series to plot")
+            self._paint_focus_ring(painter)
             return
         time_min, time_max, value_min, value_max = bounds
         for fraction in (0.25, 0.5, 0.75):
@@ -360,6 +366,7 @@ class PhysicsPlot(QWidget):
         )
         unit = next((item.unit for item in self._series if item.unit), "unit unavailable")
         painter.drawText(QRectF(4.0, plot_rect.top(), 48.0, 20.0), Qt.AlignmentFlag.AlignRight, unit)
+        self._paint_focus_ring(painter)
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         self._prepare_envelopes()
@@ -508,6 +515,15 @@ class PhysicsPlot(QWidget):
             Qt.AlignmentFlag.AlignCenter,
             f"{time_s:.6f} s",
         )
+
+    def _paint_focus_ring(self, painter: QPainter) -> None:
+        if not self.hasFocus():
+            return
+        painter.save()
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.setPen(QPen(QColor("#2F6F9F"), 2.0))
+        painter.drawRect(QRectF(self.rect()).adjusted(1.0, 1.0, -2.0, -2.0))
+        painter.restore()
 
     def _series_by_id(self, series_id: str | None) -> SampleSeries | None:
         if series_id is None:

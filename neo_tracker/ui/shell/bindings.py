@@ -205,6 +205,7 @@ ACTION_BINDINGS = (
     ActionBinding("review.rerun", "rerun_after_button", "_rerun_after_current_result", "review"),
     ActionBinding("review.jump", "jump_to_result_button", "_jump_to_selected_result", "review"),
     ActionBinding("physics.residual", "show_residual_button", "_toggle_physics_residual", "review"),
+    ActionBinding("view.canvas_focus", "canvas_focus_button", "_toggle_canvas_focus", "review"),
 )
 
 PRIMARY_BUTTON_ATTRIBUTES = {

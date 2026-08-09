@@ -170,7 +170,11 @@ from neo_tracker.ui.tracking_worker import (
     TrackingProgress,
     TrackingWorker,
 )
-from neo_tracker.ui.view_state import ViewState
+from neo_tracker.ui.view_state import (
+    PhysicsWorkspaceState,
+    PhysicsWorkspaceStateStore,
+    ViewState,
+)
 from neo_tracker.ui.workspaces import PhysicsWorkspace
 
 
@@ -223,10 +227,21 @@ class ElidingLabel(QLabel):
 class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
     physicsOperationRequested = Signal(object)
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        physics_layout_store: PhysicsWorkspaceStateStore | None = None,
+    ) -> None:
         super().__init__()
         self.setWindowTitle("Neo-Tracker")
         self.resize(1280, 780)
+        self._physics_layout_store = (
+            physics_layout_store or PhysicsWorkspaceStateStore.application_default()
+        )
+        self._restoring_physics_layout = False
+        self._canvas_focus_active = False
+        self._canvas_focus_main_sizes: tuple[int, ...] = ()
+        self._canvas_focus_sidebar_visible = True
         self.registry = default_preset_registry()
         self.default_pipeline_key = next(iter(self.registry))
         self.project_controller = ProjectTaskController(
@@ -360,6 +375,12 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self.run_tracking_button = QPushButton("Run Tracking")
         self.export_tracking_csv_button = QPushButton("Export CSV")
         self.export_report_button = QPushButton("Report")
+        self.canvas_focus_button = QPushButton("Canvas Focus")
+        self.canvas_focus_button.setToolTip("Temporarily enlarge the video canvas.")
+        self.canvas_focus_button.setAccessibleName("Enter canvas focus mode")
+        self.canvas_focus_button.setAccessibleDescription(
+            "Temporarily hide the inspector and collapse the bottom workspace to enlarge the video canvas."
+        )
         self.roi_status_label = QLabel("Default ROI from selected preset")
         self.scale_status_label = QLabel("Pixel units")
         self.curve_half_width_spin = QDoubleSpinBox()
@@ -529,6 +550,7 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         )
 
         self._build_ui()
+        self._restore_physics_layout()
         self._reset_physics_context()
         self._application_shell = ApplicationShell(self)
         self.action_registry.bind_button("physics.export", self.fit_panel.export_button)
@@ -641,6 +663,7 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         app_header.addWidget(self.run_tracking_button)
         app_header.addWidget(self.export_tracking_csv_button)
         app_header.addWidget(self.export_report_button)
+        app_header.addWidget(self.canvas_focus_button)
         root_layout.addWidget(top_toolbar)
 
         self.workspace_splitter = QSplitter(Qt.Orientation.Vertical)
@@ -734,6 +757,7 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
 
         sidebar = QWidget()
         sidebar.setObjectName("rightSidebar")
+        self.right_sidebar = sidebar
         sidebar.setMinimumWidth(450)
         sidebar_layout = QVBoxLayout(sidebar)
         sidebar_layout.setContentsMargins(8, 0, 0, 0)
@@ -1756,6 +1780,8 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         sizes = self.workspace_splitter.sizes()
         if len(sizes) == 2 and sizes[1] >= 120:
             self.physics_workspace.remember_height(sizes[1])
+            if not self._restoring_physics_layout and not self._canvas_focus_active:
+                self._physics_layout_store.save(self.physics_workspace.layout_state())
 
     def _physics_workspace_layout_changed(self, state: object) -> None:
         splitter = getattr(self, "workspace_splitter", None)
@@ -1768,6 +1794,57 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         else:
             lower = min(self.physics_workspace.preferred_height, max(120, total - 180))
         splitter.setSizes([max(1, total - lower), lower])
+        if (
+            isinstance(state, PhysicsWorkspaceState)
+            and not self._restoring_physics_layout
+            and not self._canvas_focus_active
+        ):
+            self._physics_layout_store.save(state)
+
+    @property
+    def canvas_focus_active(self) -> bool:
+        return self._canvas_focus_active
+
+    def _restore_physics_layout(self) -> None:
+        state = self._physics_layout_store.load()
+        if state is None:
+            return
+        self._restoring_physics_layout = True
+        try:
+            self.physics_workspace.apply_layout_state(state)
+            self._physics_workspace_layout_changed(state)
+        finally:
+            self._restoring_physics_layout = False
+
+    def _toggle_canvas_focus(self) -> None:
+        if not self._canvas_focus_active:
+            self._canvas_focus_active = True
+            self._canvas_focus_main_sizes = tuple(self.main_splitter.sizes())
+            self._canvas_focus_sidebar_visible = self.right_sidebar.isVisible()
+            self.right_sidebar.hide()
+            self.main_splitter.setSizes([max(1, self.main_splitter.width()), 0])
+            self.physics_workspace.set_canvas_focus(True)
+            self._update_action(
+                "view.canvas_focus",
+                text="Exit Focus",
+                tool_tip="Restore the inspector and physics workspace layout.",
+            )
+            self.canvas_focus_button.setAccessibleName("Exit canvas focus mode")
+            self.statusBar().showMessage("Canvas Focus · inspector hidden · physics workspace collapsed")
+            return
+        self._canvas_focus_active = False
+        if self._canvas_focus_sidebar_visible:
+            self.right_sidebar.show()
+        if self._canvas_focus_main_sizes:
+            self.main_splitter.setSizes(list(self._canvas_focus_main_sizes))
+        self.physics_workspace.set_canvas_focus(False)
+        self._update_action(
+            "view.canvas_focus",
+            text="Canvas Focus",
+            tool_tip="Temporarily enlarge the video canvas.",
+        )
+        self.canvas_focus_button.setAccessibleName("Enter canvas focus mode")
+        self.statusBar().showMessage("Canvas Focus ended · workspace layout restored", 4000)
 
     def _physics_route_requested(self, route: str) -> None:
         if route == "Signal":

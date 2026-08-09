@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
+
+from PySide6.QtCore import QSettings
+from PySide6.QtGui import QGuiApplication
 
 
 PHYSICS_WORKSPACE_PAGES = (
@@ -51,6 +55,49 @@ class PhysicsWorkspaceState:
             page=value.get("page", "Data"),  # type: ignore[arg-type]
             height=value.get("height", 280),  # type: ignore[arg-type]
         )
+
+
+class PhysicsWorkspaceStateStore:
+    """Persist only bounded presentation state; analysis data never enters settings."""
+
+    KEY = "ui/physics-workspace-v1"
+
+    def __init__(self, settings: QSettings | None = None) -> None:
+        self._settings = settings
+        self._memory_value: str | None = None
+
+    @classmethod
+    def application_default(cls) -> "PhysicsWorkspaceStateStore":
+        # Headless tests must not modify a user's macOS preferences. Tests that
+        # exercise restart persistence inject one shared in-memory/INI store.
+        if QGuiApplication.instance() is not None and QGuiApplication.platformName() == "offscreen":
+            return cls()
+        return cls(QSettings("ICS", "NeoTracker"))
+
+    def load(self) -> PhysicsWorkspaceState | None:
+        raw = (
+            self._settings.value(self.KEY, None)
+            if self._settings is not None
+            else self._memory_value
+        )
+        if not isinstance(raw, str) or not raw:
+            return None
+        try:
+            decoded = json.loads(raw)
+            if not isinstance(decoded, dict):
+                return None
+            return PhysicsWorkspaceState.from_mapping(decoded)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return None
+
+    def save(self, state: PhysicsWorkspaceState) -> None:
+        if not isinstance(state, PhysicsWorkspaceState):
+            raise TypeError("state must be PhysicsWorkspaceState")
+        encoded = json.dumps(state.to_mapping(), sort_keys=True, separators=(",", ":"))
+        if self._settings is None:
+            self._memory_value = encoded
+        else:
+            self._settings.setValue(self.KEY, encoded)
 
 
 @dataclass(frozen=True)
