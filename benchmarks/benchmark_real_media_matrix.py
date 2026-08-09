@@ -118,6 +118,63 @@ def child_pids() -> list[tuple[int, int]]:
     return results
 
 
+def _ps_cpu(pid: int) -> float:
+    """Return one-shot CPU percentage for a process via `ps`."""
+
+    try:
+        text = subprocess.run(
+            ["ps", "-o", "%cpu=", "-p", str(pid)],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        return float(text) if text else 0.0
+    except (subprocess.CalledProcessError, ValueError):
+        return 0.0
+
+
+class _CpuSampler:
+    """Periodically sample this process's CPU percentage on a daemon thread."""
+
+    def __init__(self, interval_s: float = 0.05) -> None:
+        self._interval_s = interval_s
+        self.samples: list[float] = []
+        self._event = threading.Event()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+
+    def _run(self) -> None:
+        while not self._event.is_set():
+            self.samples.append(_ps_cpu(os.getpid()))
+            time.sleep(self._interval_s)
+
+    def start(self) -> None:
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._event.set()
+        self._thread.join(timeout=1.0)
+
+    def summary(self) -> dict[str, Any]:
+        if not self.samples:
+            return {
+                "peak_parent_cpu_percent": 0.0,
+                "median_parent_cpu_percent": 0.0,
+                "cpu_samples": 0,
+            }
+        ordered = sorted(self.samples)
+        count = len(ordered)
+        median = (
+            ordered[count // 2]
+            if count % 2
+            else (ordered[count // 2 - 1] + ordered[count // 2]) / 2.0
+        )
+        return {
+            "peak_parent_cpu_percent": round(max(ordered), 2),
+            "median_parent_cpu_percent": round(median, 2),
+            "cpu_samples": count,
+        }
+
+
 def residual_processes() -> list[tuple[int, int, str]]:
     """Return any live spawn-like children of this process that survived a run."""
 
@@ -190,6 +247,7 @@ def run_full_tracking(
 
     peak_child_rss_kb = 0
     sampling = threading.Event()
+    cpu_sampler = _CpuSampler()
 
     def sample_rss() -> None:
         nonlocal peak_child_rss_kb
@@ -200,6 +258,7 @@ def run_full_tracking(
 
     sampler = threading.Thread(target=sample_rss, daemon=True)
     sampler.start()
+    cpu_sampler.start()
     started_at = time.perf_counter()
     thread = threading.Thread(target=worker.run, daemon=True)
     thread.start()
@@ -207,6 +266,7 @@ def run_full_tracking(
     elapsed_s = time.perf_counter() - started_at
     sampling.set()
     sampler.join(timeout=1.0)
+    cpu_sampler.stop()
     if thread.is_alive():
         raise RuntimeError(f"{label}: tracking run did not finish within 600s")
 
@@ -234,6 +294,7 @@ def run_full_tracking(
         else 0.0,
         "peak_parent_rss_kb": parent_max_rss_kb,
         "peak_child_rss_kb": peak_child_rss_kb,
+        **cpu_sampler.summary(),
         "progress_samples": len(progresses),
         "residual_processes": residual,
     }
@@ -269,6 +330,8 @@ def run_cancel(
         lambda *args: completions.append(args),
         Qt.ConnectionType.DirectConnection,
     )
+    cpu_sampler = _CpuSampler()
+    cpu_sampler.start()
     thread = threading.Thread(target=worker.run, daemon=True)
     thread.start()
     time.sleep(cancel_after_s)
@@ -276,6 +339,7 @@ def run_cancel(
     worker.request_cancel()
     thread.join(timeout=10.0)
     cancel_latency_s = time.perf_counter() - cancel_started
+    cpu_sampler.stop()
     time.sleep(0.4)
     return {
         "cancel_requested_after_s": cancel_after_s,
@@ -284,6 +348,7 @@ def run_cancel(
         "completions": completions,
         "failures": failures,
         "results": len(pipeline.results),
+        **cpu_sampler.summary(),
         "residual_processes": residual_processes(),
     }
 
@@ -319,13 +384,17 @@ def run_source_replacement(
         lambda *args: completions.append(args),
         Qt.ConnectionType.DirectConnection,
     )
+    cpu_sampler = _CpuSampler()
+    cpu_sampler.start()
     thread = threading.Thread(target=worker.run, daemon=True)
     thread.start()
     time.sleep(replace_after_s)
     if not replacement.exists():
+        cpu_sampler.stop()
         raise FileNotFoundError(f"replacement media is missing: {replacement}")
     shutil.copyfile(replacement, path)
     thread.join(timeout=30.0)
+    cpu_sampler.stop()
     time.sleep(0.4)
     source_changed = any(
         message.startswith(TRACKING_SOURCE_CHANGED_PREFIX)
@@ -338,6 +407,7 @@ def run_source_replacement(
         "completions": completions,
         "failures": [message[:160] for message, _c in failures],
         "results": len(pipeline.results),
+        **cpu_sampler.summary(),
         "residual_processes": residual_processes(),
     }
 

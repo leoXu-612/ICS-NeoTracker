@@ -72,6 +72,24 @@
 
 - 10/10 成功读帧；无残留进程。
 
+## CPU 采样（2026-08-09 补充，主进程 `ps %cpu`）
+
+矩阵脚本新增 `_CpuSampler`（0.05 s 间隔采样主进程 CPU%，记录 peak/median/样本数）；
+两轮 JSON：`benchmark-p0b-cpu-round{1,2}.json`（+ `.stderr.txt`）。
+
+| 场景 | 轮次 | CPU peak / median（主进程） | 采样数 | parent/child RSS peak KB |
+| --- | --- | --- | --- | --- |
+| real-h264 Full Run | 1 / 2 | 37.3% / 37.3% · 36.4% / 34.7% | 4 / 4 | 111,559/93,568 · 110,330/108,624 |
+| hevc-transcode Full Run | 2 | 4.2% / 4.2% | 4 | 113,181/104,160 |
+| upscale-1080p Full Run | 2 | 23.0% / 5.95% | 8 | 137,773/291,392 |
+| Cancel（0.6 s 请求） | 1 / 2 | 4.5% / 3.35% · 5.4% / — | 4 / 4 | — |
+| 来源替换检测 | 1 / 2 | 29.8% / 4.8% · 25.5% / — | 8 / 8 | — |
+
+- 72 帧片段运行仅 0.2 s，Full Run 采样点 4–8 个；CPU% 为满载宿主（8 核 load
+  峰值 >9）下的观测值，含系统噪声，仅作为运行期资源占用证据。
+- 功耗/温度/热降频仍需 root `powermetrics`，`BLOCKED`；长会话 CPU/RSS 趋势
+  随真实素材闭环。
+
 ## 残留进程与资源证据
 
 - 每轮每测试后 `residual_processes == []`；`multiprocessing.active_children()` 空。
