@@ -780,3 +780,50 @@ Codex 已在权威工作区完成：
 ### Next Integration Step
 
 - 进入 G4：提取 Tracking Full/Rerun 生命周期；在首个有效新帧之前不得替换旧 Results/Edits，保留 source drift 隔离、checkpoint/prefetch 与 spawn 进程终止语义。
+
+## [2026-08-09 21:40 Asia/Taipei] G4 Tracking Coordinator — DONE
+
+### Conclusion
+
+- `TrackingCoordinator` 已接管 Full/Rerun Job 快照、QThread/Worker、取消、progress 性能采样、首个有效新帧 replacement gate、source drift/零帧恢复、superseded edits 与 `TrackingRunRecord`。
+- Window 不再构造或保存 Tracking Worker/QThread/Job；仅保留用户确认、source-review UI、progress 呈现和稳定终态渲染。
+- Worker 的 spawn 子进程、16 帧 checkpoint、bounded prefetch、cancel grace、terminate/kill 与前后 source identity 校验未改动。
+
+### Files Changed
+
+- `neo_tracker/application/tracking_coordinator.py`
+- `neo_tracker/application/job_state.py`
+- `neo_tracker/ui/main_window.py`
+- `tests/test_tracking_coordinator.py`
+- `tests/test_main_window_architecture.py`
+- `artifacts/parallel-gpt-2026-08-09/g4/**`
+- `collab/FROM_CODEX.md`
+
+### Tests
+
+- 红：Coordinator 模块不存在，Window 仍直接拥有/构造 Tracking 生命周期，预期失败。
+- 新 Coordinator 状态测试覆盖 Full 首帧 replacement、Rerun edit supersede、零帧取消恢复、late progress 拒绝、active Rerun cancel/failure、source drift 分类与 close gate。
+- 原 TrackingWorker + MainWindow + Coordinator/架构定向：178/178，57.426 秒，PASS（最终额外增加两个纯 Rerun matrix case）。
+- 最终全量：485/485，68.187 秒，PASS；compileall 与 pip check 通过。原始证据位于 G4 artifacts；状态映射见 `tracking-state-matrix.md`。
+
+### Performance
+
+- 首组 heartbeat：35.16 / 50.61 / 52.23 / 51.71 / 111.84 ms，1/5 超 75 ms，退出码 1；outlier 位于 decoding validated records。
+- 确认组 heartbeat：36.59 / 108.09 / 54.87 / 45.95 / 47.40 ms，1/5 超 75 ms，退出码 1；outlier 位于 finished → finished。
+- 10 轮合计 2/10 超限；中位数未相对 G0/G3 回退，但孤立 outlier 仍存在并完整保留，未宣称解决。
+- 两组均 `payload_equal=True`、`results_exact=True`，fingerprint 不变，deferred views 全部完成。
+
+### Compatibility
+
+- Public API/project format/scientific outputs: unchanged。
+- Tracking domain terminal 仍可在线程退出前稳定写入；按钮和 sidebar 必须等 QThread 真正退出才解锁。
+- Full/Rerun 零帧恢复、source changed 丢弃新结果、Rerun failure 只留 prefix 与 canceled checkpoint 语义保持。
+
+### Remaining Risks
+
+- 10 万结果打开仍有 20% 样本级 outlier；不是 G4 Tracking 路径的功能回归，但也不能视为已稳定。
+- Window 仍负责 source quarantine UI 与终态渲染；G6 只应收口 action/view state，不应再移动 Tracking 科学结果所有权。
+
+### Next Integration Step
+
+- 进入 G5：分别提取 Analysis 与 Review Response 生命周期，保留 context/revision stale-result gate、pending request 合并、取消与 close 行为。

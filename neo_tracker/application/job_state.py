@@ -48,6 +48,9 @@ class TrackingJob:
     source_path: str = ""
     source_identity: MediaIdentity | None = None
     source_changed: bool = False
+    run_outcome: str = ""
+    run_note: str = ""
+    processed_frames: int = 0
 
 
 @dataclass

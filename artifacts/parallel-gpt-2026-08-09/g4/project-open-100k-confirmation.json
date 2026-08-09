@@ -1,0 +1,83 @@
+[
+  {
+    "results": 100000,
+    "file_mib": 44.39827632904053,
+    "synchronous": {
+      "call_ms": 1954.924541991204,
+      "batch_ms": 1954.9255419988185,
+      "max_heartbeat_ms": 1958.8238750002347,
+      "max_gap_phase_before": "",
+      "max_gap_phase_after": ""
+    },
+    "background": {
+      "call_ms": 0.5060840048827231,
+      "batch_ms": 3936.1410420387983,
+      "max_heartbeat_ms": 47.395375033374876,
+      "max_gap_phase_before": "Opening project \u00b7 verifying the saved baseline\u2026",
+      "max_gap_phase_after": "finished",
+      "apply_ms": 43.73849998228252
+    },
+    "results_exact": true,
+    "synchronous_signature": {
+      "project_path": "/var/folders/hf/vzc3ptl17dv1r73k0yw4zt180000gn/T/tmpqu_eqeeu/large-100000.ntproj",
+      "tasks": 1,
+      "results": 100000,
+      "fingerprint": "d9c2dd5992ccbd437da8cf320d4422a3137a6b7ef8ec815999f0947051c250b0",
+      "dirty": false
+    },
+    "background_signature": {
+      "project_path": "/var/folders/hf/vzc3ptl17dv1r73k0yw4zt180000gn/T/tmpqu_eqeeu/large-100000.ntproj",
+      "tasks": 1,
+      "results": 100000,
+      "fingerprint": "d9c2dd5992ccbd437da8cf320d4422a3137a6b7ef8ec815999f0947051c250b0",
+      "dirty": false
+    },
+    "payload_equal": true,
+    "deferred_state": {
+      "diagnostics_pending": false,
+      "analysis_pending": false
+    },
+    "background_runs": [
+      {
+        "call_ms": 0.3600419731810689,
+        "batch_ms": 4148.196458001621,
+        "max_heartbeat_ms": 36.594250006601214,
+        "max_gap_phase_before": "Opening project \u00b7 decoding validated records\u2026",
+        "max_gap_phase_after": "Opening project \u00b7 decoding validated records\u2026",
+        "apply_ms": 31.664000009186566
+      },
+      {
+        "call_ms": 0.5339159979484975,
+        "batch_ms": 4063.6500000255182,
+        "max_heartbeat_ms": 108.0902079702355,
+        "max_gap_phase_before": "finished",
+        "max_gap_phase_after": "finished",
+        "apply_ms": 44.31566601851955
+      },
+      {
+        "call_ms": 0.5781250074505806,
+        "batch_ms": 4076.5902909915894,
+        "max_heartbeat_ms": 54.86916599329561,
+        "max_gap_phase_before": "Opening project \u00b7 verifying the saved baseline\u2026",
+        "max_gap_phase_after": "finished",
+        "apply_ms": 50.90149998432025
+      },
+      {
+        "call_ms": 0.4474580055102706,
+        "batch_ms": 4036.1910830251873,
+        "max_heartbeat_ms": 45.9453749936074,
+        "max_gap_phase_before": "Opening project \u00b7 verifying the saved baseline\u2026",
+        "max_gap_phase_after": "finished",
+        "apply_ms": 43.687666999176145
+      },
+      {
+        "call_ms": 0.5060840048827231,
+        "batch_ms": 3936.1410420387983,
+        "max_heartbeat_ms": 47.395375033374876,
+        "max_gap_phase_before": "Opening project \u00b7 verifying the saved baseline\u2026",
+        "max_gap_phase_after": "finished",
+        "apply_ms": 43.73849998228252
+      }
+    ]
+  }
+]
