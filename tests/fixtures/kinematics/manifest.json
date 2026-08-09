@@ -1,0 +1,16 @@
+{
+  "schema": "neo-tracker.kinematics-fixtures/v1",
+  "random_seed": 20260810,
+  "cases": [
+    "uniform_linear",
+    "uniform_quadratic",
+    "vfr_linear",
+    "vfr_quadratic",
+    "sinusoidal",
+    "exponential",
+    "missing_segments",
+    "outlier_samples",
+    "angular_wrap",
+    "path_distance"
+  ]
+}
