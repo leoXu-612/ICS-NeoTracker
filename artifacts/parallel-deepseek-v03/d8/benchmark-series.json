@@ -1,0 +1,34 @@
+{
+  "schema": "neo-tracker.kinematics-benchmark/v1",
+  "workload": "tracker_result_snapshot_to_base_series",
+  "sample_count": 100000,
+  "method": "immutable_snapshot+aligned_series",
+  "iterations": 5,
+  "timing_ms": {
+    "median": 97.29216695996001,
+    "p95": 99.17320797685534,
+    "max": 99.51295796781778
+  },
+  "snapshot_ms": 551.1254589655437,
+  "peak_rss_mb": 281.234375,
+  "rss_stage_mb": {
+    "live_tracker_results": 158.125,
+    "immutable_snapshot": 235.640625,
+    "final_series": 280.46875
+  },
+  "result_digest": "4bffb6ae4eab05f094ea413dd0d80736acd1b675907be36b0173bdb789576aee",
+  "accuracy_error": 0,
+  "cancellation_latency_ms": 3.155292011797428,
+  "cancellation_terminal": "KinematicsCancelled",
+  "series_count": 3,
+  "gates": {
+    "aligned": true,
+    "accuracy": true,
+    "median_under_2500_ms": true,
+    "cancellation_under_250_ms": true,
+    "snapshot_delta_under_128_mb": true,
+    "pipeline_peak_under_512_mb": true
+  },
+  "passed": true,
+  "exit_code": 0
+}

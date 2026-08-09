@@ -1,0 +1,46 @@
+{
+  "schema": "neo-tracker.kinematics-benchmark/v1",
+  "workload": "linear_quadratic_and_builtin_nonlinear_fits",
+  "sample_count": 100000,
+  "method": "centered_lstsq+scipy_least_squares_optional",
+  "iterations": 5,
+  "timing_scope": "hot linear+quadratic fit pair; excludes nonlinear fits and the separately reported sinusoid initial guess",
+  "timing_ms": {
+    "median": 6.840666988864541,
+    "p95": 7.013566978275776,
+    "max": 7.016541960183531
+  },
+  "sinusoid_guess": {
+    "sample_count": 100000,
+    "frequency_candidates": 256,
+    "timing_ms": {
+      "median": 185.68212498212233,
+      "p95": 197.8127372218296,
+      "max": 199.1605830262415
+    },
+    "cancellation_latency_ms": 1.3042089994996786,
+    "cancellation_terminal": "KinematicsCancelled"
+  },
+  "peak_rss_mb": 134.390625,
+  "result_digest": "2d869222a708377862de3fe6a9fa196f8287f01db90694edf70c45ce4650432f",
+  "accuracy_error": 1.1641532182693481e-10,
+  "accuracy": {
+    "linear_parameter_max_abs": 6.366462912410498e-12,
+    "quadratic_parameter_max_abs": 1.1641532182693481e-10,
+    "exponential_no_initial_max_abs": 2.233768725545815e-13,
+    "sinusoidal_no_initial_max_abs": 1.687538997430238e-14
+  },
+  "nonlinear_available": true,
+  "cancellation_latency_ms": 1.3042089994996786,
+  "gates": {
+    "linear_accuracy": true,
+    "quadratic_accuracy": true,
+    "builtin_exponential_guess": true,
+    "builtin_sinusoidal_guess": true,
+    "median_under_1000_ms": true,
+    "sinusoid_guess_100k_under_5000_ms": true,
+    "guess_cancellation_under_500_ms": true
+  },
+  "passed": true,
+  "exit_code": 0
+}
