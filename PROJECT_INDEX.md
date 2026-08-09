@@ -86,6 +86,8 @@ SHA-256 全部通过；2026-08-10 全量 479 tests / 68.032 s OK、heartbeat
 round12 通过（load 3.61–3.65）；AX 服务部分恢复，真实窗口 AX 树完整
 可读（`artifacts/deepseek-2026-08-10/nt-ax-tree.json` + 截图），
 AXPress 激活 Add media/关闭对话框已验证；AX 写入与 VoiceOver 仍受限。
+工单后续由 GPT 接手：当前进度与解锁条件见 `collab/FROM_GPT.md`；
+8 项完成门槛审计（5 CLOSED / 3 BLOCKED）见 `collab/FROM_DEEPSEEK.md`。
 
 ## 常用命令
 

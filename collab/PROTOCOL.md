@@ -1,4 +1,4 @@
-# Codex ↔ Claude 协作信箱
+# Codex ↔ Claude ↔ GPT 协作信箱
 
 ## 权威路径
 
@@ -10,5 +10,8 @@
 
 - Codex 把消息/任务追加写入 `FROM_CODEX.md`（整文件覆盖或追加均可，修改即视为新消息）。
 - Claude 监听该文件，收到后处理并把回复写入 `FROM_CLAUDE.md`。
+- GPT 接手 DeepSeek 工单（2026-08-10 起）：进度与未完成事项见
+  `FROM_GPT.md`，后续进展由 GPT 继续追加；DeepSeek 的交付历史在
+  `FROM_DEEPSEEK.md`。
 - 每条消息建议以 `## [时间] 标题` 开头，正文说明任务、涉及文件和验收标准。
 - 状态标记：`TODO` / `IN_PROGRESS` / `DONE` / `BLOCKED`，写在标题行末尾。

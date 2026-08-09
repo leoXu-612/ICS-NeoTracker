@@ -1,7 +1,7 @@
 a382de1396d6906cf2d7e9b3f830b7a76c623c09e881e72e4f1970ecdc1d226c  ./.gitignore
 19f5f9cce580d2b4ee9d32b7549a197dbab324e3e96858de34acb5f35971f997  ./FORDEEPSEEK.md
 a68e9c529565944c873530a399fdaab7906e80221369865486544ca46d20d36b  ./MIGRATION_RECORD.md
-9f7cb3ed3d1e9d7f124811d680be9bd00c483543c615c23b30a33ce3fc133e8a  ./PROJECT_INDEX.md
+001eb0a8541cc86b47ea6767fbcae638ce3add53ccbc696c881e63e1551cd84c  ./PROJECT_INDEX.md
 6899f33c5a99de508940db05cf9a58c83867bbc9999bb1149b8c96fbe56eee00  ./README.md
 2cff680330304f0dd6a811106f707df5f94e562f3b0bfc4213d638991881f746  ./artifacts/code-review-ui-2026-07-22/01-media-ready.png
 2b98f252469573d4cab7bc2802788e5f4c1993689ff553e3eb018cdef1fda35f  ./artifacts/code-review-ui-2026-07-22/01b-media-ready-1024x768.png
@@ -398,7 +398,8 @@ df3162e19e40006ea4fd3e031d13bc2fe9f2d07d524e9c1f84f7d7b9e1aa56ce  ./build/lib/ne
 5a429f7d4b2b1311d85b2b1f7c20cd3f1b97cc4775c4c45136a3fc3308b21331  ./collab/FROM_CLAUDE.md
 ec4f6317dcf8def9817e5f6954dbfb8dee85f5e114353e0011d7d558b2169b11  ./collab/FROM_CODEX.md
 1f09c67e6f95ac03f4ff004a13701c8c9f6bd299a5f2325921d93a5e86b7411d  ./collab/FROM_DEEPSEEK.md
-b546e574e3ba1349d1d89b0f86e008526fb436b3f4c40c86f0d53b312645c0ee  ./collab/PROTOCOL.md
+e4bb263fccefeb95697c31ab6da27c0e4bc2c1df1b53a2aa33a8c3435ab07ab3  ./collab/FROM_GPT.md
+3b4ea2b70222a6a1a093f10fcbbddb3c5f96351553514b8e98390f70d0c81c0f  ./collab/PROTOCOL.md
 983ac6388cc710983f58d668dcd5ed65e4cbcaf4e579ad7c2978bb02592fa41f  ./neo_tracker.egg-info/PKG-INFO
 afaad9ddd8dc469a13833468ce9a5253d734467fe26b29c2975e0fc01625eafe  ./neo_tracker.egg-info/SOURCES.txt
 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b  ./neo_tracker.egg-info/dependency_links.txt
@@ -484,4 +485,4 @@ c17661815cd19899305810d7038acd1db5c2c566ecbaf15b6eda1331db65e546  ./tests/test_t
 832fa5aedb68e50e5d6b70eed4695678c35d6c6eb0b7b4ad2db75d67e39e6280  ./tests/test_tracking_pipeline.py
 d3c3292de09a9e0581d1b5a8aae9de409d3a13b2fed8a6b01d422519aaacc635  ./tests/test_tracking_worker.py
 7b925aacf926451c08ab243336d276e53c53df9952100c571e78ac5b6b2cbb61  ./tests/test_ui_main_window.py
-c713e358d9fd395707ed5ea4afc7888b587218ba10df8d4f8acf5615c496c099  ./交接.md
+56c645ec0a6fa9e9bf1b7841288b09bbeff173fe250f89dad2a21d91648c318b  ./交接.md
