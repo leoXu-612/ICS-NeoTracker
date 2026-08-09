@@ -7,6 +7,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QTableView, QWidget
 
 from neo_tracker.kinematics import SampleSeries
+from neo_tracker.media import MediaInfo
+from neo_tracker.ui.main_window import NeoTrackerWindow
 from neo_tracker.ui.view_state import PhysicsWorkspaceState
 from neo_tracker.ui.workspaces.physics_workspace import PhysicsWorkspace
 
@@ -80,6 +82,78 @@ class PhysicsWorkspaceTests(unittest.TestCase):
         self.assertEqual(selected[-1], ("raw:x", 2))
         self.assertIsNone(workspace.series_table.indexWidget(workspace.series_model.index(2, 2)))
         self.assertEqual(workspace.cursor_label.text(), "true time 0.090000 s · frame 2 · exact")
+
+
+class MainWindowPhysicsWorkspaceTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.app = QApplication.instance() or QApplication([])
+        cls.gui_anchor = QWidget()
+
+    def make_window(self) -> NeoTrackerWindow:
+        window = NeoTrackerWindow()
+        window._set_project_clean()
+
+        def close_cleanly() -> None:
+            window._discard_unapplied_drafts(show_status=False)
+            window._set_project_clean()
+            window.close()
+
+        self.addCleanup(close_cleanly)
+        return window
+
+    @staticmethod
+    def sparse_series() -> SampleSeries:
+        return SampleSeries(
+            series_id="filtered:x",
+            name="Filtered x",
+            frame_indices=np.array([2, 6, 10], dtype=np.int64),
+            time_s=np.array([0.071, 0.203, 0.341]),
+            values=np.array([1.0, 2.0, 3.0]),
+            valid_mask=np.array([True, True, True]),
+            unit="m",
+            source_kind="filtered_state",
+            source_revision="results:window-workspace",
+        )
+
+    def test_bottom_workspace_is_mounted_in_vertical_shell_at_1024(self) -> None:
+        window = self.make_window()
+        window.resize(1024, 768)
+        window.show()
+        QApplication.processEvents()
+
+        self.assertEqual(window.workspace_splitter.orientation(), Qt.Orientation.Vertical)
+        self.assertIs(window.workspace_splitter.widget(1), window.physics_workspace)
+        self.assertLessEqual(window.minimumSizeHint().height(), 768)
+        self.assertGreaterEqual(window.physics_workspace.height(), 38)
+
+    def test_table_video_and_video_table_share_one_selection_session(self) -> None:
+        window = self.make_window()
+        window.current_task.media_info = MediaInfo(
+            fps=30.0,
+            frame_count=30,
+            width=640,
+            height=360,
+            duration_s=1.0,
+            available=True,
+        )
+        source = self.sparse_series()
+        self.assertTrue(window.set_physics_series((source,)))
+
+        window.physics_workspace.series_table.selectRow(1)
+        QApplication.processEvents()
+        self.assertEqual(window.current_task.preview_frame_index, 6)
+        self.assertEqual(window.selection_session.state.selected_sample_index, 1)
+
+        before_revision = window.selection_session.state.selection_revision
+        window._preview_frame_changed(8)
+        QApplication.processEvents()
+        state = window.selection_session.state
+        self.assertEqual(state.selection_revision, before_revision + 1)
+        self.assertEqual(state.selected_frame_index, 8)
+        self.assertEqual(state.selected_sample_index, 1)  # equal-distance tie -> earlier frame 6
+        self.assertEqual(state.match.value, "nearest")
+        self.assertIn("frame 8 · nearest", window.physics_workspace.cursor_label.text())
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from functools import partial
 from pathlib import Path
@@ -89,6 +90,7 @@ from neo_tracker.analysis import (
     STFTResult,
 )
 from neo_tracker.media import MediaIdentity, MediaInfo, MediaReader, has_media_backend
+from neo_tracker.kinematics import SampleSeries
 from neo_tracker.observations import ColorBlobObservation, observation_backend_info
 from neo_tracker.presets import PresetDescriptor, default_preset_registry
 from neo_tracker.project import (
@@ -145,6 +147,11 @@ from neo_tracker.ui.review_response import (
 from neo_tracker.ui.review_response_worker import ReviewResponseWorker
 from neo_tracker.ui.results_table_model import ResultsTableModel
 from neo_tracker.ui.action_registry import ActionRegistry
+from neo_tracker.ui.selection_session import (
+    SelectionEvent,
+    SelectionOrigin,
+    SelectionSession,
+)
 from neo_tracker.ui.shell import ApplicationShell
 from neo_tracker.ui.shell.bindings import (
     CoordinatorCompatibilityMixin,
@@ -156,6 +163,7 @@ from neo_tracker.ui.tracking_worker import (
     TrackingWorker,
 )
 from neo_tracker.ui.view_state import ViewState
+from neo_tracker.ui.workspaces import PhysicsWorkspace
 
 
 _PROJECT_OPEN_DEFERRED_RESULTS_THRESHOLD = 10_000
@@ -410,6 +418,19 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self.analysis_export_csv_button = QPushButton("Export CSV")
         self.analysis_export_npz_button = QPushButton("Export NPZ")
         self.analysis_controller = AnalysisController()
+        self.selection_session = SelectionSession()
+        self._selection_unsubscribe = self.selection_session.subscribe(
+            self._selection_session_changed
+        )
+        self._applying_selection_revision: int | None = None
+        self._physics_series_owner_token: int | None = None
+        self.physics_workspace = PhysicsWorkspace()
+        self.physics_workspace.sampleActivated.connect(self._physics_sample_activated)
+        self.physics_workspace.timeActivated.connect(self._physics_time_activated)
+        self.physics_workspace.pageRouteRequested.connect(self._physics_route_requested)
+        self.physics_workspace.layoutStateChanged.connect(
+            self._physics_workspace_layout_changed
+        )
         self.validate_json_button = QPushButton("Validate")
         self.apply_json_button = QPushButton("Apply JSON")
         self.reset_json_button = QPushButton("Reset View")
@@ -467,6 +488,7 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         )
 
         self._build_ui()
+        self._reset_physics_context()
         self._application_shell = ApplicationShell(self)
         self._apply_style()
         self._load_presets()
@@ -577,9 +599,16 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         app_header.addWidget(self.export_report_button)
         root_layout.addWidget(top_toolbar)
 
+        self.workspace_splitter = QSplitter(Qt.Orientation.Vertical)
+        self.workspace_splitter.setObjectName("workspaceSplitter")
+        self.workspace_splitter.setChildrenCollapsible(False)
+        self.workspace_splitter.splitterMoved.connect(self._physics_splitter_moved)
+        root_layout.addWidget(self.workspace_splitter, 1)
+
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setObjectName("mainSplitter")
-        root_layout.addWidget(splitter)
+        self.main_splitter = splitter
+        self.workspace_splitter.addWidget(splitter)
 
         preview_panel = QWidget()
         preview_panel.setObjectName("previewPanel")
@@ -666,10 +695,14 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         sidebar_layout.setContentsMargins(8, 0, 0, 0)
         sidebar_layout.setSpacing(8)
         self.sidebar_tabs.setObjectName("sidebarTabs")
-        self.sidebar_tabs.setMinimumHeight(625)
+        self.sidebar_tabs.setMinimumHeight(300)
         sidebar_layout.addWidget(self.sidebar_tabs)
         splitter.addWidget(sidebar)
         splitter.setSizes([820, 500])
+        self.workspace_splitter.addWidget(self.physics_workspace)
+        self.workspace_splitter.setStretchFactor(0, 1)
+        self.workspace_splitter.setStretchFactor(1, 0)
+        self.workspace_splitter.setSizes([460, self.physics_workspace.preferred_height])
 
         self._build_media_tab()
         self._build_tracking_tab()
@@ -1394,6 +1427,136 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
             self._hydrate_project_open_diagnostics()
         elif current is not None and current.objectName() == "signalTab":
             self._hydrate_project_open_analysis_sources()
+
+    @staticmethod
+    def _physics_task_id(task: DesktopTask) -> str:
+        return f"task:{id(task):x}"
+
+    @staticmethod
+    def _physics_result_identity(task: DesktopTask) -> str:
+        return f"results:{id(task.pipeline.results):x}"
+
+    def _reset_physics_context(self) -> None:
+        task = self.current_task
+        self._physics_series_owner_token = id(task)
+        self.physics_workspace.set_series(())
+        self.selection_session.activate_context(
+            self._physics_task_id(task),
+            self._physics_result_identity(task),
+            f"unbound:{id(task.pipeline.results):x}",
+        )
+
+    def set_physics_series(
+        self,
+        series: Sequence[SampleSeries],
+        *,
+        owner: DesktopTask | None = None,
+        result_identity: str | None = None,
+    ) -> bool:
+        """Attach immutable engine output if it still belongs to the active task."""
+
+        task = owner or self.current_task
+        if task is not self.current_task:
+            return False
+        items = tuple(series)
+        if not items:
+            self._reset_physics_context()
+            return True
+        if any(not isinstance(item, SampleSeries) for item in items):
+            raise TypeError("physics series must contain SampleSeries values")
+        revisions = {item.source_revision for item in items}
+        if len(revisions) != 1:
+            raise ValueError("physics series must share one source revision")
+        source_revision = next(iter(revisions))
+        self._physics_series_owner_token = id(task)
+        self.selection_session.activate_context(
+            self._physics_task_id(task),
+            result_identity or self._physics_result_identity(task),
+            source_revision,
+        )
+        for item in items:
+            outcome = self.selection_session.attach_series(item)
+            if not outcome.accepted:
+                return False
+        self.physics_workspace.set_series(items)
+        self.selection_session.select_frame(
+            int(task.preview_frame_index),
+            origin=SelectionOrigin.VIDEO,
+            expected_source_revision=source_revision,
+        )
+        return True
+
+    def _physics_sample_activated(self, series_id: str, sample_index: int) -> None:
+        state = self.selection_session.state
+        self.selection_session.select_sample(
+            series_id,
+            int(sample_index),
+            origin=SelectionOrigin.TABLE,
+            expected_source_revision=state.source_revision,
+        )
+
+    def _physics_time_activated(self, time_s: float) -> None:
+        state = self.selection_session.state
+        self.selection_session.select_time(
+            float(time_s),
+            origin=SelectionOrigin.PLOT,
+            expected_source_revision=state.source_revision,
+        )
+
+    def _selection_session_changed(self, event: SelectionEvent) -> None:
+        state = event.current
+        if state.selected_task_id != self._physics_task_id(self.current_task):
+            return
+        self.physics_workspace.apply_selection(
+            state.selected_series_id,
+            state.selected_sample_index,
+            state.selected_frame_index,
+            state.selected_time_s,
+            state.match.value,
+        )
+        if (
+            event.origin is not SelectionOrigin.VIDEO
+            and state.selected_frame_index is not None
+            and int(self.current_task.preview_frame_index) != int(state.selected_frame_index)
+        ):
+            self._applying_selection_revision = state.selection_revision
+            try:
+                self._preview_frame_changed(int(state.selected_frame_index))
+            finally:
+                self._applying_selection_revision = None
+
+    def _physics_splitter_moved(self, _position: int, _index: int) -> None:
+        if self.physics_workspace.collapsed:
+            return
+        sizes = self.workspace_splitter.sizes()
+        if len(sizes) == 2 and sizes[1] >= 120:
+            self.physics_workspace.remember_height(sizes[1])
+
+    def _physics_workspace_layout_changed(self, state: object) -> None:
+        splitter = getattr(self, "workspace_splitter", None)
+        if splitter is None:
+            return
+        sizes = splitter.sizes()
+        total = sum(sizes) or max(1, splitter.height())
+        if self.physics_workspace.collapsed:
+            lower = min(38, total)
+        else:
+            lower = min(self.physics_workspace.preferred_height, max(120, total - 180))
+        splitter.setSizes([max(1, total - lower), lower])
+
+    def _physics_route_requested(self, route: str) -> None:
+        if route == "Signal":
+            for index in range(self.sidebar_tabs.count()):
+                page = self.sidebar_tabs.widget(index)
+                if page.objectName() == "signalTab":
+                    self.sidebar_tabs.setCurrentIndex(index)
+                    return
+        if self.review_tab is not None:
+            self.sidebar_tabs.setCurrentWidget(self.review_tab)
+        if route == "Runs":
+            self.review_history_tabs.setCurrentIndex(0)
+        elif route == "Edits":
+            self.review_history_tabs.setCurrentIndex(1)
 
     def _build_media_tab(self) -> None:
         tab = QWidget()
@@ -2759,6 +2922,7 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
                 self._show_empty_task_list_placeholder()
                 self.scratch_task = self._new_task(None, self.default_pipeline_key)
                 self.current_task = self.scratch_task
+                self._reset_physics_context()
                 self._render_task(refresh_project_state=False)
         finally:
             self._project_open_apply_defer_heavy_views = False
@@ -3049,6 +3213,7 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self.scratch_task.close_reader()
         self.scratch_task = self._new_task(None, self.default_pipeline_key)
         self.current_task = self.scratch_task
+        self._reset_physics_context()
         self._render_task(refresh_project_state=False)
 
     def _discard_removed_task_undo(self) -> None:
@@ -3190,6 +3355,7 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         else:
             index = int(task_index)
             self.current_task = self.tasks[index]
+        self._reset_physics_context()
         self._render_task(refresh_project_state=False)
         if draft_names:
             self.statusBar().showMessage(
@@ -3234,6 +3400,7 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self.current_task.tracking_outcome = ""
         self.current_task.tracking_note = ""
         self.current_task.roi = None
+        self._reset_physics_context()
         self._clear_analysis_result()
         self._render_task(sync_combo=False, refresh_project_state=False)
         self._mark_project_changed()
@@ -3248,6 +3415,16 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self._sync_preview_position_controls(self.current_task)
         self._sync_review_selection_to_frame()
         self._render_preview()
+        if (
+            self._applying_selection_revision is None
+            and self._physics_series_owner_token == id(self.current_task)
+        ):
+            state = self.selection_session.state
+            self.selection_session.select_frame(
+                int(self.current_task.preview_frame_index),
+                origin=SelectionOrigin.VIDEO,
+                expected_source_revision=state.source_revision,
+            )
 
     def _render_task(self, sync_combo: bool = True, *, refresh_project_state: bool = True) -> None:
         task = self.current_task

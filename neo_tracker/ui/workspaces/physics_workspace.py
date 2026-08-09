@@ -262,6 +262,40 @@ class PhysicsWorkspace(QFrame):
         self.cursor_label.setToolTip(detail)
         self.cursor_label.setAccessibleDescription(detail)
 
+    def apply_selection(
+        self,
+        series_id: str | None,
+        sample_index: int | None,
+        frame_index: int | None,
+        time_s: float | None,
+        match: str,
+    ) -> None:
+        """Render a session event without emitting a feedback selection."""
+
+        source = self._series.get(series_id or "")
+        if source is not None and sample_index is not None and 0 <= int(sample_index) < len(source):
+            combo_index = self.series_combo.findData(source.series_id)
+            if combo_index >= 0 and combo_index != self.series_combo.currentIndex():
+                self.series_combo.blockSignals(True)
+                self.series_combo.setCurrentIndex(combo_index)
+                self.series_combo.blockSignals(False)
+                self.series_model.set_series(source)
+            selection = self.series_table.selectionModel()
+            selection.blockSignals(True)
+            self.series_table.selectRow(int(sample_index))
+            self.series_table.scrollTo(
+                self.series_model.index(int(sample_index), 0),
+                QAbstractItemView.ScrollHint.EnsureVisible,
+            )
+            selection.blockSignals(False)
+            self.plot.set_selected_sample(int(sample_index), source.series_id)
+        else:
+            self.series_table.selectionModel().blockSignals(True)
+            self.series_table.clearSelection()
+            self.series_table.selectionModel().blockSignals(False)
+            self.plot.set_selected_sample(None)
+        self.set_cursor(frame_index, time_s, match)
+
     def remember_height(self, height: int) -> None:
         self._preferred_height = max(120, min(1_200, int(height)))
 
@@ -375,6 +409,7 @@ class PhysicsWorkspace(QFrame):
         selection.blockSignals(False)
         time_s = float(source.time_s[int(row)])
         self.set_cursor(int(source.frame_indices[int(row)]), time_s, "exact")
+        self.timeActivated.emit(time_s)
         self.sampleActivated.emit(series_id, int(row))
 
     def _page_changed(self, _index: int) -> None:
