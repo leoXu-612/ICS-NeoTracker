@@ -15,4 +15,3 @@
 - `KinematicsEngineRuntime` implements `SeriesBuilder`, `DerivativeOperator`, and `FitOperator`.
 - Cancellation raises before partial Series/Derivative/Export publication; Fit returns one explicit terminal result.
 - No nominal FPS reconstruction or implicit gap interpolation/resampling is used.
-

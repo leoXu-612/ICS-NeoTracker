@@ -15,4 +15,3 @@ All values below come from deterministic analytic fixtures and strict JSON bench
 Missing segments, VFR, positive/negative exponential rate, angular units, large-DC R²,
 overflow, stale revision, nonconvergence, cancellation, and optional-SciPy absence
 are covered by deterministic unit tests.
-

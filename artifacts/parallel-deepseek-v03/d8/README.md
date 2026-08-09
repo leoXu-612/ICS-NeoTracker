@@ -41,4 +41,3 @@ PYTHONDONTWRITEBYTECODE=1 python3 benchmarks/benchmark_kinematics_100k.py --samp
 
 Synthetic numerical correctness is closed for D0–D8. Real scientific dataset
 validation remains outside this engine branch and is PARTIAL by work-order rule.
-
