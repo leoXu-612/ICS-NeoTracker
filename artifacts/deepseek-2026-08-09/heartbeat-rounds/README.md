@@ -32,6 +32,20 @@ PaymentAuthorizationUIExtension 常驻高 CPU；`uptime` 1/5/15 分钟负载在
 
 全部轮次 `results_exact=True`、`payload_equal=True`；fingerprint 前后一致。
 
+## 低负载窗口复核（round 6–8，2026-08-09 23:13，load 3.7–4.8）
+
+| 轮次 | 逐值 max heartbeat (ms) | apply_ms | >75 ms | 退出码 |
+| --- | --- | --- | --- | --- |
+| 6 | 35.78 / 45.78 / 44.62 | 33.76–43.81 | 0 | 0 |
+| 7 | 34.80 / 59.18 / 51.04 | 32.81–55.60 | 0 | 0 |
+| 8 | 34.57 / 48.03 / 50.98 | 32.67–48.94 | 0 | 0 |
+
+与 round 3/4（load 3.8–4.1）合并：**正常负载窗口已有 5 组“连续三次打开
+<75 ms”证据（15/15 通过，max 59.18 ms）**，满足 FORDEEPSEEK.md 第 8 节
+“10 万结果项目连续三次打开仍满足 <75 ms heartbeat”门槛的验收口径。
+跨负载稳定性仍 `PARTIAL`：宿主满载（load >7，8 核）下轮次 1/2/5 出现
+76–155 ms 调度延迟超限，未宣称满载稳定。
+
 ## 阶段归因
 
 - 正常轮次（round 3/4 与多数 opens）max heartbeat 34–59 ms，全部落在
