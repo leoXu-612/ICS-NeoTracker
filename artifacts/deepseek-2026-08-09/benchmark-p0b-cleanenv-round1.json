@@ -1,0 +1,243 @@
+{
+  "environment": {
+    "os": "macOS 15.7.7",
+    "python": "3.12.6",
+    "source": "artifacts/experiment-videos/red-dot-tracking.mp4",
+    "source_probe": {
+      "fps": 20.0,
+      "frame_count": 72,
+      "width": 640,
+      "height": 360
+    }
+  },
+  "probe_matrix": [
+    {
+      "name": "hevc",
+      "path": "artifacts/deepseek-2026-08-09/media-matrix/hevc-transcode.mp4",
+      "available": true,
+      "error": "",
+      "fps": 20.0,
+      "frame_count": 72,
+      "width": 640,
+      "height": 360,
+      "identity": {
+        "strategy": "full-sha256-v1",
+        "sha256": "08d731726e181e334e803022494423c43a76530bc6a1f3bdfc03b7f76d063535",
+        "size_bytes": 15841,
+        "sampled_bytes": 15841
+      }
+    },
+    {
+      "name": "1080p",
+      "path": "artifacts/deepseek-2026-08-09/media-matrix/upscale-1080p.mp4",
+      "available": true,
+      "error": "",
+      "fps": 20.0,
+      "frame_count": 72,
+      "width": 1920,
+      "height": 1080,
+      "identity": {
+        "strategy": "full-sha256-v1",
+        "sha256": "33f6e15d8cea7179dad29df108f69eba7f80af7eab147f1b6673796a226c623c",
+        "size_bytes": 44152,
+        "sampled_bytes": 44152
+      }
+    },
+    {
+      "name": "truncated",
+      "path": "artifacts/deepseek-2026-08-09/media-matrix/truncated.mp4",
+      "available": false,
+      "error": "Could not open media file: artifacts/deepseek-2026-08-09/media-matrix/truncated.mp4",
+      "fps": 0.0,
+      "frame_count": 0,
+      "width": 0,
+      "height": 0,
+      "identity": {
+        "strategy": "full-sha256-v1",
+        "sha256": "638672cee1a7e0f78d5008391e81a03d8676ac2182428687242ec9c5bb755b0f",
+        "size_bytes": 57643,
+        "sampled_bytes": 57643
+      }
+    },
+    {
+      "name": "swap",
+      "path": "artifacts/deepseek-2026-08-09/media-matrix/source-swap-base.mp4",
+      "available": true,
+      "error": "",
+      "fps": 20.0,
+      "frame_count": 72,
+      "width": 640,
+      "height": 360,
+      "identity": {
+        "strategy": "full-sha256-v1",
+        "sha256": "aa5a51d2910d668bdc86eec55d443768f4b2884ea36f68b86f12f045db441353",
+        "size_bytes": 96073,
+        "sampled_bytes": 96073
+      }
+    }
+  ],
+  "runs": [
+    {
+      "run": {
+        "label": "real-h264",
+        "elapsed_s": 0.228,
+        "completed": 72,
+        "cancelled": false,
+        "ended_early": false,
+        "note": "",
+        "failures": [],
+        "results": 72,
+        "result_digest": "c5dc0eb22ed23004bb8631db3147b041531d246ab88baadb318c0747cfd11a09",
+        "input_s": 0.02,
+        "processing_s": 0.045,
+        "throughput_fps": 316.288,
+        "peak_parent_rss_kb": 109215744,
+        "peak_child_rss_kb": 98336,
+        "progress_samples": 3,
+        "residual_processes": []
+      },
+      "deterministic": true,
+      "run2": {
+        "label": "real-h264-run2",
+        "elapsed_s": 0.239,
+        "completed": 72,
+        "cancelled": false,
+        "ended_early": false,
+        "note": "",
+        "failures": [],
+        "results": 72,
+        "result_digest": "c5dc0eb22ed23004bb8631db3147b041531d246ab88baadb318c0747cfd11a09",
+        "input_s": 0.045,
+        "processing_s": 0.084,
+        "throughput_fps": 301.212,
+        "peak_parent_rss_kb": 111132672,
+        "peak_child_rss_kb": 98272,
+        "progress_samples": 4,
+        "residual_processes": []
+      }
+    },
+    {
+      "run": {
+        "label": "hevc-transcode",
+        "elapsed_s": 0.233,
+        "completed": 72,
+        "cancelled": false,
+        "ended_early": false,
+        "note": "",
+        "failures": [],
+        "results": 72,
+        "result_digest": "6830e05ee1943ec67046401c81e1daa183167ecc2c1ab7f6fc9fcdd75cb1ae32",
+        "input_s": 0.029,
+        "processing_s": 0.046,
+        "throughput_fps": 309.523,
+        "peak_parent_rss_kb": 114016256,
+        "peak_child_rss_kb": 103360,
+        "progress_samples": 3,
+        "residual_processes": []
+      },
+      "deterministic": true,
+      "run2": {
+        "label": "hevc-transcode-run2",
+        "elapsed_s": 0.231,
+        "completed": 72,
+        "cancelled": false,
+        "ended_early": false,
+        "note": "",
+        "failures": [],
+        "results": 72,
+        "result_digest": "6830e05ee1943ec67046401c81e1daa183167ecc2c1ab7f6fc9fcdd75cb1ae32",
+        "input_s": 0.024,
+        "processing_s": 0.046,
+        "throughput_fps": 311.733,
+        "peak_parent_rss_kb": 115146752,
+        "peak_child_rss_kb": 115424,
+        "progress_samples": 3,
+        "residual_processes": []
+      }
+    },
+    {
+      "run": {
+        "label": "upscale-1080p",
+        "elapsed_s": 0.41,
+        "completed": 72,
+        "cancelled": false,
+        "ended_early": false,
+        "note": "",
+        "failures": [],
+        "results": 72,
+        "result_digest": "ba3894397052cbc2b77a92695dbbf9fe440e48339834c95ee8b7146537c36875",
+        "input_s": 0.723,
+        "processing_s": 0.644,
+        "throughput_fps": 175.557,
+        "peak_parent_rss_kb": 188055552,
+        "peak_child_rss_kb": 296640,
+        "progress_samples": 11,
+        "residual_processes": []
+      },
+      "deterministic": true,
+      "run2": {
+        "label": "upscale-1080p-run2",
+        "elapsed_s": 0.453,
+        "completed": 72,
+        "cancelled": false,
+        "ended_early": false,
+        "note": "",
+        "failures": [],
+        "results": 72,
+        "result_digest": "ba3894397052cbc2b77a92695dbbf9fe440e48339834c95ee8b7146537c36875",
+        "input_s": 0.815,
+        "processing_s": 0.788,
+        "throughput_fps": 158.802,
+        "peak_parent_rss_kb": 193363968,
+        "peak_child_rss_kb": 300816,
+        "progress_samples": 13,
+        "residual_processes": []
+      }
+    }
+  ],
+  "cancel": {
+    "cancel_requested_after_s": 0.15,
+    "cancel_latency_s": 0.053,
+    "finished": true,
+    "completions": [
+      [
+        0,
+        true,
+        false,
+        ""
+      ]
+    ],
+    "failures": [],
+    "results": 0,
+    "residual_processes": []
+  },
+  "source_replacement": {
+    "replace_after_s": 0.4,
+    "finished": true,
+    "source_changed_detected": true,
+    "completions": [],
+    "failures": [
+      "TRACKING_SOURCE_CHANGED: Media source changed after isolated processing; the content identity no longer matches the pre-run probe: artifacts/deepseek-2026-08-09"
+    ],
+    "results": 31,
+    "residual_processes": []
+  },
+  "truncated": {
+    "probe": {
+      "available": false,
+      "error": "Could not open media file: artifacts/deepseek-2026-08-09/media-matrix/truncated.mp4",
+      "frame_count": 0
+    }
+  },
+  "reopen": {
+    "cycles": 10,
+    "all_ok": true,
+    "residual_processes": []
+  },
+  "gaps": {
+    "vfr_original_acquisition": "BLOCKED: no real VFR camera footage in workspace; ffmpeg CFR->VFR re-timing was unreliable, and synthetic VFR cannot substitute. VFR/truncation EOF behavior is covered by tests/test_media.py.",
+    "hevc_1080p": "Transcodes of the real 640x360 clip (content real, acquisition characteristics re-encoded); they do not close the original 1080p/4K camera gate.",
+    "power_temperature": "powermetrics requires root; not measured. CPU sampled via ps.",
+    "session_duration": "BLOCKED: no long-duration real footage; clips are 72 frames (~3.6s)."
+  }
+}

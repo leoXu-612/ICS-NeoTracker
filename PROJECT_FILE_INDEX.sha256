@@ -31,6 +31,8 @@ e55610ba0abb2e2e29aee07b8cfa79dad2a901786063d31a928c2c31addd2c48  ./artifacts/co
 6f48f1a501dc564c65364336c4ad68472c7ad991f386daaebf3b156a3ece676a  ./artifacts/code-review-ui-2026-07-22/runtime-evidence.json
 8ea26d72ce42846aedaa177f00f07b90e23dc260d4b12167eaf96a231fdc5555  ./artifacts/code-review-ui-2026-07-22/synthetic-red-marker.mp4
 a23666823ecfc38da2f99d226c3a4e4bb5f5f4cfadd1776a8fb5031daa1764f4  ./artifacts/deepseek-2026-08-09/baseline.md
+0d9676d636d941679bdcc6a9e17095c6b42c10281a2f208b61c90747967d1a67  ./artifacts/deepseek-2026-08-09/benchmark-p0b-cleanenv-round1.json
+e86f346b5075b0175879ed3f1f89fa252488a0f64b726852c305da809651a558  ./artifacts/deepseek-2026-08-09/benchmark-p0b-cleanenv-round1.stderr.txt
 57ec05e0d68aa98cf6b79a9bceef58cb553d19bb3439f295a44f0774bb8577a7  ./artifacts/deepseek-2026-08-09/benchmark-p0b-round1.json
 dd4679b349848bd3921701f788a7d24a3212ced388c67ac1b020dfb0541dc1dc  ./artifacts/deepseek-2026-08-09/benchmark-p0b-round1.stderr.txt
 14495270dd21effd7d8c2c237d5214ab7097c583b014c20eae2d086c1ed9003b  ./artifacts/deepseek-2026-08-09/benchmark-p0b-round2.json
@@ -51,13 +53,18 @@ febe03d264ed633aa3cf2f05bb1da3bd78e938a872779f962a1e28cf5d94800e  ./artifacts/de
 ed7082d72406338484be5e3584565169d42c2a7da8d934826b9a2ce6a1532d7b  ./artifacts/deepseek-2026-08-09/benchmark-p1a3-round1.stderr.txt
 1c963632ac15cbeb16f5acc2fa9efeda629922304c2e46b77e2731fbf21af312  ./artifacts/deepseek-2026-08-09/benchmark-p1a3-round2.json
 55d3c503f4932fd14efe2bf7adbf6c0ac45ccecca2038d34801022882fa05c60  ./artifacts/deepseek-2026-08-09/benchmark-p1a3-round2.stderr.txt
+86b82d3d91a8be9c7e9eb8ff9e9c164b1dcc1b500b2220c230065b438e0e7398  ./artifacts/deepseek-2026-08-09/benchmark-p1a3-round3.json
+10f4e0f74e27610e6314109bd9f82a207c173ad095a5246a27fa3496a857a20a  ./artifacts/deepseek-2026-08-09/benchmark-p1a3-round3.stderr.txt
+6d1de1f6e77a02c355fd326b73226eb0efdb068721147273d6583f914f0bb73b  ./artifacts/deepseek-2026-08-09/benchmark-p1a3-round4.json
+f55128ff8f162b7e2d0fd30b65bdecca33ae77301b32f63f64729b50a98b2aa4  ./artifacts/deepseek-2026-08-09/benchmark-p1a3-round4.stderr.txt
 5a7f94f2a2f83e894c886a92516700a53208d8780052ac7befeb8b97d51d309f  ./artifacts/deepseek-2026-08-09/benchmark-round1.json
 c5884d55cc4ad8b55f5276e5380638300b8fdbd6f65aaff72de431f7d1981665  ./artifacts/deepseek-2026-08-09/benchmark-round2.json
 08d731726e181e334e803022494423c43a76530bc6a1f3bdfc03b7f76d063535  ./artifacts/deepseek-2026-08-09/media-matrix/hevc-transcode.mp4
-aa5a51d2910d668bdc86eec55d443768f4b2884ea36f68b86f12f045db441353  ./artifacts/deepseek-2026-08-09/media-matrix/source-swap-base.mp4
+8ea26d72ce42846aedaa177f00f07b90e23dc260d4b12167eaf96a231fdc5555  ./artifacts/deepseek-2026-08-09/media-matrix/source-swap-base.mp4
 638672cee1a7e0f78d5008391e81a03d8676ac2182428687242ec9c5bb755b0f  ./artifacts/deepseek-2026-08-09/media-matrix/truncated.mp4
 33f6e15d8cea7179dad29df108f69eba7f80af7eab147f1b6673796a226c623c  ./artifacts/deepseek-2026-08-09/media-matrix/upscale-1080p.mp4
 2568ee5240298361739ef049500e5d7850d5bf8407feee4eea078badd3adf029  ./artifacts/deepseek-2026-08-09/p0a-ffmpeg-conflict.md
+0238f1a6b184846f63584ad4a3994717c49de5382e7fb7ae04a5372da57c272e  ./artifacts/deepseek-2026-08-09/p0b-cleanenv-and-heartbeat.md
 4636ae341e225a70a8a96748f9c705b5d4710cd52b523eaa2d74bcbd9ded43cb  ./artifacts/deepseek-2026-08-09/p0b-real-media-matrix.md
 eaf5f4e9865a657c124dc7f1fa51ff69f3988b4957d58cea3fe34f722ccad45a  ./artifacts/deepseek-2026-08-09/p1a1-data-trust-and-io-bounds.md
 f0dabf1ef597a0cef0c12168373808ac41b6b3b2852af2188fa7858aa2961203  ./artifacts/deepseek-2026-08-09/p1a1r-acceptance-fixes.md
@@ -65,6 +72,7 @@ f0dabf1ef597a0cef0c12168373808ac41b6b3b2852af2188fa7858aa2961203  ./artifacts/de
 e6460096498f601838bc20dadfae128ae903b0c5b190bb2c351dd233cc24ba36  ./artifacts/deepseek-2026-08-09/p1a3-media-reader-version-guard.md
 82a476738c187ca793d14bee586f9644d0508bb2c620b0d9cad67382bcbf5711  ./artifacts/deepseek-2026-08-09/p1a4-ipc-export-plugin-ui-safety.md
 99bf627b71f6a0a23067da460b3987635494848845326cc4ca942f16e4bad86b  ./artifacts/deepseek-2026-08-09/p1b-native-ui.md
+62731b4405ddfc065c73fe95e086d46106e8d025f41de06e1124a3f7272ad49d  ./artifacts/deepseek-2026-08-09/p1b-native-ui/nt-cleanenv-1280x808.png
 930b79608b6a80764c0ff79d946b5ae8a1abd5ae48bf13e9084469ecc5298833  ./artifacts/deepseek-2026-08-09/p1b-native-ui/nt-native-1024x768.png
 45383d5442b1fda422903ac5f5447fe5ab029acbfdee962e79802ffec6e87fc7  ./artifacts/deepseek-2026-08-09/p1b-native-ui/nt-native-1280x808.png
 4e8cf7fe829419738ea5b0208754401f7cee57667d626d3b1a0e0d28cc841b47  ./artifacts/deepseek-2026-08-09/p1b-native-ui/nt-native-1440x900.png
@@ -346,10 +354,10 @@ e4d5b7c0cc91b2fa84387e180918fb5c7b2f507bb31d0a60b5c3a8346917d4ad  ./build/lib/ne
 df3162e19e40006ea4fd3e031d13bc2fe9f2d07d524e9c1f84f7d7b9e1aa56ce  ./build/lib/neo_tracker/visualization.py
 5a429f7d4b2b1311d85b2b1f7c20cd3f1b97cc4775c4c45136a3fc3308b21331  ./collab/FROM_CLAUDE.md
 ec4f6317dcf8def9817e5f6954dbfb8dee85f5e114353e0011d7d558b2169b11  ./collab/FROM_CODEX.md
-46dd05f7ed9f161510fdb3bfadab210d8c8f4392c7f10df1b1508cd799b59a87  ./collab/FROM_DEEPSEEK.md
+4ad6b666daf292a49d42901cb9c2fff5cb865525b50da2234ede740c874e21b2  ./collab/FROM_DEEPSEEK.md
 b546e574e3ba1349d1d89b0f86e008526fb436b3f4c40c86f0d53b312645c0ee  ./collab/PROTOCOL.md
-b2e3eb5572fd7bcf4527a5107f067bb60e3b1dd693aba655756c1a1f6c835dbf  ./neo_tracker.egg-info/PKG-INFO
-15207053b832b7e102da57708dc767daece44dc6f1a8dd40174ce2d9815243b6  ./neo_tracker.egg-info/SOURCES.txt
+983ac6388cc710983f58d668dcd5ed65e4cbcaf4e579ad7c2978bb02592fa41f  ./neo_tracker.egg-info/PKG-INFO
+afaad9ddd8dc469a13833468ce9a5253d734467fe26b29c2975e0fc01625eafe  ./neo_tracker.egg-info/SOURCES.txt
 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b  ./neo_tracker.egg-info/dependency_links.txt
 a16204fb5424f61ab3b1e219b8c0f55a59e30e8ec3cc056aac0a3591d9d240f9  ./neo_tracker.egg-info/entry_points.txt
 0accb7cb9aef2c8f38a62f3ce9bcaef97aff84e57340c5b63e6bc0863a45740b  ./neo_tracker.egg-info/requires.txt
@@ -433,4 +441,4 @@ c17661815cd19899305810d7038acd1db5c2c566ecbaf15b6eda1331db65e546  ./tests/test_t
 832fa5aedb68e50e5d6b70eed4695678c35d6c6eb0b7b4ad2db75d67e39e6280  ./tests/test_tracking_pipeline.py
 d3c3292de09a9e0581d1b5a8aae9de409d3a13b2fed8a6b01d422519aaacc635  ./tests/test_tracking_worker.py
 7b925aacf926451c08ab243336d276e53c53df9952100c571e78ac5b6b2cbb61  ./tests/test_ui_main_window.py
-6712bdf393e8cb45b62ecf6dcd9228a3429a563920976c85f4f1d8aacbd8947c  ./交接.md
+94f01e23f3bb8b542219c04251b9542b92598ff371deaa1a3538497c126645d8  ./交接.md

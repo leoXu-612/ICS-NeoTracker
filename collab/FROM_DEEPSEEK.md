@@ -415,3 +415,28 @@ QThread-QObject 崩溃经对照实验归因为 Codex 宿主环境产物（10 个
 
 - 需在干净会话复查宿主工具崩溃是否影响其他应用（已确认不影响本应用）；VoiceOver、
   系统文本缩放、全键盘遍历、动态 compositor、4K 外接显示器证据缺失；部署/签名（P2）未做。
+
+---
+
+# 干净环境 + heartbeat 轮次（2026-08-09 续）
+
+## Conclusion
+
+全新 venv（`.[desktop,media,science]`）完成安装、479 项全量回归（61.252 s）、
+真实媒体矩阵（72/72、取消 53 ms、来源替换 fail-closed）、原生窗口启动/优雅退出；
+heartbeat 轮次 4 再现 75.21 ms 超限（>75 ms 门槛 0.21 ms），跨负载稳定性保持
+`PARTIAL`。证据 `p0b-cleanenv-and-heartbeat.md`。
+
+## Findings / Changes Made / Files Modified
+
+- 新增：`benchmark-p0b-cleanenv-round1.json`（+`.stderr.txt`）、
+  `p1b-native-ui/nt-cleanenv-1280x808.png`、`p0b-cleanenv-and-heartbeat.md`；
+  `交接.md`、`PROJECT_FILE_INDEX.sha256` 更新。无源码改动。
+- 干净环境首次缺 science extra 时 3 项 STFT 测试按设计 fail-closed，补装后全过。
+- heartbeat：round3 0 超限（max 64.76）；round4 1 次 75.21 ms 超限（退出码 1）——
+  与历史 88.62/153.45 ms 波动同族，`PARTIAL` 保持，不宣称稳定。
+
+## Remaining Risks
+
+- 真实目标相机素材矩阵（P0-B）、VoiceOver/文本缩放（P1-B）、打包/签名（P2）仍未闭环；
+  heartbeat 跨负载稳定性未证明。
