@@ -77,8 +77,18 @@ class PhysicsWorkspace(QFrame):
         self.collapse_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
         self.collapse_button.setAccessibleName("Collapse physics analysis workspace")
         self.collapse_button.clicked.connect(self.toggle_collapsed)
+        self.focus_button = QToolButton()
+        self.focus_button.setObjectName("canvasFocusButton")
+        self.focus_button.setText("Canvas Focus")
+        self.focus_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        self.focus_button.setToolTip("Temporarily enlarge the video canvas.")
+        self.focus_button.setAccessibleName("Enter canvas focus mode")
+        self.focus_button.setAccessibleDescription(
+            "Temporarily hide the inspector and collapse this workspace to enlarge the video canvas."
+        )
         header_layout.addWidget(title)
         header_layout.addWidget(self.cursor_label, 1)
+        header_layout.addWidget(self.focus_button)
         header_layout.addWidget(self.collapse_button)
         outer.addWidget(header)
 
