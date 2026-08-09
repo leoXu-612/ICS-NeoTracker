@@ -12,6 +12,9 @@ from pathlib import Path
 
 import numpy as np
 
+from neo_tracker.atomic_io import fsync_parent_directory
+from neo_tracker.csv_utils import spreadsheet_safe_cell
+
 from .protocols import CancellationProbe
 from .runtime import check_cancelled
 from .types import FitResult, FitStatus, SampleSeries
@@ -30,7 +33,6 @@ CSV_FIELDS = (
     "fit_prediction",
     "residual",
 )
-_CSV_FORMULA_PREFIXES = ("=", "+", "-", "@", "\t", "\r")
 
 
 def _target_path(path: str | Path) -> Path:
@@ -56,6 +58,7 @@ def _atomic_destination(path: str | Path) -> Iterator[tuple[Path, Path]]:
         with temporary.open("rb") as handle:
             os.fsync(handle.fileno())
         os.replace(temporary, target)
+        fsync_parent_directory(target)
     except BaseException:
         temporary.unlink(missing_ok=True)
         raise
@@ -78,7 +81,7 @@ def _validate_fit(series: SampleSeries, fit: FitResult | None) -> None:
 
 def _csv_text(value: str) -> str:
     text = value.replace("\x00", "")
-    return f"'{text}" if text.startswith(_CSV_FORMULA_PREFIXES) else text
+    return str(spreadsheet_safe_cell(text))
 
 
 def _numeric_cell(value: float) -> str:
@@ -244,7 +247,22 @@ def _markdown_text(value: object) -> str:
         .replace("|", "\\|")
         .replace("<", "&lt;")
         .replace(">", "&gt;")
+        .replace("`", "&#96;")
     )
+
+
+def _markdown_code(value: object) -> str:
+    text = str(value).replace("\r", " ").replace("\n", " ")
+    longest = 0
+    current = 0
+    for character in text:
+        if character == "`":
+            current += 1
+            longest = max(longest, current)
+        else:
+            current = 0
+    fence = "`" * (longest + 1)
+    return f"{fence} {text} {fence}"
 
 
 def export_markdown(
@@ -272,10 +290,10 @@ def export_markdown(
         "",
         "## Source",
         "",
-        f"- Series: `{_markdown_text(series.series_id)}` ({_markdown_text(series.name)})",
-        f"- Source kind: `{_markdown_text(series.source_kind)}`",
-        f"- Source revision: `{_markdown_text(series.source_revision)}`",
-        f"- Unit: `{_markdown_text(unit)}`",
+        f"- Series: {_markdown_code(series.series_id)} ({_markdown_text(series.name)})",
+        f"- Source kind: {_markdown_code(series.source_kind)}",
+        f"- Source revision: {_markdown_code(series.source_revision)}",
+        f"- Unit: {_markdown_code(unit)}",
         f"- Data range: {data_range}",
         f"- Valid samples: {valid_count} / {len(series)}",
         "",
@@ -283,7 +301,10 @@ def export_markdown(
         "",
     ]
     if series.processing_chain:
-        lines.extend(f"{index}. `{_markdown_text(step)}`" for index, step in enumerate(series.processing_chain, 1))
+        lines.extend(
+            f"{index}. {_markdown_code(step)}"
+            for index, step in enumerate(series.processing_chain, 1)
+        )
     else:
         lines.append("No processing steps recorded.")
     if fit is not None:
@@ -292,7 +313,7 @@ def export_markdown(
                 "",
                 "## Fit",
                 "",
-                f"- Model: `{fit.model.value}`",
+                f"- Model: {_markdown_code(fit.model.value)}",
                 f"- Range: {fit.range_start_s:.17g} s to {fit.range_end_s:.17g} s",
                 f"- RMSE: {fit.rmse:.17g} {_markdown_text(unit)}",
                 f"- R²: {fit.r_squared:.17g}",

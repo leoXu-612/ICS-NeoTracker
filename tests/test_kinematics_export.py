@@ -35,7 +35,7 @@ class KinematicsExportTests(unittest.TestCase):
         base = fixture.sample_series(series_id="=unsafe-id")
         series = SampleSeries(
             series_id=base.series_id,
-            name="+unsafe name",
+            name="  =unsafe name",
             frame_indices=base.frame_indices,
             time_s=base.time_s,
             values=base.values,
@@ -55,7 +55,7 @@ class KinematicsExportTests(unittest.TestCase):
         self.assertEqual(tuple(rows[0]), CSV_FIELDS)
         self.assertEqual(len(rows), len(series))
         self.assertEqual(rows[0]["series_id"], "'=unsafe-id")
-        self.assertEqual(rows[0]["series_name"], "'+unsafe name")
+        self.assertEqual(rows[0]["series_name"], "'  =unsafe name")
         self.assertEqual(rows[20]["valid"], "false")
         self.assertEqual(rows[20]["value"], "")
         self.assertEqual(rows[20]["fit_prediction"], "")
@@ -96,7 +96,20 @@ class KinematicsExportTests(unittest.TestCase):
         self.assertFalse(isinstance(destinations[0], (str, Path)))
 
     def test_markdown_contains_provenance_parameters_metrics_and_limitations(self) -> None:
-        series = uniform_linear().sample_series()
+        base = uniform_linear().sample_series()
+        series = SampleSeries(
+            series_id="fixture:`unsafe`",
+            name="Unsafe ` name <tag>",
+            frame_indices=base.frame_indices,
+            time_s=base.time_s,
+            values=base.values,
+            valid_mask=base.valid_mask,
+            unit=base.unit,
+            source_kind=base.source_kind,
+            source_revision=base.source_revision,
+            processing_chain=base.processing_chain,
+            metadata=base.metadata,
+        )
         fit = fit_for(series)
         with tempfile.TemporaryDirectory() as directory:
             path = export_markdown(Path(directory) / "analysis.md", series, fit)
@@ -104,6 +117,8 @@ class KinematicsExportTests(unittest.TestCase):
 
         self.assertIn("## Source", content)
         self.assertIn(series.source_revision, content)
+        self.assertIn("`` fixture:`unsafe` ``", content)
+        self.assertIn("Unsafe &#96; name &lt;tag&gt;", content)
         self.assertIn("## Processing chain", content)
         self.assertIn("## Fit", content)
         self.assertIn("| slope |", content)
@@ -131,6 +146,14 @@ class KinematicsExportTests(unittest.TestCase):
             with self.assertRaises(KinematicsCancelled):
                 export_csv(path, series, cancellation=token)
             self.assertEqual(path.read_text(encoding="utf-8"), "existing")
+
+    def test_successful_atomic_replace_fsyncs_parent_directory(self) -> None:
+        series = uniform_linear(10).sample_series()
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "analysis.csv"
+            with patch("neo_tracker.kinematics.export.fsync_parent_directory") as fsync_parent:
+                export_csv(path, series)
+            fsync_parent.assert_called_once_with(path)
 
 
 if __name__ == "__main__":
