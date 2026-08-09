@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, replace
 from functools import partial
 from pathlib import Path
 from time import monotonic
@@ -40,6 +40,16 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from neo_tracker.application.job_state import (
+    AnalysisJob,
+    MediaProbeJob,
+    PreviewDecodeJob,
+    ProjectOpenJob,
+    ProjectSaveJob,
+    ReviewResponseJob,
+    TrackingJob,
+)
+from neo_tracker.application.task_supervisor import TaskSupervisor
 from neo_tracker.config import apply_pipeline_config, validate_roi_config
 from neo_tracker.core import TrackingPipeline, TrackerResult
 from neo_tracker.coordinates import AnnularCoordinate, LinearWorldCoordinate, PathCoordinate, PolarCoordinate
@@ -69,7 +79,6 @@ from neo_tracker.project import (
 )
 from neo_tracker.ui.analysis_controller import AnalysisController, AnalysisRun, AnalysisSource
 from neo_tracker.ui.analysis_worker import AnalysisWorker
-from neo_tracker.ui.background_tasks import BackgroundTaskCoordinator, BackgroundTaskToken
 from neo_tracker.ui.calibration_editor import CalibrationEditor
 from neo_tracker.ui.edit_history_panel import EditHistoryPanel, EditHistorySelection
 from neo_tracker.ui.media_relink_panel import MediaRelinkPanel
@@ -133,99 +142,6 @@ class PipelineStep:
     title: str
     module: str
     purpose: str
-
-
-@dataclass
-class TrackingJob:
-    token: BackgroundTaskToken
-    task: DesktopTask
-    mode: str
-    start_frame: int
-    prefix: list[TrackerResult] = field(default_factory=list)
-    anchor_frame: int | None = None
-    completed: int = 0
-    cancelled: bool = False
-    failed: bool = False
-    ended_early: bool = False
-    completion_note: str = ""
-    started_at: str = ""
-    started_monotonic: float = 0.0
-    pipeline_config: dict[str, object] = field(default_factory=dict)
-    previous_results: list[TrackerResult] = field(default_factory=list)
-    previous_edit_history: list[dict[str, object]] = field(default_factory=list)
-    previous_tracking_outcome: str = ""
-    previous_tracking_note: str = ""
-    previous_analysis_run: AnalysisRun | None = None
-    previous_result_state_restored: bool = False
-    result_replacement_committed: bool = False
-    superseded_edit_count: int = 0
-    tracking_elapsed_s: float = 0.0
-    tracking_input_s: float = 0.0
-    tracking_processing_s: float = 0.0
-    tracking_peak_debug_bytes: int = 0
-    tracking_prefetch_frames: int = 0
-    source_path: str = ""
-    source_identity: MediaIdentity | None = None
-    source_changed: bool = False
-
-
-@dataclass
-class AnalysisJob:
-    token: BackgroundTaskToken
-    task: DesktopTask
-    source: AnalysisSource
-    config: AnalysisConfig
-    cancelled: bool = False
-    cancel_message: str = "Processing canceled."
-    cancel_state: str = "canceled"
-
-
-@dataclass
-class MediaProbeJob:
-    token: BackgroundTaskToken
-    paths: tuple[str, ...]
-    pipeline_key: str
-    cancelled: bool = False
-    completed: bool = False
-    failure_detail: str = ""
-
-
-@dataclass
-class ProjectOpenJob:
-    token: BackgroundTaskToken
-    path: Path
-    cancelled: bool = False
-    completed: bool = False
-    failure_detail: str = ""
-
-
-@dataclass
-class ProjectSaveJob:
-    token: BackgroundTaskToken
-    path: Path
-    content_revision: int
-    completed: bool = False
-    failure_detail: str = ""
-
-
-@dataclass
-class ReviewResponseJob:
-    token: BackgroundTaskToken
-    request: ReviewResponseRequest
-    cancelled: bool = False
-    completed: bool = False
-    failure_detail: str = ""
-
-
-@dataclass
-class PreviewDecodeJob:
-    token: BackgroundTaskToken
-    task: DesktopTask
-    request: PreviewDecodeRequest
-    session: PreviewDecoderSession
-    cancelled: bool = False
-    result: PreviewDecodeResult | None = None
-    failure_detail: str = ""
 
 
 class ElidingLabel(QLabel):
@@ -506,7 +422,8 @@ class NeoTrackerWindow(QMainWindow):
         self._preview_decode_cache: PreviewDecodeResult | None = None
         self._preview_decoder_session: PreviewDecoderSession | None = None
         self._response_mode_routing_requested = False
-        self._background_tasks = BackgroundTaskCoordinator()
+        self._task_supervisor = TaskSupervisor()
+        self._background_tasks = self._task_supervisor
         self._review_responses = ReviewResponseService(max_entries=4)
 
         self._build_ui()

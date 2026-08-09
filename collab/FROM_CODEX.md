@@ -626,3 +626,55 @@ Codex 已在权威工作区完成：
 ### Next Integration Step
 
 - 进入 G1：只提取 Job/request/result 状态与 `TaskSupervisor`，保留 `BackgroundTaskCoordinator`、窗口兼容属性和现有用户流程。
+
+## [2026-08-09 20:31 Asia/Taipei] G1 Application 状态与任务监督器 — DONE
+
+### Base
+
+- Branch: `refactor/gpt-application-shell`
+- Base SHA: `dbd7016`
+- Head SHA: G1 单一提交（以最终 `git log` 为准）
+
+### Conclusion
+
+- 7 个后台 Job dataclass 已移出 `NeoTrackerWindow`，Application 层现在拥有纯生命周期状态。
+- 新 `TaskSupervisor` 统一 active kind、generation/current token、stale finish 与 close gate；窗口保留 `_background_tasks` 兼容引用。
+- `neo_tracker.ui.background_tasks` 继续提供旧类名和 token import，现有调用和测试注入点不变。
+
+### Files Changed
+
+- `neo_tracker/application/__init__.py`
+- `neo_tracker/application/task_supervisor.py`
+- `neo_tracker/application/job_state.py`
+- `neo_tracker/ui/background_tasks.py`
+- `neo_tracker/ui/main_window.py`
+- `tests/test_application_task_supervisor.py`
+- `tests/test_main_window_architecture.py`
+- `collab/FROM_CODEX.md`
+
+### Tests
+
+- 红：旧基线缺少 `neo_tracker.application`，且 7 个 Job 仍定义在 Window；2 个架构检查按预期失败。
+- 绿：TaskSupervisor/架构/旧兼容定向 8/8，PASS。
+- 主窗口相关定向 151/151，55.713 秒，PASS。
+- 全量 462/462，60.065 秒，PASS。
+- `compileall` 与 `pip check`，PASS。
+
+### Performance
+
+- G1 只移动纯状态与复用原逻辑，没有改变项目打开路径；按清单本阶段不重复关键 benchmark。
+
+### Compatibility
+
+- Public API changes: none；旧 `BackgroundTaskCoordinator` / `BackgroundTaskToken` 路径继续可用。
+- Project format changes: none。
+- User-visible behavior changes: none。
+
+### Remaining Risks
+
+- Window 仍直接构造所有 Worker/QThread；本阶段只建立所有权边界。
+- Job 状态仍由 Window 方法变更，直到相应 G2–G5 Coordinator 接管。
+
+### Next Integration Step
+
+- 进入 G2：提取 Preview request/session/thread 所有权及 Playback 协调，保留 `PreviewCanvas`、测试 reader 注入和现有状态文案。
