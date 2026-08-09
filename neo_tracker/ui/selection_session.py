@@ -96,6 +96,10 @@ class SelectionSession:
     def series_ids(self) -> tuple[str, ...]:
         return tuple(self._series)
 
+    @property
+    def listener_count(self) -> int:
+        return len(self._listeners)
+
     def subscribe(self, listener: SelectionListener) -> Callable[[], None]:
         if listener not in self._listeners:
             self._listeners.append(listener)

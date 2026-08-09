@@ -4,6 +4,7 @@ import unittest
 
 import numpy as np
 from PySide6.QtCore import Qt
+from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QTableView, QWidget
 
 from neo_tracker.kinematics import SampleSeries
@@ -154,6 +155,38 @@ class MainWindowPhysicsWorkspaceTests(unittest.TestCase):
         self.assertEqual(state.selected_sample_index, 1)  # equal-distance tie -> earlier frame 6
         self.assertEqual(state.match.value, "nearest")
         self.assertIn("frame 8 · nearest", window.physics_workspace.cursor_label.text())
+
+    def test_one_plot_keyboard_action_commits_one_canonical_revision(self) -> None:
+        window = self.make_window()
+        window.current_task.media_info = MediaInfo(
+            fps=30.0,
+            frame_count=30,
+            width=640,
+            height=360,
+            duration_s=1.0,
+            available=True,
+        )
+        source = self.sparse_series()
+        window.set_physics_series((source,))
+        plot = window.physics_workspace.plot
+        plot.setFocus()
+        before = window.selection_session.state.selection_revision
+
+        QTest.keyClick(plot, Qt.Key.Key_Right)
+        QApplication.processEvents()
+
+        self.assertEqual(window.selection_session.state.selection_revision, before + 1)
+        self.assertEqual(window.selection_session.state.selected_sample_index, 1)
+
+    def test_final_window_close_unsubscribes_selection_session(self) -> None:
+        window = self.make_window()
+        self.assertEqual(window.selection_session.listener_count, 1)
+        window._set_project_clean()
+
+        window.close()
+        QApplication.processEvents()
+
+        self.assertEqual(window.selection_session.listener_count, 0)
 
 
 if __name__ == "__main__":

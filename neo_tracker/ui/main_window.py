@@ -426,7 +426,9 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self._physics_series_owner_token: int | None = None
         self.physics_workspace = PhysicsWorkspace()
         self.physics_workspace.sampleActivated.connect(self._physics_sample_activated)
-        self.physics_workspace.timeActivated.connect(self._physics_time_activated)
+        self.physics_workspace.plotSampleActivated.connect(
+            self._physics_plot_sample_activated
+        )
         self.physics_workspace.pageRouteRequested.connect(self._physics_route_requested)
         self.physics_workspace.layoutStateChanged.connect(
             self._physics_workspace_layout_changed
@@ -1495,10 +1497,11 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
             expected_source_revision=state.source_revision,
         )
 
-    def _physics_time_activated(self, time_s: float) -> None:
+    def _physics_plot_sample_activated(self, series_id: str, sample_index: int) -> None:
         state = self.selection_session.state
-        self.selection_session.select_time(
-            float(time_s),
+        self.selection_session.select_sample(
+            series_id,
+            int(sample_index),
             origin=SelectionOrigin.PLOT,
             expected_source_revision=state.source_revision,
         )
@@ -6968,6 +6971,9 @@ class NeoTrackerWindow(CoordinatorCompatibilityMixin, QMainWindow):
         self._review_response_coordinator.close()
         self._preview_coordinator.close()
         self._playback_coordinator.close()
+        if self._selection_unsubscribe is not None:
+            self._selection_unsubscribe()
+            self._selection_unsubscribe = None
         self._application_shell.close()
         super().closeEvent(event)
 

@@ -31,7 +31,7 @@ class PhysicsWorkspace(QFrame):
     """Collapsible bottom instrument tray for data, plot, fit, and legacy routes."""
 
     sampleActivated = Signal(str, int)
-    timeActivated = Signal(float)
+    plotSampleActivated = Signal(str, int)
     rangeSelected = Signal(float, float)
     pageRouteRequested = Signal(str)
     layoutStateChanged = Signal(object)
@@ -126,7 +126,6 @@ class PhysicsWorkspace(QFrame):
 
         self.plot = PhysicsPlot()
         self.plot.sampleActivated.connect(self._plot_sample_activated)
-        self.plot.timeActivated.connect(self.timeActivated)
         self.plot.rangeSelected.connect(self.rangeSelected)
         plot_page = QWidget()
         plot_layout = QVBoxLayout(plot_page)
@@ -409,8 +408,7 @@ class PhysicsWorkspace(QFrame):
         selection.blockSignals(False)
         time_s = float(source.time_s[int(row)])
         self.set_cursor(int(source.frame_indices[int(row)]), time_s, "exact")
-        self.timeActivated.emit(time_s)
-        self.sampleActivated.emit(series_id, int(row))
+        self.plotSampleActivated.emit(series_id, int(row))
 
     def _page_changed(self, _index: int) -> None:
         if not self._collapsed:
