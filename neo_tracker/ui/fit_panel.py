@@ -1,0 +1,302 @@
+from __future__ import annotations
+
+import json
+import math
+from collections.abc import Sequence
+
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QDoubleSpinBox,
+    QFormLayout,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
+
+from neo_tracker.kinematics import FitResult, SampleSeries
+from neo_tracker.ui.analysis_workspace_controller import AnalysisWorkspaceState, FitDraft
+
+
+class FitPanel(QWidget):
+    """Fit request/result presentation; numerical fitting never runs in this widget."""
+
+    runRequested = Signal(object)
+    cancelRequested = Signal()
+    residualToggled = Signal(bool)
+    exportRequested = Signal()
+
+    _MODELS = {
+        "Linear": "linear",
+        "Quadratic": "quadratic",
+        "Exponential": "exponential",
+        "Sinusoidal": "sinusoidal",
+    }
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._series: dict[str, SampleSeries] = {}
+        self._busy = False
+        self.setAccessibleName("Physics model fit")
+        self.setAccessibleDescription(
+            "Choose a physical series, model, and true-time range. Fits run in the background."
+        )
+        root = QVBoxLayout(self)
+        root.setContentsMargins(10, 8, 10, 8)
+        root.setSpacing(7)
+
+        form = QFormLayout()
+        self.series_combo = QComboBox()
+        self.series_combo.setAccessibleName("Fit physical series")
+        self.series_combo.currentIndexChanged.connect(self._series_changed)
+        form.addRow("Series", self.series_combo)
+        self.model_combo = QComboBox()
+        self.model_combo.setAccessibleName("Fit model")
+        for display, value in self._MODELS.items():
+            self.model_combo.addItem(display, value)
+        self.model_combo.currentTextChanged.connect(self._model_changed)
+        form.addRow("Model", self.model_combo)
+
+        range_row = QHBoxLayout()
+        self.range_start_spin = self._range_spin("Fit range start in true seconds")
+        self.range_end_spin = self._range_spin("Fit range end in true seconds")
+        range_row.addWidget(self.range_start_spin)
+        range_row.addWidget(QLabel("to"))
+        range_row.addWidget(self.range_end_spin)
+        form.addRow("True-time range", range_row)
+
+        self.initial_parameters_label = QLabel("Initial parameters")
+        self.initial_parameters_edit = QLineEdit("{}")
+        self.initial_parameters_edit.setAccessibleName("Nonlinear initial parameters JSON")
+        self.initial_parameters_edit.setToolTip(
+            'Named JSON values, for example {"omega": 6.28, "amplitude": 0.2}.'
+        )
+        form.addRow(self.initial_parameters_label, self.initial_parameters_edit)
+        self.bounds_label = QLabel("Bounds")
+        self.bounds_edit = QLineEdit("{}")
+        self.bounds_edit.setAccessibleName("Nonlinear parameter bounds JSON")
+        self.bounds_edit.setToolTip('Named JSON pairs, for example {"omega": [0.1, 20.0]}.')
+        form.addRow(self.bounds_label, self.bounds_edit)
+        root.addLayout(form)
+
+        action_row = QHBoxLayout()
+        self.run_button = QPushButton("Run Fit")
+        self.run_button.setObjectName("runPhysicsFitButton")
+        self.run_button.setAccessibleName("Run physics model fit")
+        self.run_button.clicked.connect(self._emit_run)
+        self.cancel_button = QPushButton("Cancel")
+        self.cancel_button.setObjectName("cancelPhysicsFitButton")
+        self.cancel_button.setAccessibleName("Cancel active physics model fit")
+        self.cancel_button.clicked.connect(self.cancelRequested)
+        self.cancel_button.setEnabled(False)
+        self.residual_checkbox = QCheckBox("Show residual")
+        self.residual_checkbox.setAccessibleName("Show fit residual plot")
+        self.residual_checkbox.toggled.connect(self.residualToggled)
+        self.residual_checkbox.setEnabled(False)
+        self.export_button = QPushButton("Export")
+        self.export_button.setObjectName("exportPhysicsAnalysisButton")
+        self.export_button.setAccessibleName("Export physics fit analysis")
+        self.export_button.clicked.connect(self.exportRequested)
+        self.export_button.setEnabled(False)
+        action_row.addWidget(self.run_button)
+        action_row.addWidget(self.cancel_button)
+        action_row.addWidget(self.residual_checkbox)
+        action_row.addStretch(1)
+        action_row.addWidget(self.export_button)
+        root.addLayout(action_row)
+
+        self.status_label = QLabel("Choose a physical series.")
+        self.status_label.setObjectName("physicsFitStatus")
+        self.status_label.setWordWrap(True)
+        self.status_label.setAccessibleName("Physics fit status")
+        root.addWidget(self.status_label)
+        self.summary_label = QLabel("No fit result")
+        self.summary_label.setObjectName("physicsFitSummary")
+        self.summary_label.setWordWrap(True)
+        self.summary_label.setAccessibleName("Physics fit quality summary")
+        root.addWidget(self.summary_label)
+
+        self.parameter_table = QTableWidget(0, 4)
+        self.parameter_table.setHorizontalHeaderLabels(("Parameter", "Value", "Unit", "Std. error"))
+        self.parameter_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        self.parameter_table.horizontalHeader().setStretchLastSection(True)
+        self.parameter_table.verticalHeader().setVisible(False)
+        self.parameter_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.parameter_table.setAccessibleName("Fit parameters and uncertainty")
+        root.addWidget(self.parameter_table, 1)
+        self._model_changed(self.model_combo.currentText())
+        self._update_controls()
+
+    def set_series(self, series: Sequence[SampleSeries]) -> None:
+        items = tuple(series)
+        self._series = {item.series_id: item for item in items}
+        previous = self.series_combo.currentData()
+        self.series_combo.blockSignals(True)
+        self.series_combo.clear()
+        for item in items:
+            unit = item.unit or "unit unavailable"
+            self.series_combo.addItem(f"{item.name} · {unit}", item.series_id)
+        selected = self.series_combo.findData(previous)
+        self.series_combo.setCurrentIndex(selected if selected >= 0 else (0 if items else -1))
+        self.series_combo.blockSignals(False)
+        self._series_changed(self.series_combo.currentIndex())
+        self.clear_result()
+        self.status_label.setText(
+            "Choose a model and true-time range."
+            if items
+            else "No physical series is available."
+        )
+        self._update_controls()
+
+    def draft(self) -> FitDraft:
+        series_id = self.series_combo.currentData()
+        if series_id is None or str(series_id) not in self._series:
+            raise ValueError("Choose a physical series before running a fit.")
+        initial = self._numeric_mapping(self.initial_parameters_edit.text(), "Initial parameters")
+        bounds_data = self._json_mapping(self.bounds_edit.text(), "Bounds")
+        bounds: dict[str, tuple[float, float]] = {}
+        for key, value in bounds_data.items():
+            if not isinstance(value, list) or len(value) != 2:
+                raise ValueError(f"Bounds.{key} must be a two-value JSON array.")
+            bounds[key] = (float(value[0]), float(value[1]))
+        return FitDraft(
+            series_id=str(series_id),
+            model=str(self.model_combo.currentData()),
+            range_start_s=self.range_start_spin.value(),
+            range_end_s=self.range_end_spin.value(),
+            initial_parameters=initial,
+            bounds=bounds,
+        )
+
+    def set_busy(self, busy: bool) -> None:
+        self._busy = bool(busy)
+        self.status_label.setText(
+            "Fit running in the background…" if self._busy else self.status_label.text()
+        )
+        self.cancel_button.setEnabled(self._busy)
+        self._update_controls()
+
+    def apply_state(self, state: AnalysisWorkspaceState) -> None:
+        self.set_busy(state.status == "running")
+        self.status_label.setText(state.message)
+        if state.fit_result is not None:
+            self.show_result(state.fit_result)
+        elif state.status in {"dirty", "failed", "stale", "unavailable", "empty"}:
+            self.clear_result()
+        self.residual_checkbox.blockSignals(True)
+        self.residual_checkbox.setChecked(state.residual_visible)
+        self.residual_checkbox.blockSignals(False)
+
+    def show_result(self, result: FitResult) -> None:
+        self.parameter_table.setRowCount(len(result.parameter_names))
+        for row, name in enumerate(result.parameter_names):
+            error = float(result.standard_errors[row])
+            values = (
+                name,
+                format(float(result.parameters[row]), ".10g"),
+                result.parameter_units[row] or "unit unavailable",
+                format(error, ".6g") if math.isfinite(error) else "unavailable",
+            )
+            for column, value in enumerate(values):
+                self.parameter_table.setItem(row, column, QTableWidgetItem(value))
+        self.summary_label.setText(
+            f"{result.model.value.title()} · R² {result.r_squared:.6g} · "
+            f"RMSE {result.rmse:.6g} · {result.sample_count:,} samples · "
+            f"{result.range_start_s:.6g}–{result.range_end_s:.6g} s"
+        )
+        detail = (
+            f"{result.model.value} fit using {result.sample_count:,} valid samples. "
+            f"R squared {result.r_squared:.6g}; RMSE {result.rmse:.6g}."
+        )
+        self.summary_label.setToolTip(detail)
+        self.summary_label.setAccessibleDescription(detail)
+        self.residual_checkbox.setEnabled(True)
+        self.export_button.setEnabled(True)
+
+    def clear_result(self) -> None:
+        self.parameter_table.setRowCount(0)
+        self.summary_label.setText("No fit result")
+        self.residual_checkbox.setEnabled(False)
+        self.export_button.setEnabled(False)
+
+    def _emit_run(self) -> None:
+        try:
+            draft = self.draft()
+            # FitRequest performs the authoritative finite/range/model validation.
+            draft.to_request(self._series[draft.series_id])
+        except Exception as exc:
+            self.status_label.setText(f"Fit settings invalid: {exc}")
+            self.status_label.setAccessibleDescription(self.status_label.text())
+            return
+        self.runRequested.emit(draft)
+
+    def _series_changed(self, _index: int) -> None:
+        source = self._series.get(str(self.series_combo.currentData()))
+        if source is None:
+            return
+        valid_times = source.time_s[source.valid_mask]
+        if valid_times.size:
+            minimum, maximum = float(valid_times[0]), float(valid_times[-1])
+            self.range_start_spin.setRange(-1e12, 1e12)
+            self.range_end_spin.setRange(-1e12, 1e12)
+            self.range_start_spin.setValue(minimum)
+            self.range_end_spin.setValue(maximum)
+        self.clear_result()
+
+    def _model_changed(self, model: str) -> None:
+        nonlinear = model in {"Exponential", "Sinusoidal"}
+        for widget in (
+            self.initial_parameters_label,
+            self.initial_parameters_edit,
+            self.bounds_label,
+            self.bounds_edit,
+        ):
+            widget.setVisible(nonlinear)
+
+    def _update_controls(self) -> None:
+        available = bool(self._series) and not self._busy
+        self.series_combo.setEnabled(available)
+        self.model_combo.setEnabled(available)
+        self.range_start_spin.setEnabled(available)
+        self.range_end_spin.setEnabled(available)
+        self.initial_parameters_edit.setEnabled(available)
+        self.bounds_edit.setEnabled(available)
+        self.run_button.setEnabled(available)
+
+    @staticmethod
+    def _range_spin(accessible_name: str) -> QDoubleSpinBox:
+        spin = QDoubleSpinBox()
+        spin.setRange(-1e12, 1e12)
+        spin.setDecimals(9)
+        spin.setSingleStep(0.01)
+        spin.setSuffix(" s")
+        spin.setAccessibleName(accessible_name)
+        return spin
+
+    @staticmethod
+    def _json_mapping(text: str, label: str) -> dict[str, object]:
+        try:
+            value = json.loads(text or "{}")
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{label} must be valid JSON.") from exc
+        if not isinstance(value, dict):
+            raise ValueError(f"{label} must be a JSON object.")
+        return {str(key): item for key, item in value.items()}
+
+    @classmethod
+    def _numeric_mapping(cls, text: str, label: str) -> dict[str, float]:
+        value = cls._json_mapping(text, label)
+        result: dict[str, float] = {}
+        for key, item in value.items():
+            try:
+                result[key] = float(item)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"{label}.{key} must be numeric.") from exc
+        return result
