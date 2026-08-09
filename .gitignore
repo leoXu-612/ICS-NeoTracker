@@ -17,6 +17,9 @@ dist/
 venv/
 env/
 
+# Real-media test inputs (large SloMo captures; kept out of the repository)
+ICS-NeoTracker-PHY-EE-Test-Videos/
+
 # Test, coverage, and type-check caches
 .pytest_cache/
 .coverage

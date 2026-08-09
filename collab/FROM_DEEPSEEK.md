@@ -469,3 +469,33 @@ OS 级真实按键与 AX/VoiceOver 复核因本会话宿主占用前台 + AX 服
 - OS 级真实按键、AX 表格导航、VoiceOver、系统文本缩放：宿主会话/AX 服务恢复后复核。
 - 真实目标相机素材矩阵（P0-B VFR/4K/长会话/功耗）与 heartbeat 跨负载稳定性仍
   `BLOCKED`/`PARTIAL`；P2 打包/签名范围已写入 README 部署范围。
+
+---
+
+# P0-B CPU 采样 + 低负载 heartbeat 门槛复核（2026-08-09 续）
+
+## Conclusion
+
+矩阵脚本新增主进程 CPU 采样（0.05 s 间隔，peak/median/样本数），两轮证据
+`benchmark-p0b-cpu-round{1,2}.json`：Full Run CPU peak 4.2–37.3%（满载宿主
+观测）、Cancel 4.5–5.4%、来源替换 25.5–29.8%；功耗/温度仍需 root，
+`BLOCKED`。正常负载（load 3.7–4.8）heartbeat round 6–8 三轮 × 3 次全部通过
+（34.57–59.18 ms），合并 round 3/4 后共 **5 组连续三次 <75 ms**（15/15），
+满足第 8 节门槛验收口径；满载下超限记录保留，跨负载稳定性仍 `PARTIAL`。
+
+## Changes Made / Files Modified / Testing
+
+- `benchmarks/benchmark_real_media_matrix.py`：新增 `_ps_cpu`/`_CpuSampler`，
+  Full Run/Cancel/来源替换返回 `peak_parent_cpu_percent`/
+  `median_parent_cpu_percent`/`cpu_samples`。
+- 新增 `benchmark-p0b-cpu-round{1,2}.json`（+`.stderr.txt`）与
+  `heartbeat-rounds/round{6,7,8}.json`（+`.stderr.txt`）；更新
+  `p0b-real-media-matrix.md`、`heartbeat-rounds/README.md`、`交接.md`、
+  `PROJECT_INDEX.md`、`PROJECT_FILE_INDEX.sha256`。
+- 全量 479 tests / 60.316 s OK、compileall、pip check、SHA-256 索引通过。
+- 提交：`ca9e292`（CPU 采样）、`46e6985`（低负载 heartbeat），已推送 origin/main。
+
+## Remaining Risks
+
+- P0-B 真实素材（VFR/4K/长会话）与功耗/温度、VoiceOver/文本缩放/AX 复核仍
+  需外部解锁；满载下 heartbeat 偶发超限为宿主调度延迟，未宣称跨负载稳定。
