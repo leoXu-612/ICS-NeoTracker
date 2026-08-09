@@ -678,3 +678,55 @@ Codex 已在权威工作区完成：
 ### Next Integration Step
 
 - 进入 G2：提取 Preview request/session/thread 所有权及 Playback 协调，保留 `PreviewCanvas`、测试 reader 注入和现有状态文案。
+
+## [2026-08-09 20:44 Asia/Taipei] G2 Preview 与 Playback Coordinator — DONE
+
+### Base
+
+- Branch: `refactor/gpt-application-shell`
+- Base SHA: `c6470c8`
+- Head SHA: G2 单一提交（以最终 `git log` 为准）
+
+### Conclusion
+
+- `PreviewCoordinator` 现统一拥有 request coalescing、generation token、QThread/Worker、pending request、decoder session、cache 与终态提交；只在 thread 停止后提交当前 owner 的结果。
+- `PlaybackCoordinator` 现统一拥有 `PlaybackClock`、PreciseTimer、source-time tick、generation 与幂等 stop/close。
+- Window 不再构造 `PreviewDecodeWorker`/`PreviewDecoderSession`，也不再保存 preview thread/job/pending/session；`PreviewCanvas` 和用户可见状态仍由 UI Shell 拥有。
+
+### Files Changed
+
+- `neo_tracker/application/preview_coordinator.py`
+- `neo_tracker/application/playback_coordinator.py`
+- `neo_tracker/ui/main_window.py`
+- `tests/test_preview_coordinator.py`
+- `tests/test_playback_coordinator.py`
+- `tests/test_main_window_architecture.py`
+- `collab/FROM_CODEX.md`
+
+### Tests
+
+- 红：旧 G1 状态不存在两个 Coordinator，2 个测试模块导入失败。
+- Coordinator/架构定向：7/7，PASS；覆盖快速 scrub、旧 owner late result、close-during-decode、幂等 close、source-time skip 与 1 fps interval。
+- 原有主窗口 Preview/Playback/close/隔离 decoder：143/143，63.046 秒，PASS。
+- 全量：468/468，60.914 秒，PASS。
+- `compileall` 与 `pip check`，PASS。
+
+### Performance
+
+- G2 不属于清单要求的关键 benchmark 阶段；未声称性能改善。QThread 与 decoder helper 边界、request 合并及单 session 复用语义保持。
+
+### Compatibility
+
+- Public API changes: none。
+- Project format changes: none。
+- User-visible behavior changes: none；按钮文案、状态文案、source-time skips 与测试 reader 注入路径保持。
+- Window 暂时提供只读/测试用兼容属性，真实所有权只在 Coordinator。
+
+### Remaining Risks
+
+- Preview 的 UI current-task 判定仍由窗口在语义信号入口二次验证；G6 可在测试迁移完成后移除兼容 adapter。
+- 原生 decoder、Retina/compositor 与长时媒体稳定性不由 offscreen 回归证明。
+
+### Next Integration Step
+
+- 进入 G3：分别提取 Media Import 和 Project Open/Save 生命周期，保持 prepared → validate → atomic apply、取消不替换当前项目及 save revision/path guard。

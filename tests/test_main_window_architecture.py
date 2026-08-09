@@ -33,6 +33,59 @@ class MainWindowArchitectureTests(unittest.TestCase):
             with self.subTest(job=name):
                 self.assertIs(getattr(main_window, name), getattr(job_state, name))
 
+    def test_preview_and_playback_lifecycle_are_application_owned(self) -> None:
+        root = Path(__file__).parents[1]
+        source_path = root / "neo_tracker" / "ui" / "main_window.py"
+        tree = ast.parse(source_path.read_text(encoding="utf-8"))
+        window_class = next(
+            node
+            for node in tree.body
+            if isinstance(node, ast.ClassDef) and node.name == "NeoTrackerWindow"
+        )
+        constructor = next(
+            node
+            for node in window_class.body
+            if isinstance(node, ast.FunctionDef) and node.name == "__init__"
+        )
+        assigned_attributes = {
+            target.attr
+            for node in ast.walk(constructor)
+            if isinstance(node, (ast.Assign, ast.AnnAssign))
+            for target in (
+                node.targets if isinstance(node, ast.Assign) else [node.target]
+            )
+            if isinstance(target, ast.Attribute)
+            and isinstance(target.value, ast.Name)
+            and target.value.id == "self"
+        }
+        forbidden_window_state = {
+            "play_timer",
+            "playback_clock",
+            "_preview_decode_thread",
+            "_preview_decode_worker",
+            "_preview_decode_job",
+            "_pending_preview_decode",
+            "_preview_decode_cache",
+            "_preview_decoder_session",
+        }
+        constructed_names = {
+            node.func.id
+            for node in ast.walk(window_class)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+        }
+
+        self.assertTrue(forbidden_window_state.isdisjoint(assigned_attributes))
+        self.assertNotIn("PreviewDecodeWorker", constructed_names)
+        self.assertNotIn("PreviewDecoderSession", constructed_names)
+        self.assertIn("PreviewCoordinator", constructed_names)
+        self.assertIn("PlaybackCoordinator", constructed_names)
+
+        for coordinator_name in ("preview_coordinator.py", "playback_coordinator.py"):
+            source = (root / "neo_tracker" / "application" / coordinator_name).read_text(
+                encoding="utf-8"
+            )
+            self.assertNotIn("PySide6.QtWidgets", source)
+
 
 if __name__ == "__main__":
     unittest.main()

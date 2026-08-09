@@ -49,6 +49,8 @@ from neo_tracker.application.job_state import (
     ReviewResponseJob,
     TrackingJob,
 )
+from neo_tracker.application.playback_coordinator import PlaybackCoordinator
+from neo_tracker.application.preview_coordinator import PreviewCoordinator, PreviewRequest
 from neo_tracker.application.task_supervisor import TaskSupervisor
 from neo_tracker.config import apply_pipeline_config, validate_roi_config
 from neo_tracker.core import TrackingPipeline, TrackerResult
@@ -89,7 +91,6 @@ from neo_tracker.ui.preview_canvas import PreviewCanvas
 from neo_tracker.ui.preview_decode_worker import (
     PreviewDecodeRequest,
     PreviewDecodeResult,
-    PreviewDecodeWorker,
     same_preview_request,
 )
 from neo_tracker.ui.project_open_worker import PreparedProjectOpen, ProjectOpenWorker
@@ -228,10 +229,8 @@ class NeoTrackerWindow(QMainWindow):
         self._last_project_open_apply_ms = 0.0
         self._retired_project_tasks: list[DesktopTask] = []
 
-        self.play_timer = QTimer(self)
-        self.play_timer.setTimerType(Qt.TimerType.PreciseTimer)
-        self.play_timer.timeout.connect(self._advance_playback)
-        self.playback_clock = PlaybackClock()
+        self._playback_coordinator = PlaybackCoordinator()
+        self._playback_coordinator.advance_requested.connect(self._advance_playback)
         self._project_open_diagnostics_timer = QTimer(self)
         self._project_open_diagnostics_timer.setSingleShot(True)
         self._project_open_diagnostics_timer.timeout.connect(
@@ -415,15 +414,13 @@ class NeoTrackerWindow(QMainWindow):
         self._review_response_worker: ReviewResponseWorker | None = None
         self._review_response_job: ReviewResponseJob | None = None
         self._pending_review_response: ReviewResponseRequest | None = None
-        self._preview_decode_thread: QThread | None = None
-        self._preview_decode_worker: PreviewDecodeWorker | None = None
-        self._preview_decode_job: PreviewDecodeJob | None = None
-        self._pending_preview_decode: tuple[DesktopTask, PreviewDecodeRequest] | None = None
-        self._preview_decode_cache: PreviewDecodeResult | None = None
-        self._preview_decoder_session: PreviewDecoderSession | None = None
         self._response_mode_routing_requested = False
         self._task_supervisor = TaskSupervisor()
         self._background_tasks = self._task_supervisor
+        self._preview_coordinator = PreviewCoordinator(self._task_supervisor)
+        self._preview_coordinator.result_ready.connect(self._preview_coordinator_completed)
+        self._preview_coordinator.failed.connect(self._preview_coordinator_failed)
+        self._preview_coordinator.idle_reached.connect(self._preview_coordinator_idle)
         self._review_responses = ReviewResponseService(max_entries=4)
 
         self._build_ui()
@@ -437,6 +434,59 @@ class NeoTrackerWindow(QMainWindow):
         """Compatibility name for tests and older collaboration notes."""
 
         return self._background_tasks.closing
+
+    @property
+    def play_timer(self) -> QTimer:
+        """Compatibility view of the Application-owned playback timer."""
+
+        return self._playback_coordinator.timer
+
+    @property
+    def playback_clock(self) -> PlaybackClock:
+        return self._playback_coordinator.clock
+
+    @playback_clock.setter
+    def playback_clock(self, value: PlaybackClock) -> None:
+        self._playback_coordinator.clock = value
+
+    @property
+    def _preview_decode_thread(self) -> QThread | None:
+        return self._preview_coordinator.thread
+
+    @property
+    def _preview_decode_worker(self) -> object | None:
+        return self._preview_coordinator.worker
+
+    @property
+    def _preview_decode_job(self) -> PreviewDecodeJob | None:
+        return self._preview_coordinator.job
+
+    @_preview_decode_job.setter
+    def _preview_decode_job(self, value: PreviewDecodeJob | None) -> None:
+        self._preview_coordinator.replace_job_for_testing(value)
+
+    @property
+    def _pending_preview_decode(self) -> tuple[DesktopTask, PreviewDecodeRequest] | None:
+        pending = self._preview_coordinator.pending_request
+        if pending is None or not isinstance(pending.owner, DesktopTask):
+            return None
+        return pending.owner, pending.decode_request
+
+    @property
+    def _preview_decode_cache(self) -> PreviewDecodeResult | None:
+        return self._preview_coordinator.cache
+
+    @_preview_decode_cache.setter
+    def _preview_decode_cache(self, value: PreviewDecodeResult | None) -> None:
+        self._preview_coordinator.replace_cache_for_testing(value)
+
+    @property
+    def _preview_decoder_session(self) -> PreviewDecoderSession | None:
+        return self._preview_coordinator.session
+
+    @_preview_decoder_session.setter
+    def _preview_decoder_session(self, value: PreviewDecoderSession | None) -> None:
+        self._preview_coordinator.replace_session_for_testing(value)
 
     def _build_ui(self) -> None:
         root = QWidget()
@@ -4185,9 +4235,7 @@ class NeoTrackerWindow(QMainWindow):
                 # Route it before any source-frame decode or relink early return.
                 self._tracking_overlay_for_task(task, None)
         if task.media_path is None:
-            self._cancel_preview_decode(clear_pending=True)
-            self._discard_preview_decoder_session()
-            self._preview_decode_cache = None
+            self._preview_coordinator.invalidate()
             self._cancel_review_response_requests(clear_pending=True)
             self.candidate_summary_label.setText("Candidates: none")
             self.preview_label.clear_message("No media loaded\nAdd a video or WAV file from the Media tab.")
@@ -4196,9 +4244,7 @@ class NeoTrackerWindow(QMainWindow):
         info = task.media_info or probe_media_for_ui(task.media_path)
         task.media_info = info
         if not info.available:
-            self._cancel_preview_decode(clear_pending=True)
-            self._discard_preview_decoder_session()
-            self._preview_decode_cache = None
+            self._preview_coordinator.invalidate()
             self._cancel_review_response_requests(clear_pending=True)
             self.candidate_summary_label.setText("Candidates: unavailable")
             detail = f"{task.title()}\nPreview unavailable\n{info.error}"
@@ -4221,9 +4267,7 @@ class NeoTrackerWindow(QMainWindow):
             self._sync_preview_dependent_actions(task)
             return
         if info.kind == "audio":
-            self._cancel_preview_decode(clear_pending=True)
-            self._discard_preview_decoder_session()
-            self._preview_decode_cache = None
+            self._preview_coordinator.invalidate()
             self._cancel_review_response_requests(clear_pending=True)
             self.candidate_summary_label.setText("Candidates: not used for audio")
             self.preview_label.clear_message(f"{task.title()}\nAudio file loaded\nReady for signal processing.")
@@ -4309,170 +4353,71 @@ class NeoTrackerWindow(QMainWindow):
         task: DesktopTask,
         request: PreviewDecodeRequest,
     ) -> None:
-        if self._background_tasks.closing:
-            self._pending_preview_decode = None
-            return
-        job = self._preview_decode_job
-        if self._preview_decode_thread is not None and job is not None:
-            if same_preview_request(job.request, request) and not job.cancelled:
-                return
-            self._pending_preview_decode = (task, request)
-            self._cancel_preview_decode(clear_pending=False)
-            return
-        self._start_preview_decode(task, request)
+        self._preview_coordinator.start(PreviewRequest(task, request))
 
     def _start_preview_decode(
         self,
         task: DesktopTask,
         request: PreviewDecodeRequest,
     ) -> None:
-        if self._preview_decode_thread is not None:
-            return
-        token = self._background_tasks.start("preview-decode")
-        if token is None:
-            return
-        try:
-            session = self._preview_decoder_session_for(request)
-        except Exception as exc:
-            self._background_tasks.finish(token)
-            self._show_preview_decode_failure(task, request.frame_index, str(exc))
-            return
-        thread = QThread(self)
-        worker = PreviewDecodeWorker(request, session=session)
-        worker.moveToThread(thread)
-        thread.started.connect(worker.run)
-        worker.completed.connect(self._preview_decode_completed)
-        worker.failed.connect(self._preview_decode_failed)
-        worker.canceled.connect(self._preview_decode_canceled)
-        worker.completed.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        worker.canceled.connect(thread.quit)
-        thread.finished.connect(worker.deleteLater)
-        thread.finished.connect(thread.deleteLater)
-        thread.finished.connect(self._preview_decode_thread_finished)
-        self._preview_decode_job = PreviewDecodeJob(token, task, request, session)
-        self._preview_decode_thread = thread
-        self._preview_decode_worker = worker
-        thread.start()
+        self._preview_coordinator.start(PreviewRequest(task, request))
 
     def _preview_decoder_session_for(
         self,
         request: PreviewDecodeRequest,
     ) -> PreviewDecoderSession:
-        session = self._preview_decoder_session
-        if session is not None and session.matches(
-            request.media_path,
-            expected_width=request.expected_width,
-            expected_height=request.expected_height,
-            expected_identity=request.expected_identity,
-        ):
-            return session
-        if session is not None:
-            session.close()
-        session = PreviewDecoderSession(
-            request.media_path,
-            expected_width=request.expected_width,
-            expected_height=request.expected_height,
-            expected_identity=request.expected_identity,
-        )
-        self._preview_decoder_session = session
-        return session
+        return self._preview_coordinator.session_for(request)
 
     def _discard_preview_decoder_session(self) -> None:
-        session = self._preview_decoder_session
-        self._preview_decoder_session = None
-        if session is None:
-            return
-        if self._preview_decode_thread is None:
-            session.close()
+        self._preview_coordinator.discard_session()
 
     def _cancel_preview_decode(self, *, clear_pending: bool) -> None:
-        if clear_pending:
-            self._pending_preview_decode = None
-        job = self._preview_decode_job
-        worker = self._preview_decode_worker
-        if job is None or worker is None or job.cancelled:
-            return
-        job.cancelled = True
-        worker.request_cancel()
+        self._preview_coordinator.cancel(clear_pending=clear_pending)
 
     def _preview_decode_completed(self, result_object: object) -> None:
-        job = self._preview_decode_job
-        if (
-            job is None
-            or job.cancelled
-            or not self._background_tasks.is_current(job.token)
-            or not isinstance(result_object, PreviewDecodeResult)
-            or not same_preview_request(job.request, result_object.request)
-        ):
-            return
-        job.result = result_object
+        self._preview_coordinator.handle_completed(result_object)
 
     def _preview_decode_failed(self, request_object: object, message: str) -> None:
-        job = self._preview_decode_job
-        if (
-            job is None
-            or job.cancelled
-            or not self._background_tasks.is_current(job.token)
-            or not isinstance(request_object, PreviewDecodeRequest)
-            or not same_preview_request(job.request, request_object)
-        ):
-            return
-        job.failure_detail = str(message) or "Preview decoder helper failed."
+        self._preview_coordinator.handle_failed(request_object, message)
 
     def _preview_decode_canceled(self, request_object: object) -> None:
-        job = self._preview_decode_job
-        if (
-            job is not None
-            and isinstance(request_object, PreviewDecodeRequest)
-            and same_preview_request(job.request, request_object)
-        ):
-            job.cancelled = True
+        self._preview_coordinator.handle_canceled(request_object)
 
     def _preview_decode_thread_finished(self) -> None:
-        job = self._preview_decode_job
-        pending = self._pending_preview_decode
-        job_is_current = bool(
-            job is not None
-            and self._preview_decode_request_is_current(job.task, job.request)
-        )
-        self._preview_decode_worker = None
-        self._preview_decode_thread = None
-        self._preview_decode_job = None
-        self._pending_preview_decode = None
-        if job is not None:
-            self._background_tasks.finish(job.token)
-            if (
-                self._background_tasks.closing
-                or job.cancelled
-                or bool(job.failure_detail)
-                or job.result is None
-                or not job_is_current
-            ):
-                # The QThread is now stopped, so deterministic session cleanup
-                # cannot race its decoder call. Pending work may reuse this
-                # closed object and will explicitly spawn a fresh helper.
-                job.session.close()
+        if self._preview_coordinator.thread is None:
+            self._preview_coordinator.handle_thread_finished()
+
+    def _preview_coordinator_completed(self, task_object: object, result_object: object) -> None:
+        if (
+            not isinstance(task_object, DesktopTask)
+            or not isinstance(result_object, PreviewDecodeResult)
+            or not self._preview_decode_request_is_current(task_object, result_object.request)
+        ):
+            self._preview_coordinator.clear_cache()
+            self._preview_coordinator.discard_session()
+            return
+        self._render_preview()
+
+    def _preview_coordinator_failed(
+        self,
+        task_object: object,
+        request_object: object,
+        message: str,
+    ) -> None:
+        if (
+            isinstance(task_object, DesktopTask)
+            and isinstance(request_object, PreviewDecodeRequest)
+            and self._preview_decode_request_is_current(task_object, request_object)
+        ):
+            self._show_preview_decode_failure(
+                task_object,
+                request_object.frame_index,
+                message,
+            )
+
+    def _preview_coordinator_idle(self) -> None:
         if self._background_tasks.closing:
             self._schedule_close_if_workers_stopped()
-            return
-        if pending is not None:
-            pending_task, pending_request = pending
-            if self._preview_decode_request_is_current(pending_task, pending_request):
-                self._start_preview_decode(pending_task, pending_request)
-                return
-        if job is None or not job_is_current:
-            return
-        if job.result is not None and not job.cancelled:
-            self._preview_decode_cache = job.result
-            self._render_preview()
-            return
-        if job.failure_detail and not job.cancelled:
-            self._show_preview_decode_failure(
-                job.task,
-                job.request.frame_index,
-                job.failure_detail,
-            )
 
     def _preview_decode_request_is_current(
         self,
@@ -4785,34 +4730,32 @@ class NeoTrackerWindow(QMainWindow):
             self._stop_playback()
 
     def _toggle_playback(self) -> None:
-        if self.play_timer.isActive():
+        if self._playback_coordinator.active:
             self._stop_playback()
             return
         task = self.current_task
         if not task.media_info or not task.media_info.available:
             return
         info = task.media_info
-        self.playback_clock.start(
+        if not self._playback_coordinator.start(
             current_frame=task.preview_frame_index,
             frame_count=info.frame_count,
             fps=info.fps,
-        )
+        ):
+            return
         self.play_button.setText("Pause")
         self.play_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPause))
         self.play_button.setAccessibleName("Pause video preview")
         self._set_playback_status(
-            f"Playing · Source {self._format_source_fps(self.playback_clock.fps)} fps",
+            f"Playing · Source {self._format_source_fps(self._playback_coordinator.fps)} fps",
             state="smooth",
             skipped_total=0,
         )
-        self.play_timer.start(self._playback_interval_ms(task))
 
     def _stop_playback(self, *, reached_end: bool = False, failure_detail: str = "") -> None:
-        was_active = self.play_timer.isActive() or self.playback_clock.active
-        skipped_total = self.playback_clock.skipped_total
-        if self.play_timer.isActive():
-            self.play_timer.stop()
-        self.playback_clock.stop()
+        was_active = self._playback_coordinator.active
+        skipped_total = self._playback_coordinator.skipped_total
+        self._playback_coordinator.stop()
         self.play_button.setText("Play")
         self.play_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
         self.play_button.setAccessibleName("Play video preview")
@@ -4840,20 +4783,20 @@ class NeoTrackerWindow(QMainWindow):
         if not info or not info.available:
             self._stop_playback()
             return
-        if not self._has_injected_preview_reader(task) and self._preview_decode_thread is not None:
+        if not self._has_injected_preview_reader(task) and self._preview_coordinator.busy:
             # Do not continuously supersede a bounded decoder request at the
             # source frame rate. Advance again after the isolated frame lands.
             return
-        tick = self.playback_clock.tick(task.preview_frame_index)
+        tick = self._playback_coordinator.tick(task.preview_frame_index)
         if tick.frame_index <= int(task.preview_frame_index):
             if tick.reached_end:
                 self._stop_playback(reached_end=True)
             return
         self._preview_frame_changed(tick.frame_index)
-        if not self.play_timer.isActive() or not self.playback_clock.active:
+        if not self._playback_coordinator.active:
             return
         self._set_playback_status(
-            f"Playing · Source {self._format_source_fps(self.playback_clock.fps)} fps"
+            f"Playing · Source {self._format_source_fps(self._playback_coordinator.fps)} fps"
             + (f" · Preview skips {tick.skipped_total}" if tick.skipped_total else ""),
             state="catchup" if tick.skipped_total else "smooth",
             skipped_total=tick.skipped_total,
@@ -4867,7 +4810,7 @@ class NeoTrackerWindow(QMainWindow):
 
     def _set_playback_status(self, text: str, *, state: str, skipped_total: int) -> None:
         detail = (
-            f"Video preview is playing at the source rate of {self._format_source_fps(self.playback_clock.fps)} "
+            f"Video preview is playing at the source rate of {self._format_source_fps(self._playback_coordinator.fps)} "
             f"frames per second. {skipped_total} preview display frame"
             f"{'s have' if skipped_total != 1 else ' has'} been skipped to stay aligned with source time. "
             "Tracking results and source data are unchanged."
@@ -4919,7 +4862,7 @@ class NeoTrackerWindow(QMainWindow):
     @staticmethod
     def _playback_interval_ms(task: DesktopTask) -> int:
         fps = task.media_info.fps if task.media_info and task.media_info.fps > 0 else 30.0
-        return PlaybackClock.timer_interval_ms(fps)
+        return PlaybackCoordinator.timer_interval_ms(fps)
 
     def _start_roi_selection(self) -> None:
         if not self.preview_label.begin_roi_selection():
@@ -7196,7 +7139,8 @@ class NeoTrackerWindow(QMainWindow):
         for task in self._retired_project_tasks:
             task.close_reader()
         self._retired_project_tasks.clear()
-        self._discard_preview_decoder_session()
+        self._preview_coordinator.close()
+        self._playback_coordinator.close()
         self._review_responses.clear()
         super().closeEvent(event)
 
