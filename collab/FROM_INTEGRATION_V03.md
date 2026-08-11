@@ -12,6 +12,7 @@ Engine、Analysis Workspace、Project Schema v3 与应用生命周期已完成�
 - Integration branch: `integration/physics-analysis-v0.3`
 - Remote ref: `origin/integration/physics-analysis-v0.3`（已按本地交付 SHA 精确验证）
 - Verified code SHA: `8f5f9d6`
+- Verified integration code/test SHA: `c92402c`
 - Engine source head: `ad17735`
 - Workspace source head: `c0984a2`
 
@@ -25,9 +26,10 @@ Engine、Analysis Workspace、Project Schema v3 与应用生命周期已完成�
 
 ## 最终验证
 
-- Full suite: `668/668`, `119.740 s`, OK。
+- Full suite: `674/674`, `121.656 s`, OK。
+- Test ID union: Engine `595`、Workspace `594`、双方 union `645`；Integration `674`，缺失 `0`，另增 `29`。
 - `compileall`: exit 0；`pip check`: clean。
-- Preview worker 生命周期：`100/100` 连续重复通过；最终全量后无新增 Python crash report。
+- Preview worker 生命周期：`100/100` 连续重复通过。修复前定向 cleanup 复现生成的 `Python-2026-08-11-203841.ips` 已归因为仍运行 QThread 的 SIGABRT；修复后定向、相邻序列与最终全量均正常退出，20:38:41 后无新增报告。
 - 100k project open ×3：heartbeat `35.701/49.397/52.741 ms`；payload/fingerprint 一致；physics apply `13.305–18.456 ms`。
 - 100k engine hot pipeline P50/P95/Max：`77.584/91.437/92.977 ms`；RSS peak `276.766 MiB`；cancel max `2.792 ms`。
 - 100k UI：plot prepare P95 `4.002 ms`；paint P95 `28.047 ms`；heartbeat max `31.954 ms`；table attach P95 `0.0028 ms`；0 helper。

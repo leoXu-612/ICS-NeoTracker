@@ -2,6 +2,7 @@
 
 Date: 2026-08-11 (Asia/Taipei)
 Code SHA: `8f5f9d6`
+Verified integration code/test SHA: `c92402c`
 Branch: `integration/physics-analysis-v0.3`
 
 ## Conclusion
@@ -10,7 +11,8 @@ The Engine, Workspace, Schema v3, application coordinators, persistence replay, 
 
 ## Required gates
 
-- Full regression: `668 tests / 119.740 s / OK`; zero FAIL and ERROR.
+- Full regression: `674 tests / 121.656 s / OK`; zero FAIL and ERROR.
+- Test ID union: Engine 595, Workspace 594, 645 unique across both; Integration contains all 645 with zero missing and adds 29 IDs.
 - Static/dependencies: `compileall` exit 0; `pip check` reports no broken requirements.
 - Integration tests: all four work-order suites are present and included in the full run.
 - 100k project: three background opens preserve results, payload, and fingerprint; heartbeat max `52.741 ms`; no QThread lifecycle warning.
@@ -22,7 +24,7 @@ The Engine, Workspace, Schema v3, application coordinators, persistence replay, 
 
 ## Regression found during final acceptance
 
-The first integrated 100k project-open run exposed a `ResizeToContents` scan on the 100k-row physics table and a close-time QThread leak. Fixed-column interactive sizing reduced physics apply from about `110–120 ms` to `13–18 ms`, and project heartbeat returned below `75 ms`. A later full run exposed Preview worker destruction after thread exit (`EXC_BAD_ACCESS` in `QObject::~QObject`); terminal signals now retire the worker before the QThread stops. The Preview lifecycle passed 100/100 repetitions and the subsequent 668-test full run passed without a newer Python crash report.
+The first integrated 100k project-open run exposed a `ResizeToContents` scan on the 100k-row physics table and a close-time QThread leak. Fixed-column interactive sizing reduced physics apply from about `110–120 ms` to `13–18 ms`, and project heartbeat returned below `75 ms`. A later full run exposed Preview worker destruction after thread exit (`EXC_BAD_ACCESS` in `QObject::~QObject`); terminal signals now retire the worker before the QThread stops. The Preview lifecycle passed 100/100 repetitions. After the final Engine fixture continuation was merged, the expanded suite exposed a test cleanup that waited for legacy workers but not the new physics build/fit workers; the next window could deadlock against QThread destruction. A pre-fix targeted rerun generated `Python-2026-08-11-203841.ips` (`SIGABRT` in `QThread::~QThread`, worker still running), which is the expected signature of that cleanup defect. Cleanup now waits for both physics coordinators. The targeted test, adjacent two-test sequence, and subsequent 674-test full run exit cleanly without a report newer than 20:38:41 or a QThread warning.
 
 ## Alpha qualification
 
@@ -42,5 +44,7 @@ The real source proves decode/tracking/VFR/lifecycle behavior, not experimental 
 - `benchmark-100k.json`
 - `project-open-100k.json`
 - `real-slomo-smoke.json`
+- `test-union.json`
+- `../v0.3.0-alpha/final-summary.md`
 - `../parallel-deepseek-v03/d8/`
 - `../parallel-gpt-v03/g7/`

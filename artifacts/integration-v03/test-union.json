@@ -1,0 +1,33 @@
+{
+  "schema": "ics-neotracker.test-union/v1",
+  "date": "2026-08-11",
+  "method": "PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen unittest.TestLoader.discover('tests'); sorted unique test.id() values",
+  "engine": {
+    "head": "8b91e5903e0f27b23de9818ec5d69d28994dcc64",
+    "test_ids": 595,
+    "ids_sha256": "7833246da93cd566fd64e5437d6f8ab9edf1715025af02ea577565f6d570ce7e"
+  },
+  "workspace": {
+    "head": "c0984a246cf8c65cbbf606b69e6d4154fe4d8c03",
+    "test_ids": 594,
+    "ids_sha256": "44824687987cca68146d86f707be4dd83f3ecaab99cfd7983d3ffc3884900e5c"
+  },
+  "branch_union": {
+    "unique_test_ids": 645,
+    "ids_sha256": "7b092e1da64fdef871d509017611b6e72150cc3c005a1f98edc254b19652428f"
+  },
+  "integration": {
+    "verified_code_test_head": "c92402c241c06756cb2c1176850678968caeeab2",
+    "test_ids": 674,
+    "ids_sha256": "9fba760ec13bf3c3ef8366cfa109b4851f782d78965b9754c96156d9993ab252",
+    "full_regression_seconds": 121.656,
+    "full_regression_status": "OK"
+  },
+  "result": {
+    "branch_union_ids_missing_from_integration": 0,
+    "missing_ids_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "integration_only_test_ids": 29,
+    "integration_only_ids_sha256": "3212c742ed2fb2e8b8ad8c981ebf293b19e719d84148c6e325f4d322e5803552",
+    "passed": true
+  }
+}

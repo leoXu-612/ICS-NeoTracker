@@ -18,7 +18,8 @@
 - `collab/FROM_CLAUDE.md`：Claude 的独立审查记录。
 - `collab/FROM_INTEGRATION_V03.md`：Physics Analysis v0.3 集成状态、验收数字、风险与分支交接。
 - `artifacts/integration-v03/`：当前集成 SHA 的 100k、项目打开、真实 SloMo 与验收证据。
-- `PROJECT_FILE_INDEX.sha256`：当前 591 个稳定文件的内容索引（排除 `.DS_Store`、`*.pyc`、`__pycache__`、`.git/` 与索引自身），可用于完整性校验。
+- `artifacts/v0.3.0-alpha/final-summary.md`：Physics Analysis v0.3 工单最终交付报告。
+- `PROJECT_FILE_INDEX.sha256`：当前 594 个稳定文件的内容索引（排除 `.DS_Store`、`*.pyc`、`__pycache__`、`.git/` 与索引自身），可用于完整性校验。
 - `MIGRATION_RECORD.md`：本次目录迁移、备份和验证记录。
 
 ## 代码索引
@@ -71,7 +72,7 @@ neo_tracker/
   ui/selection_session.py Video/Data/Plot/Fit 唯一 true-time selection transaction、source revision 守卫、nearest/tie 与防回环
   ui/workspaces/physics_workspace.py Data/Plot/Fit 底部实验台、100k 虚拟表、Action Registry 路由、响应式/键盘/AX 文本
   ui/physics_plot.py VFR true-time 绘图、有界 envelope decimation、gap、fit/residual、Retina 导出与键盘选择
-tests/                 668 项 unittest 回归测试（含 Engine/Workspace/Schema v3/四组 Integration、media/source identity、项目数据保护、后台生命周期、100k、VFR、导出与 UI 回归）
+tests/                 674 项 unittest 回归测试（含 14 类解析 fixture、Engine/Workspace/Schema v3/四组 Integration、media/source identity、项目数据保护、后台生命周期、100k、VFR、导出与 UI 回归）
 benchmarks/            可重复的 kinematics 100k/derivative/fit/export、Physics UI/plot、项目打开 heartbeat，以及 tracking/media/ROI/Review/Signal/WAV 工作集和语义对照基准
                         P0-B 真实媒体矩阵（real H.264/HEVC/1080p Full Run、取消、来源替换、截断、重开；主进程 CPU/RSS 采样；stdout JSON / stderr 分离）
 assets/                App 图标与封面资产
@@ -81,8 +82,8 @@ build/                 历史构建产物，不是源码权威来源
 
 最新证据状态（2026-08-11）：Physics Analysis v0.3 的 Engine、Workspace、
 Schema v3 与 Application Integration 已在 `integration/physics-analysis-v0.3`
-闭环，远端同名分支已发布并按交付 SHA 验证。本地全量 `668/668`
-（119.740 s），`compileall`/`pip check` 通过；
+闭环，远端同名分支已发布并按交付 SHA 验证。本地全量 `674/674`
+（121.656 s），双方 645 个唯一 Test ID 缺失 0 个，`compileall`/`pip check` 通过；
 100k 项目连续三次 heartbeat 最大 `52.741 ms`，payload/fingerprint 一致；
 100k engine hot pipeline P50/P95/Max 为 `77.584/91.437/92.977 ms`，
 peak RSS `276.766 MiB`，cancel max `2.792 ms`。当前 SHA 的真实 HEVC

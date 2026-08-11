@@ -355,7 +355,7 @@ neo-tracker
 
 ## Physics Analysis v0.3 状态
 
-`integration/physics-analysis-v0.3` 已集成运动学 Engine、Data/Plot/Fit 工作台、Schema v3、后台协调、持久化重放和安全导出。本地最终验收为 668/668 tests；100k 项目三轮 heartbeat 最大 `52.741 ms` 且 payload/fingerprint 一致；真实 HEVC 1080p/240fps VFR 原片 5,536 帧双跑 digest 一致、取消 44 ms、无孤儿 helper。完整数据见 `artifacts/integration-v03/` 与 `collab/FROM_INTEGRATION_V03.md`。
+`integration/physics-analysis-v0.3` 已集成运动学 Engine、Data/Plot/Fit 工作台、Schema v3、后台协调、持久化重放和安全导出。最终验收为 674/674 tests；Engine/Workspace 的 645 个唯一 Test ID 在 Integration 中缺失 0 个；100k 项目三轮 heartbeat 最大 `52.741 ms` 且 payload/fingerprint 一致；真实 HEVC 1080p/240fps VFR 原片 5,536 帧双跑 digest 一致、取消 44 ms、无孤儿 helper。完整数据见 `artifacts/integration-v03/`、`artifacts/v0.3.0-alpha/final-summary.md` 与 `collab/FROM_INTEGRATION_V03.md`。
 
 ```text
 Synthetic numerical correctness: CLOSED
