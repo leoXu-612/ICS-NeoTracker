@@ -22,6 +22,14 @@ The full suite contains every baseline test plus 45 new engine tests. Contract
 files (`types.py`, `protocols.py`, `validation.py`, `__init__.py`) have no diff
 from `a0e9d94aa50adf80d7a524171e6dbec33baa7c8e`.
 
+2026-08-11 audit addition: the analytic fixture catalog was completed to the
+14/14 work-order cases (`constant_series`, `insufficient_samples`,
+`duplicate_time`, `very_small_dt` added) with a dedicated
+`tests/test_kinematics_fixtures.py` (6 tests). Re-verified full branch:
+595 tests / 64.957 s / OK; targeted kinematics 42 tests / OK; contract
+21 tests / OK; compileall exit 0; pip check clean; 100k benchmark gate
+re-run (`--samples 5000`) passed with all gates true.
+
 The post-readiness adversarial audit is closed: no-initial sinusoid fitting now
 centers both frequency-candidate scoring and the nonlinear objective before
 restoring the physical offset. Dedicated `1e9` and `1e12` DC-offset cases pass;
