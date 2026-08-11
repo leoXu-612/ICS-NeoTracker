@@ -1,7 +1,7 @@
 # Physics Analysis v0.3 Integration Acceptance
 
-Date: 2026-08-11 (Asia/Taipei)  
-Code SHA: `8f5f9d6`  
+Date: 2026-08-11 (Asia/Taipei)
+Code SHA: `8f5f9d6`
 Branch: `integration/physics-analysis-v0.3`
 
 ## Conclusion
