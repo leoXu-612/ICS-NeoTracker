@@ -111,10 +111,11 @@ PSO 在设计中主要用于调参和局部精修，而不是代替整个追踪�
 - 左侧是视频预览区，支持首帧/指定帧显示、播放控制、ROI 覆盖层。
 - 顶部是 macOS 风格的统一工具栏，显示当前媒体、追踪状态、结果摘要，并提供 `Run Tracking`、`Export CSV` 和 `Report` 快捷入口；追踪运行时会显示实时帧进度，并将主按钮切换为可安全取消的 `Cancel`。已有 Results/Edits 时，新的 Full Run 会先列出替换数量并默认保留当前结果，用户必须明确选择 `Run + Replace Results/Edits` 才会覆盖。
 - 右侧是 inspector 式分组侧栏：`Media`、`Tracking`、`Review`、`Signal`、`Calib`、`Flow`、`JSON`。
+- 底部是可折叠的 Physics 工作台：`Data` 使用虚拟表显示 frame/true-time/value/validity/provenance/unit，`Plot` 以真实时间绘制并保留 gap，`Fit` 在后台运行模型；Video/Data/Plot/Fit 只通过一个带 source revision 的 true-time SelectionSession 联动。Velocity、Acceleration、Smooth、Fit、Residual 与 Export 统一走 Action Registry，UI 不包含数值算法。
 - `Media` 用于添加视频或 WAV 文件、查看 FPS/帧数/分辨率、播放和切换当前帧。多任务项目可在移除前查看该任务的 Results/Edits/Runs 数量，经二次确认后只移除项目条目、不删除磁盘媒体，并可立即撤销恢复同一任务及历史。项目媒体移动或离线时可在当前任务内选择替代文件：类型、核心元数据和已保存 source identity 匹配时保留历史结果；内容摘要或分辨率/FPS/帧数等不一致时明确要求重连并清除结果，视频与音频互换会被拒绝。
 - WAV 会作为音频媒体识别，显示采样率、样本数和通道数；视频追踪按钮保持禁用，但 `Signal` 标签页可直接使用 mono 或单独声道做 FFT/STFT。
 - `Media` 也提供 `Open Project` / `Save Project`，保存媒体路径、预设、ROI、定标、当前帧、追踪结果和最近 20 次运行审计记录；已 Apply 的内容变化后顶部和 Media 页会持续显示 `Unsaved` / `Unsaved changes`，Save 变为明确主操作。尚未 Apply 的 ROI、定标、Pipeline JSON、媒体替代候选或预览绘制会独立显示全局 `Draft` / `Drafts`，避免把“可保存内容”和“编辑草稿”混为一谈。打开其他项目或关闭窗口前会先列出草稿并提供 `Keep Editing` / `Discard Drafts`，再按需提供 Save / Discard / Cancel；任一步取消都会保留当前内容和可继续操作的窗口。移除最后一个任务后保存会保持显式空项目，不会把临时占位任务写回文件。
-- 项目文件 version 2 会保存媒体元信息和 source identity 快照、任务 pipeline 和可选 `pipeline_library`；version 1 顶层 `pipelines` 会自动无损迁移。如果原媒体暂时不可用，UI 仍会显示上下文，并提供先比对、后 Apply 的重连入口；应用新路径后需点击 `Save Project` 才会持久化。旧项目没有 source identity 时继续按元数据兼容读取，并在下次保存时升级。
+- 项目文件 version 3 会保存媒体元信息、source identity、稳定 task UUID、结果 generation、任务 pipeline、可选 `pipeline_library` 及有界 physics analysis definitions；只保存 config/range/view/provenance，不复制派生数组或 GUI/Worker runtime。version 1/2 会无损迁移；原媒体不可用时仍保留上下文和先比对、后 Apply 的重连入口。
 - `Tracking` 用于选择预设并查看当前 pipeline 模块摘要；Compute backend 状态会明确标出 OpenCV 加速、NumPy 优化路径或较慢回退；仅 Color Marker 等实际使用 Color Blob 的预设显示标记颜色、容差、候选上限和最小区域面积，其他预设会收起整组无关参数并把空间留给当前模块摘要。
 - `Review` 用于查看带单位的逐帧结果表、可切换的 Confidence/Velocity/Mismatch/Angular response 诊断图，以及带数量提示的 `Runs` / `Edits` 双历史页；诊断图支持点击或左右方向键同步跳帧，并且只显示当前数据真实提供的模式。运行记录区分 Full/Rerun 与 Complete/Partial/Canceled/Failed，并可筛选、双选比较配置及导出可见记录。编辑历史可按 Corrected/Marked lost/Rerun 筛选，保留任务级原始序号，选中后可跳回对应帧或导出当前筛选结果。用户还可手动修正当前点、标记丢失帧、从当前结果后重跑，并在预览区同步显示滤波轨迹、未滤波测量轨迹、当前点、带编号候选点、运动预测点和图像空间响应热图；环形观测只保留真实的 `polar_samples` 与轻量 `theta_signal`，Response 会直接路由到下方 Angular response 并显示采样数，不再为旧帧解码/重算一张重复的极坐标矩阵，即使源媒体不可用也能查看已保存的角向证据。其他历史图像空间响应仍在后台重算，期间显示 `Loading` 且不沿用上一帧热图；选中结果卡会明确显示目标 frame/time/status/confidence/state，候选与响应诊断在手动编辑后会标为原始 `pre-edit evidence`。
 - `Signal` 在后台线程按块解码 WAV 到单一 mono/指定声道输出，不再同时长期保留完整原始 PCM 与全通道 `float64`。Tracking 选中序列也只在主线程冻结一个不可变结果引用快照，随后在 worker 构建数值数组。运行按钮会切换为可取消状态，状态条明确区分 `Loading WAV…`、`Preparing N samples…`（Stage 1 of 2）和真正的 `FFT/STFT running…`（Stage 2 of 2）；任务/数据源/参数变化会丢弃过期结果。长信号会在读取前估算峰值工作集，超过 768 MiB 安全阈值时给出缩短、降采样或降低 overlap 的提示。FFT 只显示当前会生效的参数；切换到 STFT 时窗口大小和 overlap 原位恢复，不再用禁用的无关字段压缩结果区。
@@ -235,7 +236,7 @@ Curve Band ROI -> Arc-Length Coordinates -> Brightness/Template Observation -> P
 - Review 表格、带单位的选中结果状态卡、置信度曲线、运行/编辑双历史页、滤波/未滤波轨迹叠加、当前点/观测点/候选点/预测点显示、响应热图、手动点修正、丢失帧标记和从修正点后继续重跑；Velocity 诊断的 series 下拉直接显示 `v_x_px (px/s)` 等单位化名称，同时保留内部 key 供状态、导出与持久化使用；`Rerun After…` 会先列出被替换的后续 Results 和受影响人工修订，默认保留当前尾段，提交后保留早期锚点并把被覆盖修订灰显为可导出的 superseded 历史；运行历史可按四类结局筛选、显示每次 runtime Compute backend、吞吐/Input/Compute/Review cache peak、双选比较元数据/性能和逐路径 pipeline 配置差异，并把当前可见记录以保留原序号的 CSV 导出；结果刷新、重跑终态和时间轴移动会保持表格、状态卡、诊断与预览作用目标一致
 - 大规模 Review 的模式发现、frame lookup、velocity key 与证据可用性合并为一次索引；Velocity/Mismatch 静态序列使用最多两项的 LRU，重复切换只重绘。Results、ROI 节点和运行比较三类表格均由 Qt C++ 工厂创建原生 view/widget，避免 macOS Accessibility 重入 PySide table wrapper 的已观测原生崩溃边界；表格内容、选择和完整虚拟 Results 模型保持不变
 - 重型响应图和二维调试层同时受最近 4 个结果帧与默认 64 MiB payload target 约束；Color/Brightness/Template/EdgeFront 在后台 Tracking 中只保留 ROI/search window 的精确响应与全局 placement，用户查看时才展开为只读全尺寸图并进入全局 4 项 Review LRU，直接 observation API 仍返回完整 response。旧帧缺少已存证据时会在 QThread 后台按需重算，快速切帧只接纳最新 owner/pipeline/result/frame token；状态条会标明 Loading/Stored/Cached/Recomputed 来源；环形分析的一维 `theta_signal` 仍完整保留
-- `.ntproj` version 2 以同目录临时文件、flush/fsync 和 `os.replace` 原子保存；UI 保存使用不可变快照在后台完成，保存期间继续编辑会保持 Unsaved。生产打开由 subprocess 读取/迁移 JSON，再以有 digest、顺序和数量清单的受限 JSONL 流式重建，成功后才原子切换；项目文件上限 64 MiB，项目结果总量上限 100,000。加载覆盖媒体路径、预设、ROI、标定、帧位置、pipeline library、notes、结果与最近 20 次 Full/Rerun
+- `.ntproj` version 3 以同目录临时文件、flush/fsync 和 `os.replace` 原子保存；UI 保存使用不可变快照在后台完成，保存期间继续编辑会保持 Unsaved。生产打开由 subprocess 读取/迁移 JSON，再以有 digest、顺序和数量清单的受限 JSONL 流式重建，成功后才原子切换；项目文件上限 64 MiB，项目结果总量上限 100,000。加载覆盖媒体路径、预设、ROI、标定、帧位置、pipeline library、notes、结果、最近 20 次 Full/Rerun 与有界 analysis definitions；来源 revision 不匹配的定义会标为 stale，不会静默重用
 - 项目加载会校验格式版本，并要求文件中明确提供的 pipeline 字段精确应用；五类 ROI 同时校验有限坐标、正尺寸和半径顺序，损坏配置不再静默回退到预设
 - 项目任务会先完整构建和验证再替换当前窗口；坏项目加载失败后会保留原任务，任务列表信号不会被锁死。同一路径媒体若与项目保存的核心元数据或 source identity 不同，会先以 `Source changed` 阻断 Preview、结果编辑/重跑和导出，并把当前文件作为待审核 Relink 候选；旧 Results/Edits 在用户明确 Apply 前不会被改写
 - 未 Apply 的 ROI、定标、Pipeline JSON、媒体替代候选和预览选择会以独立 Draft 状态持续显示；Open/Close、task/preset 切换、scratch 媒体替换、task 移除与撤销都会在替换编辑上下文前提供 `Keep Editing` / `Discard Drafts`，取消时恢复原选择并完整保留草稿。向已有项目添加新 task 不再重绘当前编辑器，因此不会丢失当前草稿
@@ -352,10 +353,25 @@ neo-tracker
 - 若未来改为分发式 App，需先补齐签名/notarization 与干净环境安装/升级/回滚矩阵
   （见 FORDEEPSEEK.md P2）。
 
+## Physics Analysis v0.3 状态
+
+`integration/physics-analysis-v0.3` 已集成运动学 Engine、Data/Plot/Fit 工作台、Schema v3、后台协调、持久化重放和安全导出。本地最终验收为 668/668 tests；100k 项目三轮 heartbeat 最大 `52.741 ms` 且 payload/fingerprint 一致；真实 HEVC 1080p/240fps VFR 原片 5,536 帧双跑 digest 一致、取消 44 ms、无孤儿 helper。完整数据见 `artifacts/integration-v03/` 与 `collab/FROM_INTEGRATION_V03.md`。
+
+```text
+Synthetic numerical correctness: CLOSED
+Engineering regression: CLOSED
+VFR semantics: CLOSED
+Project persistence: CLOSED
+Real scientific dataset: PARTIAL
+Release qualification: PARTIAL
+```
+
+真实视频尚无定标 manifest 与 ground truth，因此当前 alpha 不宣称已覆盖全部实验的科学验证，也不宣称 production-ready。
+
 ## Test
 
 ```bash
-PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen python3 -m unittest discover -s tests
+PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen python3 -m unittest discover -s tests -v
 ```
 
 ## Roadmap

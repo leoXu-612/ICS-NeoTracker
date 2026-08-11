@@ -1,6 +1,6 @@
 # ICSTracker Project Index
 
-更新时间：2026-08-10（Asia/Taipei）
+更新时间：2026-08-11（Asia/Taipei）
 
 ## 权威工作区
 
@@ -16,7 +16,9 @@
 - `collab/PROTOCOL.md`：协作信箱与路径约定。
 - `collab/FROM_CODEX.md`：Codex 任务和迁移通知。
 - `collab/FROM_CLAUDE.md`：Claude 的独立审查记录。
-- `PROJECT_FILE_INDEX.sha256`：当前 414 个稳定文件的内容索引（排除 `.DS_Store`、`*.pyc`、`__pycache__`、`.git/` 与索引自身），可用于完整性校验。
+- `collab/FROM_INTEGRATION_V03.md`：Physics Analysis v0.3 集成状态、验收数字、风险与分支交接。
+- `artifacts/integration-v03/`：当前集成 SHA 的 100k、项目打开、真实 SloMo 与验收证据。
+- `PROJECT_FILE_INDEX.sha256`：当前 591 个稳定文件的内容索引（排除 `.DS_Store`、`*.pyc`、`__pycache__`、`.git/` 与索引自身），可用于完整性校验。
 - `MIGRATION_RECORD.md`：本次目录迁移、备份和验证记录。
 
 ## 代码索引
@@ -35,7 +37,10 @@ neo_tracker/
   atomic_io.py        同目录临时文件、flush/fsync、原子替换与失败回滚的通用持久化边界
   csv_utils.py        电子表格公式注入防护与统一 CSV 单元格净化
   analysis.py         有界分块 WAV PCM 解码、一次式 tracking source metadata 发现、低复制/cancel-aware dense-sparse 选中序列、FFT/STFT 与信号分析
-  project.py          64 MiB/100,000-result 有界 .ntproj 原子序列化、record-framed canonical JSON 指纹、终态 runtime/backend/source provenance 指标与有界运行历史
+  project.py          Schema v3、v1/v2 迁移、64 MiB/100,000-result 有界 .ntproj 原子序列化、稳定 task UUID/results generation、bounded analysis definitions 与 canonical fingerprint
+  kinematics/         immutable SampleSeries、VFR/gap-aware derivative、Savitzky–Golay、线性/二次/可选非线性 fit、residual/unit、atomic CSV/NPZ/Markdown export 与 cancellation runtime
+  application/kinematics_workspace_coordinator.py 后台 series/derivative/smoothing/export、task/generation/revision 陈旧校验、单终态与 close gate
+  application/kinematics_coordinator.py 后台 fit protocol、取消/陈旧结果拒绝与单终态
   visualization.py    叠加层和环形时序热图
   ui/main_window.py   PySide6 桌面界面、1024×768 响应式 Preview/固定高度工具栏、Add/Open/Save 后台准备与原子提交、O(1) dirty 标记、Tracking 来源绑定/漂移隔离/恢复入口、取消/关闭终态与运行生命周期编排
   ui/playback_controller.py elapsed wall time 到源帧的播放时钟、低 FPS 间隔与 preview skip 计数
@@ -63,31 +68,28 @@ neo_tracker/
   ui/review_response.py ROI-local 响应按需完整展开、历史响应图恢复与全局有界 LRU
   ui/review_response_worker.py QThread 后台历史响应图重算与取消
   ui/tracking_worker.py QThread 监控与 spawn 解码/追踪子进程、单次 child-input 序列化、128 MiB 有界 IPC 信封与批次/终态校验、异常 EOF 有界失败、严格一帧预取、16 帧结果 checkpoint、0.35 s 取消宽限后的有界 terminate/kill、运行前后来源复核、插件隔离 fail-closed、终态性能样本
-tests/                 479 项 unittest 回归测试（含 media 依赖守卫、sampled identity 审查、ROI 上限与载入 fail-closed、WAV 通道/解码预检、NPZ 原子导出、`.ntproj` 重复键/类型混淆拒绝、MediaReader TOCTOU/symlink/VFR、tracking IPC 有界信封/批次上限、保存/导出失败清理与 CSV 公式转义、pipeline 配置 fail-closed）
-benchmarks/            可重复的 tracking input/compute、严格一帧预取、持久 Preview decoder session、进度 cadence、Add/Open/Save GUI heartbeat、100,000-result 项目流式打开与 Review 增量编辑、Color/Template/Edge/Annular/ROI/Review/Signal/WAV 工作集和语义对照基准
+  ui/selection_session.py Video/Data/Plot/Fit 唯一 true-time selection transaction、source revision 守卫、nearest/tie 与防回环
+  ui/workspaces/physics_workspace.py Data/Plot/Fit 底部实验台、100k 虚拟表、Action Registry 路由、响应式/键盘/AX 文本
+  ui/physics_plot.py VFR true-time 绘图、有界 envelope decimation、gap、fit/residual、Retina 导出与键盘选择
+tests/                 668 项 unittest 回归测试（含 Engine/Workspace/Schema v3/四组 Integration、media/source identity、项目数据保护、后台生命周期、100k、VFR、导出与 UI 回归）
+benchmarks/            可重复的 kinematics 100k/derivative/fit/export、Physics UI/plot、项目打开 heartbeat，以及 tracking/media/ROI/Review/Signal/WAV 工作集和语义对照基准
                         P0-B 真实媒体矩阵（real H.264/HEVC/1080p Full Run、取消、来源替换、截断、重开；主进程 CPU/RSS 采样；stdout JSON / stderr 分离）
 assets/                App 图标与封面资产
 artifacts/             UI 审查截图、实验视频与可复现性能记录
 build/                 历史构建产物，不是源码权威来源
 ```
 
-最新证据状态（2026-08-10）：P1-A 第 1–6 项安全审计全部闭环；P0-B 真实媒体
-矩阵：H.264 640×360 与 HEVC/1080p 转码、**真实 SloMo VFR HEVC 1080p 240fps
-原采集（4 素材 92,288 帧 ×2 轮确定性通过）**、取消/来源替换/截断/重开均闭环；
-4K 原采集、单会话 ≥10 分钟、功耗缺口 `BLOCKED`；heartbeat 多轮复核见
-`artifacts/deepseek-2026-08-09/heartbeat-rounds/`（宿主满载下偶发超限，
-跨负载稳定性 `PARTIAL`；正常负载连续三次 <75 ms 证据 8 组 24/24，
-max 59.18 ms）；P1-B 键盘遍历（Qt 焦点链正/反向闭环、键盘激活、
-媒体态 16 控件、来源漂移态 14 控件焦点链 + 危险操作保护）见
-`artifacts/deepseek-2026-08-09/p1b-keyboard-traversal/`；
-VoiceOver/文本缩放/OS 级真实按键（宿主会话阻塞）未闭环。
-内容索引已排除 `.git/` 元数据（提交/推送后不再伪失败），481 个内容文件
-SHA-256 全部通过；2026-08-10 全量 479 tests / 68.032 s OK、heartbeat
-round12 通过（load 3.61–3.65）；AX 服务部分恢复，真实窗口 AX 树完整
-可读（`artifacts/deepseek-2026-08-10/nt-ax-tree.json` + 截图），
-AXPress 激活 Add media/关闭对话框已验证；AX 写入与 VoiceOver 仍受限。
-工单后续由 GPT 接手：当前进度与解锁条件见 `collab/FROM_GPT.md`；
-8 项完成门槛审计（5 CLOSED / 3 BLOCKED）见 `collab/FROM_DEEPSEEK.md`。
+最新证据状态（2026-08-11）：Physics Analysis v0.3 的 Engine、Workspace、
+Schema v3 与 Application Integration 已在 `integration/physics-analysis-v0.3`
+闭环。本地全量 `668/668`（119.740 s），`compileall`/`pip check` 通过；
+100k 项目连续三次 heartbeat 最大 `52.741 ms`，payload/fingerprint 一致；
+100k engine hot pipeline P50/P95/Max 为 `77.584/91.437/92.977 ms`，
+peak RSS `276.766 MiB`，cancel max `2.792 ms`。当前 SHA 的真实 HEVC
+1080p/240fps VFR 原片 5,536 帧双跑 digest 一致，取消 44 ms，来源替换/
+截断 fail-closed，重开 10/10，无残留 helper。工程、VFR 和持久化为
+`CLOSED`；真实科学数据集与发布资格仍为 `PARTIAL`，因为尚无定标 manifest、
+ground truth、完整实验类型矩阵、原生 VoiceOver/文本缩放与发行验证。完整证据见
+`artifacts/integration-v03/` 与 `collab/FROM_INTEGRATION_V03.md`。
 
 ## 常用命令
 

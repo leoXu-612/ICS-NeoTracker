@@ -1,0 +1,26 @@
+{
+  "schema": "neo-tracker.integration-project-open/v1",
+  "date": "2026-08-11",
+  "code_sha": "8f5f9d6",
+  "results": 100000,
+  "project_size_mib": 44.39842128753662,
+  "background_repeats": 3,
+  "call_ms": {"p50": 0.7400840004265774, "p95": 0.8327831019414589, "max": 0.843083002109779},
+  "complete_ready_ms": {"p50": 5301.190000001952, "p95": 5353.106125599152, "max": 5358.8745839988405},
+  "gui_heartbeat_ms": {"p50": 49.39666700011003, "p95": 52.40615360271477, "max": 52.74054100300418},
+  "project_apply_ms": {"p50": 47.18079200029024, "p95": 50.08299139808514, "max": 50.40545799784013},
+  "physics_apply_ms": {"p50": 13.567207999585662, "p95": 17.967495200718986, "max": 18.45641600084491},
+  "runs": [
+    {"call_ms": 0.6472499990195502, "ready_ms": 5242.096832997049, "heartbeat_ms": 35.70145800040336, "project_apply_ms": 33.42412499841885, "physics_apply_ms": 18.45641600084491},
+    {"call_ms": 0.7400840004265774, "ready_ms": 5358.8745839988405, "heartbeat_ms": 49.39666700011003, "project_apply_ms": 47.18079200029024, "physics_apply_ms": 13.304666998010362},
+    {"call_ms": 0.843083002109779, "ready_ms": 5301.190000001952, "heartbeat_ms": 52.74054100300418, "project_apply_ms": 50.40545799784013, "physics_apply_ms": 13.567207999585662}
+  ],
+  "results_exact": true,
+  "payload_equal": true,
+  "synchronous_fingerprint": "08be8f34c6fee8f193fbf1fe6df678eba3910de0e9f764bccaa833c9b6869dd9",
+  "background_fingerprint": "08be8f34c6fee8f193fbf1fe6df678eba3910de0e9f764bccaa833c9b6869dd9",
+  "deferred_diagnostics_pending": false,
+  "deferred_analysis_pending": false,
+  "qthread_lifecycle_errors": 0,
+  "passed": true
+}

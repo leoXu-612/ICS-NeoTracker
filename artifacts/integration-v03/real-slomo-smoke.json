@@ -1,0 +1,32 @@
+{
+  "schema": "neo-tracker.real-slomo-smoke/v1",
+  "date": "2026-08-11",
+  "code_sha": "8f5f9d6",
+  "source": {
+    "name": "PMR00056.mov",
+    "codec": "hevc",
+    "width": 1920,
+    "height": 1080,
+    "nominal_fps": 240.0,
+    "average_fps": 240.26213571165073,
+    "vfr": true,
+    "frame_count": 5536,
+    "duration_s": 23.0415
+  },
+  "runs": [
+    {"elapsed_s": 25.537, "results": 5536, "throughput_fps": 216.782, "digest": "87b77eb574719f3d2f6bae6693bce1c257977965eb1d4b91b157554d5e4a9a5a", "failures": []},
+    {"elapsed_s": 28.94, "results": 5536, "throughput_fps": 191.295, "digest": "87b77eb574719f3d2f6bae6693bce1c257977965eb1d4b91b157554d5e4a9a5a", "failures": []}
+  ],
+  "deterministic": true,
+  "cancel_latency_ms": 44.0,
+  "cancel_finished": true,
+  "source_replacement_detected": true,
+  "truncated_media_fail_closed": true,
+  "reopen_cycles": 10,
+  "reopen_all_ok": true,
+  "residual_helpers": [],
+  "source_copy_modified": false,
+  "ground_truth_available": false,
+  "scientific_validation": "partial",
+  "passed": true
+}

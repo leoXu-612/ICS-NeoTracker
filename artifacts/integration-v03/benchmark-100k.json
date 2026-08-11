@@ -1,0 +1,39 @@
+{
+  "schema": "neo-tracker.integration-acceptance/v1",
+  "date": "2026-08-11",
+  "code_sha": "8f5f9d6",
+  "workload": "100000-result integrated kinematics workflow",
+  "sample_count": 100000,
+  "engine_pipeline_ms": {
+    "p50": 77.58387500143726,
+    "p95": 91.43723750021309,
+    "max": 92.97650000007707
+  },
+  "series_build_ms": {
+    "p50": 70.7562500028871,
+    "p95": 71.22029160018428,
+    "max": 71.32962499963469
+  },
+  "derivative_ms": {
+    "p50": 2.4297920026583597,
+    "p95": 2.5748079977347516,
+    "max": 2.605457997560734
+  },
+  "fit_ms": {
+    "p50": 6.329708001430845,
+    "p95": 6.699458599177888,
+    "max": 6.74691699896357
+  },
+  "export_ms": {
+    "csv": {"p50": 587.043542000174, "p95": 587.043542000174, "max": 587.043542000174, "iterations": 1},
+    "npz": {"p50": 157.2927500019432, "p95": 157.2927500019432, "max": 157.2927500019432, "iterations": 1},
+    "markdown": {"p50": 0.8664170018164441, "p95": 0.8664170018164441, "max": 0.8664170018164441, "iterations": 1}
+  },
+  "snapshot_ms": 541.407665998122,
+  "peak_rss_mib": 276.765625,
+  "rss_repeat_growth_mib": 0.03125,
+  "max_cancellation_latency_ms": 2.7923750021727756,
+  "accuracy_max_abs_error": 2.2737367544343885e-09,
+  "result_digest": "87b78f03d212bad467226add0d78aec448fd557efa7f07cbdb0011c132606cfc",
+  "passed": true
+}
