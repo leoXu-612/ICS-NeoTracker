@@ -1,7 +1,7 @@
 a382de1396d6906cf2d7e9b3f830b7a76c623c09e881e72e4f1970ecdc1d226c  ./.gitignore
 19f5f9cce580d2b4ee9d32b7549a197dbab324e3e96858de34acb5f35971f997  ./FORDEEPSEEK.md
 a68e9c529565944c873530a399fdaab7906e80221369865486544ca46d20d36b  ./MIGRATION_RECORD.md
-4ff47b560eb8475de685661ab4d0ac32ae21194e078f6dc173d478bf10cb0ad8  ./PROJECT_INDEX.md
+5f9ade8b460394ac9faf98fb787444b1b751d30dfd9537eb9038d4dab50b36a1  ./PROJECT_INDEX.md
 d55f7ae4ca038321aad8e8a4af322c477b9c80be2802fd61040e4e64b61cfb35  ./README.md
 2cff680330304f0dd6a811106f707df5f94e562f3b0bfc4213d638991881f746  ./artifacts/code-review-ui-2026-07-22/01-media-ready.png
 2b98f252469573d4cab7bc2802788e5f4c1993689ff553e3eb018cdef1fda35f  ./artifacts/code-review-ui-2026-07-22/01b-media-ready-1024x768.png
@@ -124,7 +124,7 @@ fc3be17e8f64f1a546bbe9a4f4fd317a90ed0271f9a268a7422bf14dcb60ee5d  ./artifacts/de
 788b0c6e9f9c360b5f9f0059441c881083efa308933d8fea169d629d34931a07  ./artifacts/design-audit-2026-07-08/03-tracking-review.png
 637aceba24d5235d045ada63d01784a5d30d7c35a2aa0d82e0eb3d414064119c  ./artifacts/design-audit-2026-07-08/audit-notes.md
 aa5a51d2910d668bdc86eec55d443768f4b2884ea36f68b86f12f045db441353  ./artifacts/experiment-videos/red-dot-tracking.mp4
-41ebbb4c5ade1f85c818642be5cd6cd7c6a5a934afaa3a95057b699eda598b84  ./artifacts/integration-v03/acceptance.md
+34c9cf96fdd81b660b05000068608f52e2badc0d22556bae659d22f8823add5a  ./artifacts/integration-v03/acceptance.md
 d81d28e7036740085ed4de722892a3b3fdb0f10078bb7939af3d4a5dc9a08435  ./artifacts/integration-v03/benchmark-100k.json
 25bd53edd34f124c3bca87061e15cd316877b371ea55296c126a7108e10b3fdb  ./artifacts/integration-v03/project-open-100k.json
 03c658627e9ad6a4a45757489a4e77e33246bfe58302e156655eec7d21b9a516  ./artifacts/integration-v03/real-slomo-smoke.json
@@ -426,7 +426,7 @@ ea3a892ec3ffd3b447b3babbb5c120b6d41901048560f3ded0111ab8e8b002c8  ./benchmarks/b
 41a536b4a60b1940fd98c958697e41d6d987937ff83b0f2cf1db12d00c5702c8  ./collab/FROM_DEEPSEEK_V03.md
 e4bb263fccefeb95697c31ab6da27c0e4bc2c1df1b53a2aa33a8c3435ab07ab3  ./collab/FROM_GPT.md
 e3928657d7264a25d309fc70ae88040efc8861e102380345fe67b15efab99627  ./collab/FROM_GPT_V03.md
-f4710d43d2c46d297de7b66cb8253d57e4636020fc79a7276dca602a64627120  ./collab/FROM_INTEGRATION_V03.md
+b3c4bde36fe6cfdd82ce0fe58d80d398c476e7f88248629914e7ef0d463eba95  ./collab/FROM_INTEGRATION_V03.md
 3b4ea2b70222a6a1a093f10fcbbddb3c5f96351553514b8e98390f70d0c81c0f  ./collab/PROTOCOL.md
 f28d91b70224d47aabadaf036333fe3e6189c3c2c7b9433add6d9b5873d56f6d  ./docs/kinematics-contract-v0.3.md
 a13c9052dfbe053564b4e717344bb15e9ce1bd79603c2299f0b180c6920bec7f  ./neo_tracker/__init__.py
@@ -588,4 +588,4 @@ f1c3b95059946b815710d2ab1bb0873ebf11e0bc45d8f0bb52fa62368948f38d  ./tests/test_t
 d3c3292de09a9e0581d1b5a8aae9de409d3a13b2fed8a6b01d422519aaacc635  ./tests/test_tracking_worker.py
 b451524349e69642d4595528ee8f849b4991071357a2e38aeead4a1b06ac49cb  ./tests/test_ui_main_window.py
 96ed1ce0a75fc7903aeca67c8c02619bd6b42ab4a2f33945ebcf41989d79dedc  ./tests/test_view_state.py
-3dff00fe910750e4bd6d04c350b432f9d0b59e3b968f9ec52f2edd049d95d863  ./交接.md
+f926490034e48c4f3bfd233057022094fb0dbb7b8e74701931c33459a128852f  ./交接.md

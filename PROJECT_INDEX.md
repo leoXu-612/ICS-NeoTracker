@@ -81,7 +81,8 @@ build/                 历史构建产物，不是源码权威来源
 
 最新证据状态（2026-08-11）：Physics Analysis v0.3 的 Engine、Workspace、
 Schema v3 与 Application Integration 已在 `integration/physics-analysis-v0.3`
-闭环。本地全量 `668/668`（119.740 s），`compileall`/`pip check` 通过；
+闭环，远端同名分支已发布并按交付 SHA 验证。本地全量 `668/668`
+（119.740 s），`compileall`/`pip check` 通过；
 100k 项目连续三次 heartbeat 最大 `52.741 ms`，payload/fingerprint 一致；
 100k engine hot pipeline P50/P95/Max 为 `77.584/91.437/92.977 ms`，
 peak RSS `276.766 MiB`，cancel max `2.792 ms`。当前 SHA 的真实 HEVC

@@ -6,7 +6,7 @@ Branch: `integration/physics-analysis-v0.3`
 
 ## Conclusion
 
-The Engine, Workspace, Schema v3, application coordinators, persistence replay, exports, and stale-result guards are integrated and locally `MERGE_READY`; the remote branch push is retried at final handoff because the first GitHub attempt timed out.
+The Engine, Workspace, Schema v3, application coordinators, persistence replay, exports, and stale-result guards are integrated and `MERGE_READY`; the remote integration branch is published and its ref is verified against the exact local delivery SHA.
 
 ## Required gates
 

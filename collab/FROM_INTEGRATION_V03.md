@@ -4,12 +4,13 @@
 
 ## 结论
 
-Engine、Analysis Workspace、Project Schema v3 与应用生命周期已完成集成；本地验收达到 `MERGE_READY`，真实科学数据集与发布资格仍为 `PARTIAL`。
+Engine、Analysis Workspace、Project Schema v3 与应用生命周期已完成集成；远端集成分支已发布并达到 `MERGE_READY`，真实科学数据集与发布资格仍为 `PARTIAL`。
 
 ## 分支
 
 - Base: `a0e9d94aa50adf80d7a524171e6dbec33baa7c8e`
 - Integration branch: `integration/physics-analysis-v0.3`
+- Remote ref: `origin/integration/physics-analysis-v0.3`（已按本地交付 SHA 精确验证）
 - Verified code SHA: `8f5f9d6`
 - Engine source head: `ad17735`
 - Workspace source head: `c0984a2`
