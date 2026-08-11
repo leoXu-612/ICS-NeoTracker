@@ -311,6 +311,53 @@ def path_distance(count: int = 301) -> AnalyticFixture:
     )
 
 
+def constant_series(count: int = 121) -> AnalyticFixture:
+    """Constant target: derivative ~0 and R^2 has a fixed degenerate definition."""
+    level = 2.5
+    time_s = np.arange(count, dtype=np.float64) * 0.02
+    return _fixture(
+        "constant_series",
+        time_s,
+        np.full(count, level, dtype=np.float64),
+        parameters={"level": level},
+    )
+
+
+def insufficient_samples(count: int = 2) -> AnalyticFixture:
+    """Too few valid samples for a quadratic fit (minimum requirement exceeded)."""
+    a, b, c = 1.0, -0.5, 0.25
+    time_s = np.arange(count, dtype=np.float64) * 0.1
+    return _fixture(
+        "insufficient_samples",
+        time_s,
+        a * time_s**2 + b * time_s + c,
+        parameters={"a": a, "b": b, "c": c},
+    )
+
+
+def duplicate_time(count: int = 16) -> AnalyticFixture:
+    """Non-strictly-increasing timestamps; builders must reject them."""
+    time_s = np.arange(count, dtype=np.float64) * 0.05
+    time_s[8] = time_s[7]
+    return _fixture(
+        "duplicate_time",
+        time_s,
+        np.arange(count, dtype=np.float64),
+        parameters={"duplicate_index": 8.0},
+    )
+
+
+def very_small_dt(count: int = 8) -> AnalyticFixture:
+    """Extreme sub-ulp time spacing; numerical paths must fail closed, not emit inf."""
+    time_s = np.arange(count, dtype=np.float64) * 1e-200
+    return _fixture(
+        "very_small_dt",
+        time_s,
+        time_s**2,
+        parameters={"base_dt": 1e-200},
+    )
+
+
 def fixture_catalog() -> dict[str, AnalyticFixture]:
     return {
         fixture.name: fixture
@@ -325,5 +372,9 @@ def fixture_catalog() -> dict[str, AnalyticFixture]:
             outlier_samples(),
             angular_wrap(),
             path_distance(),
+            constant_series(),
+            insufficient_samples(),
+            duplicate_time(),
+            very_small_dt(),
         )
     }

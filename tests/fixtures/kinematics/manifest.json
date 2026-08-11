@@ -11,6 +11,10 @@
     "missing_segments",
     "outlier_samples",
     "angular_wrap",
-    "path_distance"
+    "path_distance",
+    "constant_series",
+    "insufficient_samples",
+    "duplicate_time",
+    "very_small_dt"
   ]
 }

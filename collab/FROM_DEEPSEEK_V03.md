@@ -75,3 +75,36 @@
 - Call Engine operations on workers for 100k workloads even though recorded compute times are bounded; cancellation and revision checks are already available.
 - Export functions atomically replace targets, fsync the parent directory, neutralize spreadsheet formulas, and write NPZ through a binary file object readable with `allow_pickle=False`.
 - Evidence and exact result digests are under `artifacts/parallel-deepseek-v03/d8/`.
+
+## 2026-08-11 Fixture catalog completion — DONE
+
+### Base
+- Branch: `feature/ds-kinematics-engine`
+- Contract SHA: `a0e9d94aa50adf80d7a524171e6dbec33baa7c8e`
+- Head SHA: `4ca21f4`
+
+### Conclusion
+- The analytic fixture catalog was completed to the 14/14 cases required by
+  work-order §5.2 (`constant_series`, `insufficient_samples`,
+  `duplicate_time`, `very_small_dt` added); manifest and README updated;
+  `tests/test_kinematics_fixtures.py` (6 tests) validates catalog coverage,
+  determinism, and the four boundary behaviors.
+
+### Tests
+- Targeted kinematics: 42 tests / OK (including 6 new fixture tests).
+- Full branch: 595 tests / 64.957 s / OK (0 FAIL, 0 ERROR).
+- Contract: 21 tests / OK; compileall exit 0; pip check clean.
+- 100k benchmark gate re-run (`--samples 5000`): passed=true, exit_code=0,
+  all gates true.
+
+### Files Changed
+- `benchmarks/kinematics_fixtures.py` (4 new fixtures + catalog),
+  `tests/test_kinematics_fixtures.py` (new),
+  `tests/fixtures/kinematics/manifest.json`,
+  `tests/fixtures/kinematics/README.md`,
+  `artifacts/parallel-deepseek-v03/d0/baseline.md`,
+  `artifacts/parallel-deepseek-v03/d8/acceptance.md`.
+
+### Remaining Risks
+- Unchanged from D0–D8: real scientific dataset validation remains PARTIAL
+  by work-order scope; project schema/UI integration is integration-owner work.
