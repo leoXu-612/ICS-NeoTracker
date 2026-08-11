@@ -248,14 +248,22 @@ def close_window_safely(window: NeoTrackerWindow, timeout_s: float = 5.0) -> Non
         "_review_response_thread",
         "_preview_decode_thread",
     )
+
+    def has_active_workers() -> bool:
+        return bool(
+            any(getattr(window, field, None) is not None for field in worker_fields)
+            or window._kinematics_workspace_coordinator.busy
+            or window.analysis_workspace_controller.busy
+        )
+
     while (
-        any(getattr(window, field, None) is not None for field in worker_fields)
+        has_active_workers()
         and time.monotonic() < deadline
     ):
         QCoreApplication.processEvents()
         time.sleep(0.001)
     QCoreApplication.processEvents()
-    if any(getattr(window, field, None) is not None for field in worker_fields):
+    if has_active_workers():
         raise AssertionError("window workers did not finish before cleanup timeout")
     if window.isVisible():
         window.close()
@@ -2098,7 +2106,7 @@ class MainWindowStructureTests(unittest.TestCase):
             path = Path(tmpdir) / "polygon.ntproj"
             window._project_from_window(path).save(path)
             restored = NeoTrackerWindow()
-            self.addCleanup(restored.close)
+            self.addCleanup(close_window_safely, restored)
             restored._load_project(path)
             self.assertEqual(restored.current_task.roi["type"], "polygon")
             self.assertEqual(restored.current_task.pipeline.roi.to_config()["points"][2], [38.0, 30.0])
@@ -2147,7 +2155,7 @@ class MainWindowStructureTests(unittest.TestCase):
             path = Path(tmpdir) / "curve.ntproj"
             window._project_from_window(path).save(path)
             restored = NeoTrackerWindow()
-            self.addCleanup(restored.close)
+            self.addCleanup(close_window_safely, restored)
             restored._load_project(path)
             self.assertEqual(restored.current_task.roi["type"], "curve_band")
             self.assertEqual(restored.current_task.pipeline.roi.to_config()["polyline"][0], [5.0, 6.0])
@@ -2602,7 +2610,7 @@ class MainWindowStructureTests(unittest.TestCase):
             project.save(path)
 
             restored = NeoTrackerWindow()
-            self.addCleanup(restored.close)
+            self.addCleanup(close_window_safely, restored)
             restored._load_project(path)
             restored_observation = restored.current_task.pipeline.observation_model
             self.assertEqual(tuple(restored_observation.sample_rgb), (12.0, 180.0, 70.0))
@@ -2644,7 +2652,7 @@ class MainWindowStructureTests(unittest.TestCase):
             window._project_from_window(path).save(path)
 
             restored = NeoTrackerWindow()
-            self.addCleanup(restored.close)
+            self.addCleanup(close_window_safely, restored)
             restored._load_project(path)
             restored_pipeline = restored.current_task.pipeline
             self.assertEqual(restored.current_task.pipeline_key, "travelling_flame")
@@ -4954,7 +4962,7 @@ class MainWindowStructureTests(unittest.TestCase):
             path = Path(tmpdir) / "partial.ntproj"
             window._project_from_window(path).save(path)
             restored = NeoTrackerWindow()
-            self.addCleanup(restored.close)
+            self.addCleanup(close_window_safely, restored)
             restored._load_project(path)
 
         self.assertEqual(restored.current_task.tracking_outcome, "partial")
@@ -5635,7 +5643,7 @@ class MainWindowStructureTests(unittest.TestCase):
             path = Path(tmpdir) / "history.ntproj"
             window._project_from_window(path).save(path)
             restored = NeoTrackerWindow()
-            self.addCleanup(restored.close)
+            self.addCleanup(close_window_safely, restored)
             restored._load_project(path)
             restored_types = [entry["type"] for entry in restored.current_task.edit_history]
             self.assertEqual(restored_types, history_types)
@@ -5671,7 +5679,7 @@ class MainWindowStructureTests(unittest.TestCase):
             project.save(path)
 
             restored = NeoTrackerWindow()
-            self.addCleanup(restored.close)
+            self.addCleanup(close_window_safely, restored)
             restored._load_project(path)
             self.assertEqual(restored.project_name_label.text(), "Project: experiment.ntproj")
             self.assertEqual(len(restored.tasks), 1)
