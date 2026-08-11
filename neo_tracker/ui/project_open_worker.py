@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import gc
 import json
 import os
 import subprocess
@@ -11,12 +10,16 @@ from dataclasses import dataclass, replace
 from hashlib import sha256
 from pathlib import Path
 from stat import S_ISREG
-from threading import Event, Lock
+from threading import Event
 from time import monotonic
 from typing import Any
 
 from PySide6.QtCore import QObject, Signal, Slot
 
+from neo_tracker.application.gc_guard import (
+    acquire_high_generation_gc_guard,
+    release_high_generation_gc_guard,
+)
 from neo_tracker.media import MediaInfo
 from neo_tracker.project import (
     MAX_PROJECT_CONTAINER_ITEMS,
@@ -52,38 +55,14 @@ _PROJECT_OPEN_STAGE_MAX_RECORD_BYTES = 8 * 1024 * 1024
 _PROJECT_OPEN_REPLY_MAX_BYTES = 64 * 1024
 _PROJECT_OPEN_LOAD_DEADLINE_S = 90.0
 _PROJECT_OPEN_PROCESS_STOP_GRACE_S = 0.35
-_PROJECT_OPEN_GC_GUARD_LOCK = Lock()
-_PROJECT_OPEN_GC_GUARD_DEPTH = 0
-_PROJECT_OPEN_GC_GUARD_THRESHOLDS: tuple[int, int, int] | None = None
-
-
 def _acquire_project_open_gc_guard() -> None:
     """Delay expensive high-generation scans while any project is materializing."""
 
-    global _PROJECT_OPEN_GC_GUARD_DEPTH, _PROJECT_OPEN_GC_GUARD_THRESHOLDS
-    with _PROJECT_OPEN_GC_GUARD_LOCK:
-        if _PROJECT_OPEN_GC_GUARD_DEPTH == 0:
-            thresholds = gc.get_threshold()
-            gc.set_threshold(
-                thresholds[0],
-                max(thresholds[1], 1_000_000),
-                max(thresholds[2], 1_000_000),
-            )
-            _PROJECT_OPEN_GC_GUARD_THRESHOLDS = thresholds
-        _PROJECT_OPEN_GC_GUARD_DEPTH += 1
+    acquire_high_generation_gc_guard()
 
 
 def _release_project_open_gc_guard() -> None:
-    global _PROJECT_OPEN_GC_GUARD_DEPTH, _PROJECT_OPEN_GC_GUARD_THRESHOLDS
-    with _PROJECT_OPEN_GC_GUARD_LOCK:
-        if _PROJECT_OPEN_GC_GUARD_DEPTH <= 0:
-            raise RuntimeError("project-open GC guard release is unbalanced")
-        _PROJECT_OPEN_GC_GUARD_DEPTH -= 1
-        if _PROJECT_OPEN_GC_GUARD_DEPTH == 0:
-            thresholds = _PROJECT_OPEN_GC_GUARD_THRESHOLDS
-            _PROJECT_OPEN_GC_GUARD_THRESHOLDS = None
-            if thresholds is not None:
-                gc.set_threshold(*thresholds)
+    release_high_generation_gc_guard()
 
 
 def _safe_json_loads(

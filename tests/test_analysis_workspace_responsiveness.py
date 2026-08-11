@@ -7,7 +7,7 @@ from pathlib import Path
 from PySide6.QtCore import QCoreApplication, Qt
 from PySide6.QtGui import QImage
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QApplication, QHeaderView, QWidget
 
 from neo_tracker.ui.main_window import NeoTrackerWindow
 from neo_tracker.ui.physics_plot import PhysicsPlot
@@ -129,6 +129,16 @@ class PhysicsWorkspaceResponsiveTests(unittest.TestCase):
         QCoreApplication.processEvents()
         self.assertIs(workspace.focusWidget(), workspace.series_combo)
         workspace.close()
+
+    def test_virtual_table_never_scans_all_rows_to_size_columns(self) -> None:
+        workspace = PhysicsWorkspace()
+        header = workspace.series_table.horizontalHeader()
+
+        for section in range(workspace.series_model.columnCount()):
+            self.assertNotEqual(
+                header.sectionResizeMode(section),
+                QHeaderView.ResizeMode.ResizeToContents,
+            )
 
     def test_retina_export_uses_physical_pixels_and_plot_has_textual_semantics(self) -> None:
         plot = RetinaPhysicsPlot()

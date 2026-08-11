@@ -109,8 +109,11 @@ class PhysicsWorkspace(QFrame):
         self.series_table.setTabKeyNavigation(False)
         self.series_table.setAlternatingRowColors(True)
         self.series_table.verticalHeader().setVisible(False)
-        self.series_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        self.series_table.horizontalHeader().setStretchLastSection(True)
+        header = self.series_table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        for section, width in enumerate((86, 112, 132, 82, 176, 96)):
+            header.resizeSection(section, width)
+        header.setStretchLastSection(True)
         self.series_table.setAccessibleName("Physical series data")
         self.series_table.setAccessibleDescription(
             "Virtual frame-aligned physical data. Columns identify validity, provenance, and units in text."

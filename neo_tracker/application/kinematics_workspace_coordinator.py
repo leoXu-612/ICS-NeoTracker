@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import struct
+import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -14,9 +15,15 @@ from uuid import UUID
 
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 
+from neo_tracker.application.gc_guard import (
+    acquire_high_generation_gc_guard,
+    release_high_generation_gc_guard,
+)
 from neo_tracker.application.task_supervisor import BackgroundTaskToken, TaskSupervisor
 from neo_tracker.kinematics.derivatives import derive_series
 from neo_tracker.kinematics.export import export_csv, export_markdown, export_npz
+from neo_tracker.kinematics.protocols import CancellationProbe
+from neo_tracker.kinematics.runtime import check_cancelled
 from neo_tracker.kinematics.series import (
     TrackingResultSnapshot,
     TrackingSeriesBuilder,
@@ -39,6 +46,8 @@ def _hash_text(digest: Any, value: str) -> None:
 
 def tracking_source_revision(
     snapshots: Sequence[TrackingResultSnapshot],
+    *,
+    cancellation: CancellationProbe | None = None,
 ) -> str:
     """Hash exactly the detached fields consumed by ``TrackingSeriesBuilder``."""
 
@@ -46,7 +55,7 @@ def tracking_source_revision(
         raise TypeError("tracking snapshots must be a sequence")
     digest = hashlib.sha256(_REVISION_DOMAIN)
     digest.update(struct.pack(">Q", len(snapshots)))
-    for item in snapshots:
+    for index, item in enumerate(snapshots, start=1):
         if not isinstance(item, TrackingResultSnapshot):
             raise TypeError("source revision requires detached TrackingResultSnapshot values")
         digest.update(struct.pack(">qd", int(item.frame_index), float(item.time_s)))
@@ -62,6 +71,10 @@ def tracking_source_revision(
             for key, value in ordered:
                 _hash_text(digest, key)
                 digest.update(struct.pack(">d", float(value)))
+        if index % 1_024 == 0 or index == len(snapshots):
+            check_cancelled(cancellation, phase="tracking source revision")
+            if cancellation is not None:
+                time.sleep(0.001)
     return f"sha256:{digest.hexdigest()}"
 
 
@@ -208,6 +221,7 @@ class KinematicsWorkspaceWorker(QObject):
     completed = Signal(object)
     failed = Signal(str)
     canceled = Signal()
+    stage_changed = Signal(str)
 
     def __init__(self, task: KinematicsWorkspaceTask) -> None:
         super().__init__()
@@ -235,11 +249,17 @@ class KinematicsWorkspaceWorker(QObject):
     def _execute(self) -> KinematicsWorkspaceOutput:
         task = self.task
         if task.operation == "build":
+            self.stage_changed.emit("snapshot")
             snapshots = snapshot_tracker_results(
                 task.results,
                 cancellation=self._cancellation,
             )
-            revision = tracking_source_revision(snapshots)
+            self.stage_changed.emit("revision")
+            revision = tracking_source_revision(
+                snapshots,
+                cancellation=self._cancellation,
+            )
+            self.stage_changed.emit("series")
             series = TrackingSeriesBuilder(units=task.units).build_series(
                 snapshots,
                 source_revision=revision,
@@ -318,6 +338,7 @@ class KinematicsWorkspaceCoordinator(QObject):
     failed = Signal(object, str)
     canceled = Signal(object)
     state_changed = Signal(str)
+    stage_changed = Signal(str)
     finished = Signal(object)
     idle_reached = Signal()
 
@@ -331,6 +352,9 @@ class KinematicsWorkspaceCoordinator(QObject):
         self._job: KinematicsWorkspaceJob | None = None
         self._terminal_received = False
         self._closed = False
+        self._gc_guard_active = False
+        self._stage = "idle"
+        self._last_output_apply_ms = 0.0
 
     @property
     def busy(self) -> bool:
@@ -340,12 +364,22 @@ class KinematicsWorkspaceCoordinator(QObject):
     def job(self) -> KinematicsWorkspaceJob | None:
         return self._job
 
+    @property
+    def stage(self) -> str:
+        return self._stage
+
+    @property
+    def last_output_apply_ms(self) -> float:
+        return self._last_output_apply_ms
+
     def start(self, task: KinematicsWorkspaceTask) -> bool:
         if self.busy or self._closed or self.supervisor.closing:
             return False
         token = self.supervisor.start(self.TASK_KIND)
         if token is None:
             return False
+        acquire_high_generation_gc_guard()
+        self._gc_guard_active = True
         job = KinematicsWorkspaceJob(token, task)
         try:
             thread = QThread(self)
@@ -355,6 +389,7 @@ class KinematicsWorkspaceCoordinator(QObject):
             worker.completed.connect(self._handle_completed)
             worker.failed.connect(self._handle_failed)
             worker.canceled.connect(self._handle_canceled)
+            worker.stage_changed.connect(self._handle_stage_changed)
             worker.completed.connect(thread.quit)
             worker.failed.connect(thread.quit)
             worker.canceled.connect(thread.quit)
@@ -364,6 +399,9 @@ class KinematicsWorkspaceCoordinator(QObject):
             thread.finished.connect(self._handle_thread_finished)
             thread.finished.connect(thread.deleteLater)
         except Exception:
+            if self._gc_guard_active:
+                release_high_generation_gc_guard()
+                self._gc_guard_active = False
             self.supervisor.finish(token)
             raise
         self._job = job
@@ -371,6 +409,7 @@ class KinematicsWorkspaceCoordinator(QObject):
         self._worker = worker
         self._terminal_received = False
         self.state_changed.emit("running")
+        self._stage = "starting"
         self.started.emit(job)
         thread.start()
         return True
@@ -398,12 +437,16 @@ class KinematicsWorkspaceCoordinator(QObject):
         if not self._accepts(job) or job.cancelled:
             return
         self._terminal_received = True
+        self._stage = "applying"
         if not isinstance(output, KinematicsWorkspaceOutput) or not self._matches(job.task, output):
             job.cancelled = True
             self.canceled.emit(job)
         else:
             job.completed = True
+            apply_started = time.perf_counter()
             self.output_ready.emit(job, output)
+            self._last_output_apply_ms = (time.perf_counter() - apply_started) * 1_000.0
+        self._stage = "finishing"
         self.state_changed.emit("finishing")
 
     def _handle_failed(self, message: str) -> None:
@@ -431,6 +474,10 @@ class KinematicsWorkspaceCoordinator(QObject):
         self._worker = None
         self._job = None
         self._terminal_received = False
+        self._stage = "idle"
+        if self._gc_guard_active:
+            release_high_generation_gc_guard()
+            self._gc_guard_active = False
         if job is not None:
             if not terminal:
                 if job.cancelled:
@@ -442,6 +489,10 @@ class KinematicsWorkspaceCoordinator(QObject):
             self.finished.emit(job)
         self.state_changed.emit("closed" if self._closed else "idle")
         self.idle_reached.emit()
+
+    def _handle_stage_changed(self, stage: str) -> None:
+        self._stage = str(stage)
+        self.stage_changed.emit(self._stage)
 
     def _accepts(self, job: KinematicsWorkspaceJob | None) -> bool:
         return bool(

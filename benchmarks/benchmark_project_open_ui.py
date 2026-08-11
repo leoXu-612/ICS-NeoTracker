@@ -62,6 +62,39 @@ def _pump_events(app: QApplication, rounds: int = 5) -> None:
         time.sleep(0.003)
 
 
+def _physics_workspace_settled(window: NeoTrackerWindow) -> bool:
+    return bool(
+        getattr(window, "_physics_pending_build", None) is None
+        and not getattr(window, "_physics_replay_queue", [])
+        and getattr(window, "_physics_replay_active_id", None) is None
+        and not window._kinematics_workspace_coordinator.busy
+        and not window.analysis_workspace_controller.busy
+    )
+
+
+def _project_open_phase(window: NeoTrackerWindow) -> str:
+    if window._project_open_thread is not None:
+        return window.media_probe_status_label.text()
+    active = ",".join(window._background_tasks.active_kinds) or "idle"
+    pending = int(getattr(window, "_physics_pending_build", None) is not None)
+    stage = window._kinematics_workspace_coordinator.stage
+    return f"finished|active={active}|physics_pending={pending}|physics_stage={stage}"
+
+
+def _wait_until(
+    app: QApplication,
+    predicate: Callable[[], bool],
+    *,
+    timeout_s: float = 15.0,
+) -> bool:
+    started = time.perf_counter()
+    while not predicate() and time.perf_counter() - started < timeout_s:
+        app.processEvents()
+        time.sleep(0.001)
+    _pump_events(app)
+    return predicate()
+
+
 def _measure(
     app: QApplication,
     operation: Callable[[], None],
@@ -153,6 +186,8 @@ def benchmark(
             synchronous_signature = _signature(synchronous_window)
             synchronous_payload = synchronous_window._project_from_window(path).to_dict()
             synchronous_window.close()
+            if not _wait_until(app, lambda: synchronous_window._background_tasks.idle):
+                raise RuntimeError("synchronous reference window did not close its background work")
             synchronous_window.deleteLater()
             _pump_events(app)
             del synchronous_window
@@ -170,14 +205,14 @@ def benchmark(
                         background_window._project_open_thread is None
                         and not background_window._project_open_diagnostics_pending
                         and not background_window._project_open_analysis_pending
+                        and _physics_workspace_settled(background_window)
                     ),
-                    phase=lambda: (
-                        background_window.media_probe_status_label.text()
-                        if background_window._project_open_thread is not None
-                        else "finished"
-                    ),
+                    phase=lambda: _project_open_phase(background_window),
                 )
                 measurement["apply_ms"] = background_window._last_project_open_apply_ms
+                measurement["physics_apply_ms"] = (
+                    background_window._kinematics_workspace_coordinator.last_output_apply_ms
+                )
                 background_runs.append(measurement)
             background = background_runs[-1]
             background_signature = _signature(background_window)
@@ -189,6 +224,10 @@ def benchmark(
             background_window._saved_project_fingerprint = None
             background_window._project_dirty = False
             background_window.close()
+            if not _wait_until(app, lambda: background_window._background_tasks.idle):
+                raise RuntimeError("background project window did not close its background work")
+            background_window.deleteLater()
+            _pump_events(app)
 
             row: dict[str, Any] = {
                     "results": result_count,

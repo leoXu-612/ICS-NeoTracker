@@ -3,6 +3,7 @@ from __future__ import annotations
 """Frame-aligned immutable series construction from TrackerResult snapshots."""
 
 import math
+import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from types import MappingProxyType
@@ -18,6 +19,14 @@ from .units import state_unit, velocity_unit
 _INVALID_STATUSES = frozenset({"lost", "failed", "invalid", "cancelled"})
 _PROGRESS_STRIDE = 1_024
 _EMPTY_NUMERIC_MAPPING: Mapping[str, float] = MappingProxyType({})
+
+
+def _cooperate(cancellation: CancellationProbe | None, *, phase: str) -> None:
+    """Keep cancellable Python loops from monopolizing the interpreter."""
+
+    check_cancelled(cancellation, phase=phase)
+    if cancellation is not None:
+        time.sleep(0.001)
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,7 +117,7 @@ def snapshot_tracker_results(
         snapshots.append(_snapshot_one(item))
         completed = index + 1
         if completed % _PROGRESS_STRIDE == 0 or completed == total:
-            check_cancelled(cancellation, phase="tracking result snapshot")
+            _cooperate(cancellation, phase="tracking result snapshot")
             if progress is not None:
                 progress(completed, total, "snapshot")
     return tuple(snapshots)
@@ -196,7 +205,7 @@ class TrackingSeriesBuilder:
                         valid_mask[index] = True
                     completed_work += 1
                     if completed_work % _PROGRESS_STRIDE == 0:
-                        check_cancelled(cancellation, phase="series build")
+                        _cooperate(cancellation, phase="series build")
                         if progress is not None:
                             progress(min(completed_work, total_work), total_work, "series")
                 unit = (

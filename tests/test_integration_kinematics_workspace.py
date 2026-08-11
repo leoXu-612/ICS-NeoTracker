@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import gc
 import unittest
 from dataclasses import replace
 from threading import Event
@@ -176,6 +177,7 @@ class KinematicsWorkspaceIntegrationTests(unittest.TestCase):
         self.assertEqual(window._physics_series_by_id, {})
 
     def test_close_active_series_build_reaches_supervisor_idle(self) -> None:
+        original_gc_thresholds = gc.get_threshold()
         window = self.make_window()
         task = window.current_task
         times = np.arange(50_000, dtype=np.float64) * 0.01
@@ -190,6 +192,7 @@ class KinematicsWorkspaceIntegrationTests(unittest.TestCase):
 
         self.assertFalse(window._kinematics_workspace_coordinator.busy)
         self.assertTrue(window._background_tasks.ready_to_close)
+        self.assertEqual(gc.get_threshold(), original_gc_thresholds)
 
     def test_cancel_after_worker_completed_still_emits_exactly_one_terminal(self) -> None:
         supervisor = TaskSupervisor()
