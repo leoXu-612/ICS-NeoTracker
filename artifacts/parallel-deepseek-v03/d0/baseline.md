@@ -15,3 +15,10 @@
 - `KinematicsEngineRuntime` implements `SeriesBuilder`, `DerivativeOperator`, and `FitOperator`.
 - Cancellation raises before partial Series/Derivative/Export publication; Fit returns one explicit terminal result.
 - No nominal FPS reconstruction or implicit gap interpolation/resampling is used.
+Fixture catalog: 14/14 work-order cases (`uniform_linear`,
+`uniform_quadratic`, `vfr_linear`, `vfr_quadratic`, `sinusoidal`,
+`exponential`, `missing_segments`, `outlier_samples`, `angular_wrap`,
+`path_distance`, `constant_series`, `insufficient_samples`,
+`duplicate_time`, `very_small_dt`) in `benchmarks/kinematics_fixtures.py`
+and `tests/fixtures/kinematics/manifest.json`; covered by
+`tests/test_kinematics_fixtures.py` (6 tests).
