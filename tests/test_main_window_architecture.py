@@ -17,6 +17,32 @@ _JOB_NAMES = {
 
 
 class MainWindowArchitectureTests(unittest.TestCase):
+    def test_application_workers_retire_before_their_thread_exits(self) -> None:
+        application = Path(__file__).parents[1] / "neo_tracker" / "application"
+        for path in application.glob("*_coordinator.py"):
+            source = path.read_text(encoding="utf-8")
+            if "worker.moveToThread(thread)" not in source:
+                continue
+            with self.subTest(coordinator=path.name):
+                self.assertNotIn("thread.finished.connect(worker.deleteLater)", source)
+                lines = source.splitlines()
+                for terminal in ("completed", "failed", "canceled"):
+                    delete_lines = [
+                        index
+                        for index, line in enumerate(lines)
+                        if f"worker.{terminal}.connect(worker.deleteLater)" in line
+                    ]
+                    quit_lines = [
+                        index
+                        for index, line in enumerate(lines)
+                        if f"worker.{terminal}.connect(thread.quit)" in line
+                    ]
+                    if not quit_lines:
+                        continue
+                    self.assertEqual(len(delete_lines), len(quit_lines), terminal)
+                    for delete_line, quit_line in zip(delete_lines, quit_lines):
+                        self.assertLess(delete_line, quit_line, terminal)
+
     def test_background_job_dataclasses_live_in_application_layer(self) -> None:
         source_path = Path(__file__).parents[1] / "neo_tracker" / "ui" / "main_window.py"
         tree = ast.parse(source_path.read_text(encoding="utf-8"))
@@ -313,6 +339,7 @@ class MainWindowArchitectureTests(unittest.TestCase):
             "neo_tracker/ui/view_state.py",
             "neo_tracker/ui/shell/main_shell.py",
             "neo_tracker/ui/shell/bindings.py",
+            "neo_tracker/ui/shell/review_editing_mixin.py",
         ):
             self.assertTrue((root / relative_path).is_file(), relative_path)
 

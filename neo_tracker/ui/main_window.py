@@ -165,6 +165,7 @@ from neo_tracker.ui.shell.bindings import (
     PRIMARY_BUTTON_ATTRIBUTES,
 )
 from neo_tracker.ui.shell.physics_workspace_mixin import PhysicsWorkspaceMixin
+from neo_tracker.ui.shell.review_editing_mixin import ReviewEditingMixin, ReviewUndo
 from neo_tracker.ui.tracking_worker import (
     TRACKING_SOURCE_CHANGED_PREFIX,
     TrackingProgress,
@@ -223,7 +224,12 @@ class ElidingLabel(QLabel):
             QLabel.setText(self, displayed)
 
 
-class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMainWindow):
+class NeoTrackerWindow(
+    ReviewEditingMixin,
+    PhysicsWorkspaceMixin,
+    CoordinatorCompatibilityMixin,
+    QMainWindow,
+):
     physicsOperationRequested = Signal(object)
 
     def __init__(
@@ -265,6 +271,7 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
             str | None,
             int,
         ] | None = None
+        self._review_undo: ReviewUndo | None = None
         self._saved_project_fingerprint: str | None = None
         self._current_project_fingerprint: str | None = None
         self._project_dirty = False
@@ -414,6 +421,7 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
         self.review_selection_detail_label = QLabel("Select a result row or move to a tracked frame.")
         self.correct_point_button = QPushButton("Correct Point")
         self.mark_lost_button = QPushButton("Mark Lost")
+        self.undo_review_edit_button = QPushButton("Undo Edit")
         self.rerun_after_button = QPushButton("Rerun After…")
         self.jump_to_result_button = QPushButton("Jump to Row")
         self.show_response_checkbox = QCheckBox("Response")
@@ -1647,14 +1655,17 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
         action_grid = QGridLayout()
         self.correct_point_button.setObjectName("correctPointButton")
         self.mark_lost_button.setObjectName("markLostButton")
+        self.undo_review_edit_button.setObjectName("undoReviewEditButton")
         self.rerun_after_button.setObjectName("rerunAfterButton")
         self.jump_to_result_button.setObjectName("jumpToResultButton")
         self.correct_point_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowRight))
         self.mark_lost_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxWarning))
+        self.undo_review_edit_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowBack))
         self.rerun_after_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload))
         self.jump_to_result_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowDown))
         self.correct_point_button.setToolTip("Replace the selected result with a point clicked in the preview.")
         self.mark_lost_button.setToolTip("Mark the selected frame as lost and exclude it from trusted review.")
+        self.undo_review_edit_button.setToolTip("Undo the most recent point correction or Mark Lost action.")
         self.rerun_after_button.setToolTip(
             "Review the affected later Results/Edits, then rerun tracking after the selected result."
         )
@@ -1678,8 +1689,9 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
         self.show_prediction_checkbox.stateChanged.connect(lambda _state: self._render_preview())
         action_grid.addWidget(self.correct_point_button, 0, 0)
         action_grid.addWidget(self.mark_lost_button, 0, 1)
-        action_grid.addWidget(self.rerun_after_button, 1, 0)
-        action_grid.addWidget(self.jump_to_result_button, 1, 1)
+        action_grid.addWidget(self.undo_review_edit_button, 1, 0)
+        action_grid.addWidget(self.rerun_after_button, 1, 1)
+        action_grid.addWidget(self.jump_to_result_button, 2, 0, 1, 2)
         action_grid.setColumnStretch(0, 1)
         action_grid.setColumnStretch(1, 1)
         layout.addLayout(action_grid)
@@ -2816,6 +2828,7 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
         defer_heavy_views: bool = False,
     ) -> None:
         self._invalidate_project_open_deferred_views()
+        self._review_undo = None
         snapshots = project.tasks or [
             ProjectTaskSnapshot(media_path=media_path, pipeline_key=self.default_pipeline_key)
             for media_path in project.media_paths
@@ -3309,6 +3322,7 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
         else:
             index = int(task_index)
             self.current_task = self.tasks[index]
+        self._review_undo = None
         self._reset_physics_context()
         self._render_task(refresh_project_state=False)
         if draft_names:
@@ -3906,6 +3920,7 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
             self._set_action_enabled(
                 "review.mark_lost", bool(has_results and not analysis_busy)
             )
+            self._sync_review_undo_action()
             self._set_action_enabled("review.rerun", False)
             self._set_action_enabled("review.jump", has_results)
             return
@@ -3923,6 +3938,7 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
         self._set_action_enabled(
             "review.mark_lost", bool(has_results and not analysis_busy)
         )
+        self._sync_review_undo_action()
         self._set_action_enabled(
             "review.rerun", bool(has_results and can_track and not analysis_busy)
         )
@@ -3944,6 +3960,7 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
             self._set_action_enabled("tracking.export_report", False)
             self._set_action_enabled("review.correct", False)
             self._set_action_enabled("review.mark_lost", False)
+            self._set_action_enabled("review.undo", False)
             self._set_action_enabled("review.rerun", False)
             self._set_action_enabled("review.jump", False)
             return
@@ -5530,6 +5547,8 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
     ) -> None:
         if not self._tracking_coordinator.can_start:
             return
+        self._review_undo = None
+        self._sync_review_undo_action()
         previous_analysis_run = self.analysis_controller.current_run
         if self.analysis_controller.has_result or self._analysis_thread is not None:
             self._clear_analysis_result(
@@ -5589,6 +5608,10 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
             "review.rerun",
             False if busy else bool(self.current_task.pipeline.results),
         )
+        if busy:
+            self._set_action_enabled("review.undo", False)
+        else:
+            self._sync_review_undo_action()
         self._set_playback_enabled(False if busy else self._current_task_can_play())
         self.run_tracking_button.setProperty("trackingBusy", busy)
         self.run_tracking_button.style().unpolish(self.run_tracking_button)
@@ -6040,104 +6063,6 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
             return
         self.statusBar().showMessage(f"Exported report: {path}", 6000)
 
-    def _start_manual_correction(self) -> None:
-        if self._analysis_thread is not None:
-            self.statusBar().showMessage(
-                "Cancel or finish Signal processing before correcting a result.",
-                6000,
-            )
-            return
-        if not self.current_task.pipeline.results:
-            QMessageBox.information(self, "Correct point", "Run tracking before correcting a result.")
-            return
-        if not self.preview_label.begin_manual_point_selection():
-            QMessageBox.information(self, "Correct point", "Load a readable video frame before correcting a point.")
-            return
-        if self.review_tab is not None:
-            self.sidebar_tabs.setCurrentWidget(self.review_tab)
-        self.statusBar().showMessage("Click the corrected point in the preview canvas.", 6000)
-
-    def _manual_point_selected(self, point: object) -> None:
-        if self._analysis_thread is not None:
-            self.preview_label.cancel_selection()
-            self.statusBar().showMessage(
-                "Signal processing is using a stable result snapshot; correct the point after it finishes.",
-                6000,
-            )
-            return
-        try:
-            point_px = (float(point[0]), float(point[1]))  # type: ignore[index]
-        except Exception:
-            return
-        index = self._current_result_index()
-        if index is None:
-            QMessageBox.information(self, "Correct point", "No tracking result matches the current frame.")
-            return
-        task = self.current_task
-        previous_result = task.pipeline.results[index]
-        try:
-            edit = self.review_controller.manual_correction(task.pipeline, index, point_px)
-        except Exception as exc:
-            QMessageBox.warning(self, "Correct point", f"Could not map manual point:\n{exc}")
-            return
-        result = task.pipeline.results[index]
-        task.mark_results_changed()
-        self._reset_physics_context()
-        self._record_review_edit(task, edit)
-        self.analysis_controller.refresh_result_source_cache(
-            task.pipeline.results,
-            index,
-            previous_result,
-            result,
-        )
-        if self.analysis_controller.has_result or self._analysis_thread is not None:
-            self._clear_analysis_result(
-                "Tracking data changed after manual correction. Run processing again.",
-                state="dirty",
-            )
-        self._refresh_edited_result(task, index, previous_result)
-        self._refresh_analysis_sources()
-        self._render_preview()
-        self.statusBar().showMessage(f"Corrected frame {result.frame_index}.", 6000)
-
-    def _mark_current_result_lost(self) -> None:
-        if self._analysis_thread is not None:
-            self.statusBar().showMessage(
-                "Cancel or finish Signal processing before changing result status.",
-                6000,
-            )
-            return
-        index = self._current_result_index()
-        if index is None:
-            QMessageBox.information(self, "Mark lost", "Select a result row or move to a tracked frame first.")
-            return
-        task = self.current_task
-        previous_result = task.pipeline.results[index]
-        edit = self.review_controller.mark_lost(
-            task.pipeline.results,
-            index,
-            pipeline=task.pipeline,
-        )
-        result = task.pipeline.results[index]
-        task.mark_results_changed()
-        self._reset_physics_context()
-        self._record_review_edit(task, edit)
-        self.analysis_controller.refresh_result_source_cache(
-            task.pipeline.results,
-            index,
-            previous_result,
-            result,
-        )
-        if self.analysis_controller.has_result or self._analysis_thread is not None:
-            self._clear_analysis_result(
-                "Tracking data changed after marking a result lost. Run processing again.",
-                state="dirty",
-            )
-        self._refresh_edited_result(task, index, previous_result)
-        self._refresh_analysis_sources()
-        self._render_preview()
-        self.statusBar().showMessage(f"Marked frame {result.frame_index} as lost.", 6000)
-
     def _jump_to_selected_result(self) -> None:
         self._result_selection_changed()
 
@@ -6353,6 +6278,7 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
         )
 
     def _clear_tracking_results(self, message: str | None = None) -> None:
+        self._review_undo = None
         self._invalidate_review_responses(self.current_task)
         self.current_task.tracking_outcome = ""
         self.current_task.tracking_note = ""
@@ -6711,6 +6637,7 @@ class NeoTrackerWindow(PhysicsWorkspaceMixin, CoordinatorCompatibilityMixin, QMa
             self._set_action_enabled("tracking.run", False)
             self._set_action_enabled("review.correct", False)
             self._set_action_enabled("review.mark_lost", False)
+            self._set_action_enabled("review.undo", False)
             self._set_action_enabled("review.rerun", False)
             job = self._analysis_job
             if job is not None:

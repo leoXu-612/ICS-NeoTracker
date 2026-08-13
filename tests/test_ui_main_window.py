@@ -5327,6 +5327,55 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertEqual(window.analysis_status_label.text(), "Needs run")
         self.assertIn("manual correction", window.analysis_result_view.toPlainText())
 
+    def test_review_undo_restores_exact_result_and_respects_later_mutations(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        frames = [red_dot_frame((50, 70, 3), 12 + i * 4, 20 + i) for i in range(3)]
+        reader = FakeReader(frames)
+        window.current_task.media_path = "synthetic.mp4"
+        window.current_task.media_info = reader.info
+        window._reader_for_task = lambda _task: reader  # type: ignore[method-assign]
+        window._tracking_reader_for_path = lambda _path: reader  # type: ignore[method-assign]
+        window.project_controller.media_probe = lambda _path: reader.info
+        window._render_task()
+        window._run_tracking()
+        wait_for_tracking(window)
+        window._set_project_clean()
+        original = window.current_task.pipeline.results[-1]
+
+        window._manual_point_selected((30.0, 35.0))
+
+        self.assertTrue(window.undo_review_edit_button.isEnabled())
+        self.assertTrue(window._project_dirty)
+        window.undo_review_edit_button.click()
+
+        self.assertIs(window.current_task.pipeline.results[-1], original)
+        self.assertEqual(window.current_task.edit_history, [])
+        self.assertFalse(window.undo_review_edit_button.isEnabled())
+        self.assertFalse(window._project_dirty)
+        np.testing.assert_allclose(
+            window.preview_label.current_tracking_point,
+            window.review_controller.result_image_point(window.current_task.pipeline, original),
+        )
+        self.assertEqual(window.confidence_plot._values[-1][2], "ok")
+
+        window._manual_point_selected((30.0, 35.0))
+        window._project_notes = "intervening change"
+        window._mark_project_changed()
+
+        self.assertTrue(window._undo_review_edit())
+        self.assertTrue(window._project_dirty)
+        self.assertEqual(window._project_notes, "intervening change")
+
+        window._mark_current_result_lost()
+        self.assertTrue(window.undo_review_edit_button.isEnabled())
+        window.current_task.mark_results_changed()
+        window._render_tracking_status(window.current_task)
+
+        self.assertFalse(window.undo_review_edit_button.isEnabled())
+        self.assertFalse(window._undo_review_edit())
+        self.assertEqual(window.current_task.pipeline.results[-1].status, "manual_lost")
+
     def test_rerun_after_current_result_preserves_manual_anchor(self) -> None:
         window = NeoTrackerWindow()
         self.addCleanup(close_window_safely, window)

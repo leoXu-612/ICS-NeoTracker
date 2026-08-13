@@ -1,6 +1,6 @@
 # ICSTracker Project Index
 
-更新时间：2026-08-11（Asia/Taipei）
+更新时间：2026-08-13（Asia/Taipei）
 
 ## 权威工作区
 
@@ -19,7 +19,7 @@
 - `collab/FROM_INTEGRATION_V03.md`：Physics Analysis v0.3 集成状态、验收数字、风险与分支交接。
 - `artifacts/integration-v03/`：当前集成 SHA 的 100k、项目打开、真实 SloMo 与验收证据。
 - `artifacts/v0.3.0-alpha/final-summary.md`：Physics Analysis v0.3 工单最终交付报告。
-- `PROJECT_FILE_INDEX.sha256`：当前 594 个稳定文件的内容索引（排除 `.DS_Store`、`*.pyc`、`__pycache__`、`.git/` 与索引自身），可用于完整性校验。
+- `PROJECT_FILE_INDEX.sha256`：当前 595 个稳定文件的内容索引（排除 `.DS_Store`、`*.pyc`、`__pycache__`、`.git/` 与索引自身），可用于完整性校验。
 - `MIGRATION_RECORD.md`：本次目录迁移、备份和验证记录。
 
 ## 代码索引
@@ -44,6 +44,7 @@ neo_tracker/
   application/kinematics_coordinator.py 后台 fit protocol、取消/陈旧结果拒绝与单终态
   visualization.py    叠加层和环形时序热图
   ui/main_window.py   PySide6 桌面界面、1024×768 响应式 Preview/固定高度工具栏、Add/Open/Save 后台准备与原子提交、O(1) dirty 标记、Tracking 来源绑定/漂移隔离/恢复入口、取消/关闭终态与运行生命周期编排
+  ui/shell/review_editing_mixin.py Review 点修正/Mark Lost 的会话内一步撤销、结果 generation 守卫与精确 dirty 状态恢复
   ui/playback_controller.py elapsed wall time 到源帧的播放时钟、低 FPS 间隔与 preview skip 计数
   ui/background_tasks.py 后台任务 generation、当前 token 与窗口关闭门控
   ui/isolated_media.py spawn-owned probe/preview decoder、受限 JSON+raw-bytes IPC、4K 工作集上限、来源版本复验与有界 terminate/kill
@@ -72,7 +73,7 @@ neo_tracker/
   ui/selection_session.py Video/Data/Plot/Fit 唯一 true-time selection transaction、source revision 守卫、nearest/tie 与防回环
   ui/workspaces/physics_workspace.py Data/Plot/Fit 底部实验台、100k 虚拟表、Action Registry 路由、响应式/键盘/AX 文本
   ui/physics_plot.py VFR true-time 绘图、有界 envelope decimation、gap、fit/residual、Retina 导出与键盘选择
-tests/                 674 项 unittest 回归测试（含 14 类解析 fixture、Engine/Workspace/Schema v3/四组 Integration、media/source identity、项目数据保护、后台生命周期、100k、VFR、导出与 UI 回归）
+tests/                 676 项 unittest 回归测试（含 14 类解析 fixture、Engine/Workspace/Schema v3/四组 Integration、media/source identity、项目数据保护、后台生命周期、100k、VFR、导出与 UI 回归）
 benchmarks/            可重复的 kinematics 100k/derivative/fit/export、Physics UI/plot、项目打开 heartbeat，以及 tracking/media/ROI/Review/Signal/WAV 工作集和语义对照基准
                         P0-B 真实媒体矩阵（real H.264/HEVC/1080p Full Run、取消、来源替换、截断、重开；主进程 CPU/RSS 采样；stdout JSON / stderr 分离）
 assets/                App 图标与封面资产
@@ -92,6 +93,12 @@ peak RSS `276.766 MiB`，cancel max `2.792 ms`。当前 SHA 的真实 HEVC
 `CLOSED`；真实科学数据集与发布资格仍为 `PARTIAL`，因为尚无定标 manifest、
 ground truth、完整实验类型矩阵、原生 VoiceOver/文本缩放与发行验证。完整证据见
 `artifacts/integration-v03/` 与 `collab/FROM_INTEGRATION_V03.md`。
+
+增量证据（2026-08-13）：`codex/editing-reliability-v0.4` 增加 Review
+会话内一步撤销；任何后续 Results mutation 都会使撤销失效。Application QThread
+统一在终态先调度 worker 退休、再退出线程，修复已复现的 Qt/GIL 析构死锁。
+最终 `676/676`（121.742 s），`compileall`、`pip check`、`git diff --check`
+通过；未发现新增 Python crash report、QThread warning或遗留 unittest 进程。
 
 ## 常用命令
 

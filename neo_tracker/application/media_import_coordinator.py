@@ -107,10 +107,12 @@ class MediaImportCoordinator(QObject):
             worker.completed.connect(self.handle_completed)
             worker.failed.connect(self.handle_failed)
             worker.canceled.connect(self.handle_canceled)
+            worker.completed.connect(worker.deleteLater)
+            worker.failed.connect(worker.deleteLater)
+            worker.canceled.connect(worker.deleteLater)
             worker.completed.connect(thread.quit)
             worker.failed.connect(thread.quit)
             worker.canceled.connect(thread.quit)
-            thread.finished.connect(worker.deleteLater)
             thread.finished.connect(thread.deleteLater)
             thread.finished.connect(self.handle_thread_finished)
         except Exception:

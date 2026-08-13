@@ -202,6 +202,7 @@ ACTION_BINDINGS = (
     ActionBinding("playback.next", "next_frame_button", "_step_preview_frame", "run", 1),
     ActionBinding("review.correct", "correct_point_button", "_start_manual_correction", "review"),
     ActionBinding("review.mark_lost", "mark_lost_button", "_mark_current_result_lost", "review"),
+    ActionBinding("review.undo", "undo_review_edit_button", "_undo_review_edit", "review"),
     ActionBinding("review.rerun", "rerun_after_button", "_rerun_after_current_result", "review"),
     ActionBinding("review.jump", "jump_to_result_button", "_jump_to_selected_result", "review"),
     ActionBinding("physics.residual", "show_residual_button", "_toggle_physics_residual", "review"),

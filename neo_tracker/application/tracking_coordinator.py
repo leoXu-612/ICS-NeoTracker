@@ -169,10 +169,10 @@ class TrackingCoordinator(QObject):
             worker.progress.connect(self.handle_progressed)
             worker.completed.connect(self.handle_completed)
             worker.failed.connect(self.handle_failed)
-            worker.completed.connect(thread.quit)
-            worker.failed.connect(thread.quit)
             worker.completed.connect(worker.deleteLater)
             worker.failed.connect(worker.deleteLater)
+            worker.completed.connect(thread.quit)
+            worker.failed.connect(thread.quit)
             thread.finished.connect(self.handle_thread_finished)
             thread.finished.connect(thread.deleteLater)
         except Exception:
