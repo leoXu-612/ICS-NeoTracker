@@ -119,7 +119,7 @@ PSO 在设计中主要用于调参和局部精修，而不是代替整个追踪�
 - `Tracking` 用于选择预设并查看当前 pipeline 模块摘要；Compute backend 状态会明确标出 OpenCV 加速、NumPy 优化路径或较慢回退；仅 Color Marker 等实际使用 Color Blob 的预设显示标记颜色、容差、候选上限和最小区域面积，其他预设会收起整组无关参数并把空间留给当前模块摘要。
 - `Review` 用于查看带单位的逐帧结果表、可切换的 Confidence/Velocity/Mismatch/Angular response 诊断图，以及带数量提示的 `Runs` / `Edits` 双历史页；诊断图支持点击或左右方向键同步跳帧，并且只显示当前数据真实提供的模式。运行记录区分 Full/Rerun 与 Complete/Partial/Canceled/Failed，并可筛选、双选比较配置及导出可见记录。编辑历史可按 Corrected/Marked lost/Rerun 筛选，保留任务级原始序号，选中后可跳回对应帧或导出当前筛选结果。用户还可手动修正当前点、标记丢失帧，并用 `Undo Edit` 撤销当前会话最近一次点修正或丢失标记；若 Results 已再次变化，撤销会失效而不覆盖新结果。从当前结果后重跑仍会显式确认影响范围。预览区同步显示滤波轨迹、未滤波测量轨迹、当前点、带编号候选点、运动预测点和图像空间响应热图；环形观测只保留真实的 `polar_samples` 与轻量 `theta_signal`，Response 会直接路由到下方 Angular response 并显示采样数，不再为旧帧解码/重算一张重复的极坐标矩阵，即使源媒体不可用也能查看已保存的角向证据。其他历史图像空间响应仍在后台重算，期间显示 `Loading` 且不沿用上一帧热图；选中结果卡会明确显示目标 frame/time/status/confidence/state，候选与响应诊断在手动编辑后会标为原始 `pre-edit evidence`。
 - `Signal` 在后台线程按块解码 WAV 到单一 mono/指定声道输出，不再同时长期保留完整原始 PCM 与全通道 `float64`。Tracking 选中序列也只在主线程冻结一个不可变结果引用快照，随后在 worker 构建数值数组。运行按钮会切换为可取消状态，状态条明确区分 `Loading WAV…`、`Preparing N samples…`（Stage 1 of 2）和真正的 `FFT/STFT running…`（Stage 2 of 2）；任务/数据源/参数变化会丢弃过期结果。长信号会在读取前估算峰值工作集，超过 768 MiB 安全阈值时给出缩短、降采样或降低 overlap 的提示。FFT 只显示当前会生效的参数；切换到 STFT 时窗口大小和 overlap 原位恢复，不再用禁用的无关字段压缩结果区。
-- `Calib` 用于 ROI 和定标信息。矩形、圆形、环形可直接精确编辑像素几何；多边形和曲线带可在节点表中修改、删除节点，或在选中节点后的线段中点插入新节点，曲线带同时可编辑半宽；顶部 ROI 摘要使用与编辑器一致的 `nodes`、`px` 和 `half-width` 术语，新建控件也明确标为 `New curve half-width`。画布节点支持拖动及方向键 1 px 微调，按住 Shift 时步进 10 px；单击只选择节点，不会产生坐标漂移。所有 ROI 修改先进入可撤销的草稿，点击 `Apply Geometry` 后才统一校验并使旧结果失效；绘制新 ROI 时编辑器会锁定，`Finish Drawing` / `Cancel Drawing` 只在真实绘制状态可用。标记两点定标杆后会进入独立草稿，可直接编辑真实长度、单位和二维线性坐标的 `+Y` 方向；Preview 明确绘制 `+X/+Y` 轴。只有 Apply 才更新任务、坐标模型并使旧结果失效，Revert 会恢复完整定标草稿。
+- `Calib` 用于 ROI 和定标信息。矩形、圆形、环形可直接精确编辑像素几何；多边形和曲线带可在节点表中修改、删除节点，或在选中节点后的线段中点插入新节点，曲线带同时可编辑半宽；顶部 ROI 摘要使用与编辑器一致的 `nodes`、`px` 和 `half-width` 术语，新建控件也明确标为 `New curve half-width`。画布节点支持拖动及方向键 1 px 微调，按住 Shift 时步进 10 px；单击只选择节点，不会产生坐标漂移。所有 ROI 修改先进入可撤销的草稿，点击 `Apply Geometry` 后才统一校验并使旧结果失效；绘制新 ROI 时编辑器会锁定，`Finish Drawing` / `Cancel Drawing` 只在真实绘制状态可用。标记两点定标杆后会进入独立草稿，可直接编辑真实长度、单位和二维线性坐标的 `+Y` 方向，也可用 `Reverse +X` 交换端点而不重画标尺；Preview 明确绘制 `+X/+Y` 轴。只有 Apply 才更新任务、坐标模型并使旧结果失效，Revert 会恢复完整定标草稿。
 - 未定标时，Calib 的 `Scale` 使用 `Path distance · px`、`Position · px`、`Angle · rad` 或 `Area · px²` 等用户可读物理量，不再直接暴露 `s`、`x_px`、`theta` 等内部状态键；应用两点定标后仍显示精确的 `1 px = … unit`。
 - `Flow` 用文字展示当前追踪流程每一步的模块。
 - `JSON` 显示并编辑当前 pipeline JSON，可校验、应用或重置视图，主要用于开发调试和复现实验。
@@ -224,7 +224,7 @@ Curve Band ROI -> Arc-Length Coordinates -> Brightness/Template Observation -> P
 - 预览播放按源 FPS 与 elapsed wall time 映射目标帧，不再因慢渲染按 timer 次数累积慢放；低帧率保持真实间隔，落后时只跳过 preview display frame，并以 `Playing · … fps · Preview skips …` 明示追帧状态。解码失败会立即停止并显示 `Playback stopped · Frame … unreadable`、恢复 Play 和选择其他帧/重连指引；完整错误进入 tooltip/无障碍描述，Tracking results/source data 不会改变
 - 生产视频探测和 Preview 解码都在可终止的 `spawn` helper 中运行；同一媒体复用一个持久 `MediaReader` session，并通过受限 JSON header + 原始 `uint8` bytes 传帧。IPC 在数组构造前执行 16,777,216 像素/48 MiB 上限、尺寸与来源版本/identity 复验；取消、超时、崩溃、媒体切换和过期结果会关闭 session，不会把 native decoder 故障带回 GUI 进程
 - 五类 ROI 的上下文数值编辑：简单几何使用带单位字段，Polygon/Curve Band 使用节点表和合法最小节点数保护；Calib 画布会显示可命中的节点手柄，表格行与画布节点双向选择，支持选中段中点插入、拖动和 1/10 px 键盘微调。所有操作只更新蓝色草稿并保留绿色 applied 基线，仍需 Apply/Revert；coordinate model、Advanced JSON 和项目保存保持同步
-- 两点定标的非模态草稿编辑：端点、像素长度、真实长度和单位同时可见，支持 `mm` / `cm` / `m` / `in` 与短自定义单位、Apply/Revert、应用后不重画直接修正；任务、旧结果和世界坐标只在 Apply 后改变
+- 两点定标的非模态草稿编辑：端点、像素长度、真实长度和单位同时可见，支持 `mm` / `cm` / `m` / `in` 与短自定义单位、`Reverse +X`、Apply/Revert、应用后不重画直接修正；任务、旧结果和世界坐标只在 Apply 后改变
 - 离线项目媒体恢复：替代文件先与保存的音视频类型、分辨率/FPS/帧数或采样率/样本数/声道数以及 source identity 比较；验证匹配时显示 `Source verified` 并保留结果，不匹配时用 `Relink + Clear Results/Edits` 明示破坏性后果并保留 Runs 审计。结果为空但仍有 Edits/outcome/note 时也会进入清理保护，完整路径保留在 tooltip/无障碍描述中
 - 色块标记颜色采样、容差、候选上限和最小区域面积调节，参数会写入 pipeline JSON 和项目文件
 - Color/Brightness 观测按 8 连通区域输出 top-k 候选，不再把多个目标合并成一个中点；ROI 边界小于整帧时，颜色/亮度转换与连通域只在边界窗口内执行，再把候选和完整响应图还原到全帧坐标；运动先验会从候选中选择时间上最一致的目标
@@ -378,7 +378,7 @@ PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen python3 -m unittest discover
 
 短期优先级：
 
-- 增强定标系统：在已有二维坐标轴方向基础上，按真实测量需求再支持多定标杆和透视校正。
+- 增强定标系统：在已有二维坐标轴方向与 `+X` 反转控制基础上，按真实测量需求再支持多定标杆和透视校正。
 - 仅在真实排障需求出现时增加二维 `radius×angle` 展开采样和模型专属物理残差视图。
 - 增强 Review：为完整实验重放设计结果、人工锚点和媒体身份的独立版本化快照。
 - 增强项目文件：支持多图表、批处理队列、完整模块 config 反序列化和报告资产引用。

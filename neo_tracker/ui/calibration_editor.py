@@ -66,6 +66,14 @@ class CalibrationEditor(QWidget):
         )
         self.y_direction_combo.currentIndexChanged.connect(self._mark_dirty)
 
+        self.reverse_x_button = QPushButton("Reverse +X")
+        self.reverse_x_button.setObjectName("reverseCalibrationXButton")
+        self.reverse_x_button.setAccessibleName("Reverse positive X direction")
+        self.reverse_x_button.setToolTip(
+            "Swap the rod endpoints so positive X points in the opposite direction."
+        )
+        self.reverse_x_button.clicked.connect(self._reverse_x)
+
         form = QFormLayout()
         form.setContentsMargins(0, 0, 0, 0)
         form.setHorizontalSpacing(8)
@@ -78,7 +86,12 @@ class CalibrationEditor(QWidget):
         value_row.addWidget(self.unit_combo, 1)
         form.addRow("Real length", value_row)
         self.y_direction_label = QLabel("Positive Y")
-        form.addRow(self.y_direction_label, self.y_direction_combo)
+        axis_row = QHBoxLayout()
+        axis_row.setContentsMargins(0, 0, 0, 0)
+        axis_row.setSpacing(6)
+        axis_row.addWidget(self.y_direction_combo, 1)
+        axis_row.addWidget(self.reverse_x_button)
+        form.addRow(self.y_direction_label, axis_row)
 
         self.apply_button = QPushButton("Apply Calibration")
         self.apply_button.setObjectName("applyCalibrationButton")
@@ -134,6 +147,7 @@ class CalibrationEditor(QWidget):
             self._loading = False
         self.apply_button.setEnabled(False)
         self.revert_button.setEnabled(False)
+        self._sync_reverse_x_button()
         if parsed is None:
             self._set_status("Mark a rod in the preview, then enter its real length.", "empty")
         else:
@@ -147,6 +161,7 @@ class CalibrationEditor(QWidget):
             return False
         self._line = line
         self._render_summary()
+        self._sync_reverse_x_button()
         self._mark_dirty()
         return True
 
@@ -154,6 +169,8 @@ class CalibrationEditor(QWidget):
         self._axis_direction_available = bool(available)
         self.y_direction_label.setVisible(available)
         self.y_direction_combo.setVisible(available)
+        self.reverse_x_button.setVisible(available)
+        self._sync_reverse_x_button()
 
     def current_config(self) -> dict[str, object] | None:
         if self._line is None:
@@ -176,6 +193,7 @@ class CalibrationEditor(QWidget):
         self.length_spin.setEnabled(not active)
         self.unit_combo.setEnabled(not active)
         self.y_direction_combo.setEnabled(not active)
+        self._sync_reverse_x_button()
         self.apply_button.setEnabled(False if active else self.is_dirty() and self._is_valid())
         self.revert_button.setEnabled(False if active else self.is_dirty())
         if active:
@@ -223,6 +241,19 @@ class CalibrationEditor(QWidget):
         baseline = deepcopy(self._baseline)
         self.set_calibration(baseline)
         self.draftChanged.emit(deepcopy(baseline))
+
+    def _reverse_x(self) -> None:
+        if self._line is None or self._drawing_active or not self._axis_direction_available:
+            return
+        start, end = self._line
+        self._line = end, start
+        self._render_summary()
+        self._mark_dirty()
+
+    def _sync_reverse_x_button(self) -> None:
+        self.reverse_x_button.setEnabled(
+            self._axis_direction_available and self._line is not None and not self._drawing_active
+        )
 
     def _render_summary(self) -> None:
         if self._line is None:

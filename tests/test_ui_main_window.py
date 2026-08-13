@@ -2439,16 +2439,23 @@ class MainWindowStructureTests(unittest.TestCase):
         editor.y_direction_combo.setCurrentIndex(1)
         self.assertEqual(window.preview_label.calibration_y_positive, "down")
         self.assertEqual(task.calibration_rod.y_positive, "up")
+        editor.reverse_x_button.click()
+        self.assertEqual(window.preview_label.calibration_line, ((110.0, 20.0), (10.0, 20.0)))
+        self.assertIsNone(task.calibration_rod.start_px)
         editor.apply_button.click()
-        self.assertEqual(task.calibration_rod.start_px, (10.0, 20.0))
-        self.assertEqual(task.calibration_rod.end_px, (110.0, 20.0))
+        self.assertEqual(task.calibration_rod.start_px, (110.0, 20.0))
+        self.assertEqual(task.calibration_rod.end_px, (10.0, 20.0))
         self.assertEqual(task.calibration_rod.real_length, 25.0)
         self.assertEqual(task.calibration_rod.unit, "mm")
         self.assertEqual(task.calibration_rod.y_positive, "down")
         self.assertEqual(task.pipeline.coordinate_model.to_config()["y_positive"], "down")
         self.assertAlmostEqual(
+            task.pipeline.coordinate_model.image_to_state_space((10.0, 20.0))["x_world"],
+            25.0,
+        )
+        self.assertAlmostEqual(
             task.pipeline.coordinate_model.image_to_state_space((10.0, 30.0))["y_world"],
-            2.5,
+            -2.5,
         )
         self.assertEqual(task.pipeline.results, [])
         self.assertIn("1 px = 0.25 mm", window.scale_status_label.text())
@@ -2458,7 +2465,7 @@ class MainWindowStructureTests(unittest.TestCase):
         editor.unit_combo.setCurrentText("cm")
         self.assertIn("Calibration draft changed", window.statusBar().currentMessage())
         editor.apply_button.click()
-        self.assertEqual(task.calibration_rod.start_px, (10.0, 20.0))
+        self.assertEqual(task.calibration_rod.start_px, (110.0, 20.0))
         self.assertEqual(task.calibration_rod.real_length, 2.5)
         self.assertEqual(task.calibration_rod.unit, "cm")
         self.assertEqual(task.calibration_rod.y_positive, "down")

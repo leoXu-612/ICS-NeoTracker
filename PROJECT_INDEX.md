@@ -63,7 +63,7 @@ neo_tracker/
   ui/results_table_model.py 保留完整行语义、按需格式化、有界行缓存与单行 copy-on-write/summary 增量更新的虚拟 Results table model
   ui/preview_canvas.py 预览、ROI/定标交互、Applied/Editable 标签分层、节点编辑、追踪叠加与物理显示像素有界的 Response RGBA 缓存组件
   ui/roi_geometry_editor.py 五类 ROI 数值字段、Qt C++ 原生节点表、节点中点插入、画布双向选择与 Apply/Revert
-  ui/calibration_editor.py 两点定标的长度/单位草稿、Apply/Revert 与不重画修正
+  ui/calibration_editor.py 两点定标的长度/单位草稿、+X 端点反转、Apply/Revert 与不重画修正
   ui/run_history_panel.py 运行历史筛选、终态最新记录选择、持久 runtime backend/吞吐/Input/Compute/prefetch overlap/Review peak 摘要、缓存目标说明、Qt C++ 原生双选比较表格与可见记录导出请求
   ui/edit_history_panel.py 编辑历史类型筛选、superseded 灰显/计数、原序号、跳帧与可见记录导出请求
   ui/review_diagnostics.py Review 诊断模式、单次结果索引、单位化 velocity selector、静态 series LRU 与单结果/字段消失增量失效
@@ -74,7 +74,7 @@ neo_tracker/
   ui/selection_session.py Video/Data/Plot/Fit 唯一 true-time selection transaction、source revision 守卫、nearest/tie 与防回环
   ui/workspaces/physics_workspace.py Data/Plot/Fit 底部实验台、100k 虚拟表、Action Registry 路由、响应式/键盘/AX 文本
   ui/physics_plot.py VFR true-time 绘图、有界 envelope decimation、gap、fit/residual、Retina 导出与键盘选择
-tests/                 679 项 unittest 回归测试（含 14 类解析 fixture、Engine/Workspace/Schema v3/四组 Integration、media/source identity、项目数据保护、后台生命周期、100k、VFR、导出与 UI 回归）
+tests/                 680 项 unittest 回归测试（含 14 类解析 fixture、Engine/Workspace/Schema v3/四组 Integration、media/source identity、项目数据保护、后台生命周期、100k、VFR、导出与 UI 回归）
 benchmarks/            可重复的 kinematics 100k/derivative/fit/export、Physics UI/plot、项目打开 heartbeat，以及 tracking/media/ROI/Review/Signal/WAV 工作集和语义对照基准
                         P0-B 真实媒体矩阵（real H.264/HEVC/1080p Full Run、取消、来源替换、截断、重开；主进程 CPU/RSS 采样；stdout JSON / stderr 分离）
 assets/                App 图标与封面资产
@@ -108,6 +108,11 @@ QThread 终态的 Python wrapper 析构竞态；全部 Application coordinator �
 terminal worker 迁回主事件循环、再退出 QThread，最后在主线程延迟删除。Analysis
 生命周期修复前循环稳定原生退出，修复后 200/200；最终 `679/679`
 （125.662 s）通过，15:08 后无新 `.ips`。
+
+定标轴控制增量（2026-08-13）：Calib 的 `Reverse +X` 只交换现有两点标尺的
+草稿端点，Preview 立即更新，但 task、Results 和坐标模型在 Apply 前保持不变；
+Revert 精确恢复基线，非二维坐标模型不显示该操作。1024×768 无横向滚动；最终
+`680/680`（120.680 s）、`compileall`、`pip check` 与 `git diff --check` 通过。
 
 ## 常用命令
 
