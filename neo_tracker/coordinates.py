@@ -38,6 +38,10 @@ class LinearWorldCoordinate(CoordinateModel):
     y_positive: str = "up"
     name: str = "linear_world"
 
+    def __post_init__(self) -> None:
+        if self.y_positive not in {"up", "down"}:
+            raise ValueError("y_positive must be 'up' or 'down'")
+
     @classmethod
     def from_calibration_rod(
         cls,
@@ -63,10 +67,7 @@ class LinearWorldCoordinate(CoordinateModel):
     def image_to_state_space(self, point: tuple[float, float]) -> State:
         origin = np.asarray(self.origin_px, dtype=float)
         axis = _unit(np.asarray(self.x_axis_px, dtype=float) - origin)
-        if self.y_positive == "up":
-            y_axis = np.array([axis[1], -axis[0]])
-        else:
-            y_axis = np.array([-axis[1], axis[0]])
+        y_axis = self._y_axis(axis)
         vector = np.asarray(point, dtype=float) - origin
         return {
             "x_world": float(np.dot(vector, axis) * self.unit_per_pixel),
@@ -76,10 +77,7 @@ class LinearWorldCoordinate(CoordinateModel):
     def state_to_image_space(self, state: State) -> tuple[float, float]:
         origin = np.asarray(self.origin_px, dtype=float)
         axis = _unit(np.asarray(self.x_axis_px, dtype=float) - origin)
-        if self.y_positive == "up":
-            y_axis = np.array([axis[1], -axis[0]])
-        else:
-            y_axis = np.array([-axis[1], axis[0]])
+        y_axis = self._y_axis(axis)
         pixel = origin + (state["x_world"] / self.unit_per_pixel) * axis + (state["y_world"] / self.unit_per_pixel) * y_axis
         return float(pixel[0]), float(pixel[1])
 
@@ -92,6 +90,13 @@ class LinearWorldCoordinate(CoordinateModel):
             "unit": self.unit,
             "y_positive": self.y_positive,
         }
+
+    def _y_axis(self, x_axis: np.ndarray) -> np.ndarray:
+        return (
+            np.array([x_axis[1], -x_axis[0]])
+            if self.y_positive == "up"
+            else np.array([-x_axis[1], x_axis[0]])
+        )
 
 
 @dataclass(frozen=True)
@@ -237,4 +242,3 @@ class PathCoordinate(CoordinateModel):
             "unit_per_pixel": self.unit_per_pixel,
             "unit": self.unit,
         }
-

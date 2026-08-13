@@ -68,7 +68,13 @@ class ProjectTaskControllerTests(unittest.TestCase):
         self.assertTrue(
             self.controller.apply_calibration_rod_to_task(
                 task,
-                CalibrationRod(start_px=(0.0, 0.0), end_px=(100.0, 0.0), real_length=50.0, unit="cm"),
+                CalibrationRod(
+                    start_px=(0.0, 0.0),
+                    end_px=(100.0, 0.0),
+                    real_length=50.0,
+                    unit="cm",
+                    y_positive="down",
+                ),
             )
         )
         task.preview_frame_index = 17
@@ -94,12 +100,41 @@ class ProjectTaskControllerTests(unittest.TestCase):
         self.assertEqual(restored.preview_frame_index, 17)
         self.assertEqual(restored.roi["width"], 200.0)
         self.assertAlmostEqual(restored.calibration_rod.unit_per_pixel(), 0.5)
+        self.assertEqual(restored.calibration_rod.y_positive, "down")
         self.assertEqual(restored.pipeline.coordinate_model.to_config()["unit"], "cm")
+        self.assertEqual(restored.pipeline.coordinate_model.to_config()["y_positive"], "down")
         self.assertEqual(restored.tracking_outcome, "partial")
         self.assertEqual(restored.tracking_note, "Source ended at frame 18.")
         self.assertEqual(len(restored.run_history), 1)
         self.assertEqual(restored.run_history[0].processed_frames, 18)
         self.assertEqual(restored.run_history[0].pipeline_digest, task.run_history[0].pipeline_digest)
+
+    def test_legacy_calibration_keeps_pipeline_axis_direction(self) -> None:
+        task = self.controller.new_task("missing.mp4", "color_marker")
+        self.assertTrue(
+            self.controller.apply_calibration_rod_to_task(
+                task,
+                CalibrationRod(
+                    start_px=(0.0, 0.0),
+                    end_px=(100.0, 0.0),
+                    real_length=50.0,
+                    unit="cm",
+                    y_positive="down",
+                ),
+            )
+        )
+        snapshot = self.controller.snapshot_from_task(task)
+        assert snapshot.calibration_rod is not None
+        snapshot.calibration_rod.pop("y_positive")
+
+        restored = self.controller.task_from_snapshot(snapshot)
+
+        self.assertEqual(restored.calibration_rod.y_positive, "down")
+        self.assertEqual(restored.pipeline.coordinate_model.to_config()["y_positive"], "down")
+
+        invalid = replace(restored.calibration_rod, y_positive="sideways")
+        self.assertIsNone(self.controller.calibration_rod_to_dict(invalid))
+        self.assertFalse(self.controller.apply_calibration_rod_to_task(restored, invalid))
 
     def test_invalid_snapshot_pipeline_geometry_is_rejected(self) -> None:
         config = self.registry["color_marker"].factory().to_config()

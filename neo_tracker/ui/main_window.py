@@ -79,7 +79,13 @@ from neo_tracker.application.tracking_coordinator import (
 )
 from neo_tracker.config import apply_pipeline_config, validate_roi_config
 from neo_tracker.core import TrackingPipeline, TrackerResult
-from neo_tracker.coordinates import AnnularCoordinate, LinearWorldCoordinate, PathCoordinate, PolarCoordinate
+from neo_tracker.coordinates import (
+    AnnularCoordinate,
+    ImageCoordinate,
+    LinearWorldCoordinate,
+    PathCoordinate,
+    PolarCoordinate,
+)
 from neo_tracker.export import (
     write_edit_history_csv,
     write_csv as write_tracking_csv,
@@ -3805,13 +3811,23 @@ class NeoTrackerWindow(
         self.roi_geometry_editor.set_config(config)
         self._render_curve_half_width(task)
         rod = task.calibration_rod or CalibrationRod()
+        has_axis = isinstance(
+            task.pipeline.coordinate_model,
+            (ImageCoordinate, LinearWorldCoordinate),
+        )
+        self.calibration_editor.set_axis_direction_available(has_axis)
+        self.preview_label.set_calibration_axis(has_axis, rod.y_positive)
         self.calibration_editor.set_calibration(self.project_controller.calibration_rod_to_dict(rod))
         self.reset_calibration_button.setEnabled(
             rod.start_px is not None and rod.end_px is not None and rod.real_length is not None
         )
         scale = rod.unit_per_pixel()
         if scale is not None:
-            self.scale_status_label.setText(f"1 px = {scale:.6g} {rod.unit}")
+            text = f"1 px = {scale:.6g} {rod.unit}"
+            if has_axis:
+                y_side = "left of +X" if rod.y_positive == "up" else "right of +X"
+                text += f" · +Y {y_side}"
+            self.scale_status_label.setText(text)
         else:
             unit = task.pipeline.state_model.units()
             self.scale_status_label.setText(self._format_state_unit_summary(unit))
@@ -5254,6 +5270,14 @@ class NeoTrackerWindow(
             except (KeyError, TypeError, ValueError, IndexError, OverflowError):
                 line = None
         self.preview_label.set_calibration_line(line)
+        if isinstance(config, dict):
+            self.preview_label.set_calibration_axis(
+                isinstance(
+                    self.current_task.pipeline.coordinate_model,
+                    (ImageCoordinate, LinearWorldCoordinate),
+                ),
+                str(config.get("y_positive", "up")),
+            )
         if self.calibration_editor.is_dirty():
             self.statusBar().showMessage("Calibration draft changed. Apply or revert before tracking.", 8000)
         else:
@@ -5265,7 +5289,13 @@ class NeoTrackerWindow(
         if rod is None or rod.start_px is None or rod.end_px is None or rod.real_length is None:
             self.calibration_editor.show_error("Calibration values are incomplete or invalid.")
             return
-        self._apply_calibration_rod(rod.start_px, rod.end_px, rod.real_length, rod.unit)
+        self._apply_calibration_rod(
+            rod.start_px,
+            rod.end_px,
+            rod.real_length,
+            rod.unit,
+            rod.y_positive,
+        )
 
     def _apply_calibration_rod(
         self,
@@ -5273,6 +5303,7 @@ class NeoTrackerWindow(
         end_px: tuple[float, float],
         real_length: float,
         unit: str = "cm",
+        y_positive: str = "up",
     ) -> bool:
         task = self.current_task
         rod = CalibrationRod(
@@ -5280,12 +5311,17 @@ class NeoTrackerWindow(
             end_px=end_px,
             real_length=float(real_length),
             unit=str(unit).strip(),
+            y_positive=str(y_positive),
         )
         if rod.pixel_length() <= 1e-12:
             QMessageBox.warning(self, "Calibration rod", "Calibration rod endpoints must be distinct.")
             return False
-        if rod.unit_per_pixel() is None or not rod.unit:
-            QMessageBox.warning(self, "Calibration rod", "Calibration length must be positive and include a unit.")
+        if rod.unit_per_pixel() is None or not rod.unit or rod.y_positive not in {"up", "down"}:
+            QMessageBox.warning(
+                self,
+                "Calibration rod",
+                "Calibration length, unit, and axis direction must be valid.",
+            )
             return False
         if not self._apply_calibration_rod_to_task(task, rod):
             self.calibration_editor.show_error("Calibration could not be applied to this pipeline.")

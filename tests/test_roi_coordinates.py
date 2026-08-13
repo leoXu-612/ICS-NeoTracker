@@ -126,6 +126,19 @@ class ROICoordinateTests(unittest.TestCase):
         self.assertAlmostEqual(pixel[0], 60.0, places=6)
         self.assertAlmostEqual(pixel[1], 0.0, places=6)
 
+        down = LinearWorldCoordinate.from_calibration_rod(
+            (10, 10), (110, 10), 0.5, "m", y_positive="down"
+        )
+        down_world = down.image_to_state_space((60, 20))
+        self.assertAlmostEqual(down_world["x_world"], 0.25, places=6)
+        self.assertAlmostEqual(down_world["y_world"], 0.05, places=6)
+        self.assertEqual(down.state_to_image_space(down_world), (60.0, 20.0))
+
+        with self.assertRaisesRegex(ValueError, "y_positive"):
+            LinearWorldCoordinate.from_calibration_rod(
+                (10, 10), (110, 10), 0.5, "m", y_positive="sideways"
+            )
+
     def test_polar_mapping(self) -> None:
         mapping = PolarCoordinate(center_px=(50, 50))
         state = mapping.image_to_state_space((50, 30))

@@ -1632,6 +1632,30 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertEqual(window.preview_label.roi_rect, (10.0, 12.0, 30.0, 24.0))
         window.preview_label.set_calibration_line(((0.0, 0.0), (100.0, 0.0)))
         self.assertEqual(window.preview_label.calibration_line, ((0.0, 0.0), (100.0, 0.0)))
+        window.preview_label.set_calibration_axis(True, "down")
+        self.assertTrue(window.preview_label.calibration_has_axis)
+        self.assertEqual(window.preview_label.calibration_y_positive, "down")
+
+    def test_preview_calibration_axis_direction_changes_rendered_side(self) -> None:
+        canvas = PreviewCanvas()
+        self.addCleanup(canvas.close)
+        canvas.resize(320, 240)
+        canvas.set_frame(np.zeros((240, 320, 3), dtype=np.uint8))
+        canvas.set_calibration_line(((80.0, 120.0), (240.0, 120.0)))
+
+        canvas.set_calibration_axis(True, "up")
+        up_image = canvas.grab().toImage()
+        canvas.set_calibration_axis(True, "down")
+        down_image = canvas.grab().toImage()
+
+        self.assertNotEqual(
+            up_image.pixelColor(80, 96).rgba(),
+            down_image.pixelColor(80, 96).rgba(),
+        )
+        self.assertNotEqual(
+            up_image.pixelColor(80, 144).rgba(),
+            down_image.pixelColor(80, 144).rgba(),
+        )
 
     def test_preview_canvas_bgr_display_matches_rgb_pixels(self) -> None:
         canvas = PreviewCanvas()
@@ -2412,11 +2436,20 @@ class MainWindowStructureTests(unittest.TestCase):
 
         editor.length_spin.setValue(25.0)
         editor.unit_combo.setCurrentText("mm")
+        editor.y_direction_combo.setCurrentIndex(1)
+        self.assertEqual(window.preview_label.calibration_y_positive, "down")
+        self.assertEqual(task.calibration_rod.y_positive, "up")
         editor.apply_button.click()
         self.assertEqual(task.calibration_rod.start_px, (10.0, 20.0))
         self.assertEqual(task.calibration_rod.end_px, (110.0, 20.0))
         self.assertEqual(task.calibration_rod.real_length, 25.0)
         self.assertEqual(task.calibration_rod.unit, "mm")
+        self.assertEqual(task.calibration_rod.y_positive, "down")
+        self.assertEqual(task.pipeline.coordinate_model.to_config()["y_positive"], "down")
+        self.assertAlmostEqual(
+            task.pipeline.coordinate_model.image_to_state_space((10.0, 30.0))["y_world"],
+            2.5,
+        )
         self.assertEqual(task.pipeline.results, [])
         self.assertIn("1 px = 0.25 mm", window.scale_status_label.text())
         self.assertEqual(editor.message_label.property("calibrationState"), "applied")
@@ -2428,6 +2461,7 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertEqual(task.calibration_rod.start_px, (10.0, 20.0))
         self.assertEqual(task.calibration_rod.real_length, 2.5)
         self.assertEqual(task.calibration_rod.unit, "cm")
+        self.assertEqual(task.calibration_rod.y_positive, "down")
         self.assertIn("1 px = 0.025 cm", window.scale_status_label.text())
 
     def test_calibration_rod_updates_annular_coordinate_scale(self) -> None:
@@ -2435,6 +2469,7 @@ class MainWindowStructureTests(unittest.TestCase):
         self.addCleanup(close_window_safely, window)
         combo = window.preset_combo
         combo.setCurrentIndex(combo.findData("travelling_flame"))
+        self.assertTrue(window.calibration_editor.y_direction_combo.isHidden())
 
         window._apply_calibration_rod((10.0, 20.0), (110.0, 20.0), 50.0, "cm")
 
@@ -2449,6 +2484,7 @@ class MainWindowStructureTests(unittest.TestCase):
         self.addCleanup(close_window_safely, window)
         combo = window.preset_combo
         combo.setCurrentIndex(combo.findData("path_motion"))
+        self.assertTrue(window.calibration_editor.y_direction_combo.isHidden())
         curve = {
             "type": "curve_band",
             "polyline": [[5.0, 6.0], [40.0, 8.0], [60.0, 32.0]],

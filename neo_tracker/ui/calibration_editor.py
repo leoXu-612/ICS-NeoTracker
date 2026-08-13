@@ -27,6 +27,7 @@ class CalibrationEditor(QWidget):
         self.setObjectName("calibrationEditor")
         self._loading = False
         self._drawing_active = False
+        self._axis_direction_available = True
         self._baseline: dict[str, object] | None = None
         self._line: tuple[tuple[float, float], tuple[float, float]] | None = None
 
@@ -55,6 +56,16 @@ class CalibrationEditor(QWidget):
             self.unit_combo.lineEdit().setMaxLength(12)
         self.unit_combo.currentTextChanged.connect(self._mark_dirty)
 
+        self.y_direction_combo = QComboBox()
+        self.y_direction_combo.setObjectName("calibrationYDirectionCombo")
+        self.y_direction_combo.addItem("Left of +X", "up")
+        self.y_direction_combo.addItem("Right of +X", "down")
+        self.y_direction_combo.setAccessibleName("Positive Y direction")
+        self.y_direction_combo.setToolTip(
+            "Choose which side of the rod's positive X direction contains positive Y."
+        )
+        self.y_direction_combo.currentIndexChanged.connect(self._mark_dirty)
+
         form = QFormLayout()
         form.setContentsMargins(0, 0, 0, 0)
         form.setHorizontalSpacing(8)
@@ -66,16 +77,20 @@ class CalibrationEditor(QWidget):
         value_row.addWidget(self.length_spin, 2)
         value_row.addWidget(self.unit_combo, 1)
         form.addRow("Real length", value_row)
+        self.y_direction_label = QLabel("Positive Y")
+        form.addRow(self.y_direction_label, self.y_direction_combo)
 
         self.apply_button = QPushButton("Apply Calibration")
         self.apply_button.setObjectName("applyCalibrationButton")
-        self.apply_button.setAccessibleName("Apply calibration length and unit")
-        self.apply_button.setToolTip("Apply this rod, length, and unit, then invalidate stale tracking results.")
+        self.apply_button.setAccessibleName("Apply calibration")
+        self.apply_button.setToolTip(
+            "Apply this calibration, then invalidate stale tracking results."
+        )
         self.apply_button.clicked.connect(self._apply)
         self.revert_button = QPushButton("Revert")
         self.revert_button.setObjectName("revertCalibrationButton")
         self.revert_button.setAccessibleName("Revert calibration draft")
-        self.revert_button.setToolTip("Discard the unapplied calibration line, length, and unit changes.")
+        self.revert_button.setToolTip("Discard unapplied calibration changes.")
         self.revert_button.clicked.connect(self._revert)
 
         actions = QHBoxLayout()
@@ -106,10 +121,14 @@ class CalibrationEditor(QWidget):
                 self._line = None
                 self.length_spin.setValue(10.0)
                 self.unit_combo.setCurrentText("cm")
+                self.y_direction_combo.setCurrentIndex(0)
             else:
                 self._line = self._line_from_config(parsed)
                 self.length_spin.setValue(float(parsed["real_length"]))
                 self.unit_combo.setCurrentText(str(parsed["unit"]))
+                self.y_direction_combo.setCurrentIndex(
+                    self.y_direction_combo.findData(str(parsed["y_positive"]))
+                )
             self._render_summary()
         finally:
             self._loading = False
@@ -118,7 +137,8 @@ class CalibrationEditor(QWidget):
         if parsed is None:
             self._set_status("Mark a rod in the preview, then enter its real length.", "empty")
         else:
-            self._set_status("Edit the real length or unit, or mark a replacement rod.", "ready")
+            detail = "scale or axis direction" if self._axis_direction_available else "scale"
+            self._set_status(f"Edit the {detail}, or mark a replacement rod.", "ready")
 
     def set_line(self, start: object, end: object) -> bool:
         line = self._normalized_line(start, end)
@@ -130,6 +150,11 @@ class CalibrationEditor(QWidget):
         self._mark_dirty()
         return True
 
+    def set_axis_direction_available(self, available: bool) -> None:
+        self._axis_direction_available = bool(available)
+        self.y_direction_label.setVisible(available)
+        self.y_direction_combo.setVisible(available)
+
     def current_config(self) -> dict[str, object] | None:
         if self._line is None:
             return None
@@ -139,6 +164,7 @@ class CalibrationEditor(QWidget):
             "end_px": [round(end[0], 3), round(end[1], 3)],
             "real_length": round(float(self.length_spin.value()), 6),
             "unit": self.unit_combo.currentText().strip(),
+            "y_positive": str(self.y_direction_combo.currentData()),
         }
 
     def is_dirty(self) -> bool:
@@ -149,6 +175,7 @@ class CalibrationEditor(QWidget):
         self._drawing_active = bool(active)
         self.length_spin.setEnabled(not active)
         self.unit_combo.setEnabled(not active)
+        self.y_direction_combo.setEnabled(not active)
         self.apply_button.setEnabled(False if active else self.is_dirty() and self._is_valid())
         self.revert_button.setEnabled(False if active else self.is_dirty())
         if active:
@@ -157,7 +184,8 @@ class CalibrationEditor(QWidget):
             self._mark_dirty()
 
     def show_applied(self) -> None:
-        self._set_status("Calibration applied. Tracking results now need a fresh run.", "applied")
+        detail = "Calibration and axis direction" if self._axis_direction_available else "Calibration"
+        self._set_status(f"{detail} applied. Tracking results now need a fresh run.", "applied")
 
     def show_error(self, message: str) -> None:
         self._set_status(str(message), "error")
@@ -217,14 +245,24 @@ class CalibrationEditor(QWidget):
         pixel_length = hypot(end[0] - start[0], end[1] - start[1])
         real_length = float(self.length_spin.value())
         unit = self.unit_combo.currentText().strip()
-        return f"{pixel_length:.3f} px = {real_length:g} {unit} · 1 px = {real_length / pixel_length:.6g} {unit}"
+        detail = (
+            f"{pixel_length:.3f} px = {real_length:g} {unit} · "
+            f"1 px = {real_length / pixel_length:.6g} {unit}"
+        )
+        if self._axis_direction_available:
+            detail += f" · +Y {self.y_direction_combo.currentText().lower()}"
+        return detail
 
     def _is_valid(self) -> bool:
         config = self.current_config()
         if config is None:
             return False
         unit = str(config["unit"]).strip()
-        return 1 <= len(unit) <= 12 and unit.isprintable()
+        return (
+            1 <= len(unit) <= 12
+            and unit.isprintable()
+            and config["y_positive"] in {"up", "down"}
+        )
 
     def _set_status(self, text: str, state: str) -> None:
         self.message_label.setText(text)
@@ -242,9 +280,16 @@ class CalibrationEditor(QWidget):
         try:
             real_length = float(config["real_length"])
             unit = str(config["unit"]).strip()
+            y_positive = str(config.get("y_positive", "up"))
         except (KeyError, TypeError, ValueError, OverflowError):
             return None
-        if line is None or not isfinite(real_length) or real_length <= 0.0 or not unit:
+        if (
+            line is None
+            or not isfinite(real_length)
+            or real_length <= 0.0
+            or not unit
+            or y_positive not in {"up", "down"}
+        ):
             return None
         start, end = line
         return {
@@ -252,6 +297,7 @@ class CalibrationEditor(QWidget):
             "end_px": [end[0], end[1]],
             "real_length": real_length,
             "unit": unit,
+            "y_positive": y_positive,
         }
 
     @staticmethod

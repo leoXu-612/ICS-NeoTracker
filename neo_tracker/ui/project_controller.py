@@ -34,6 +34,7 @@ class CalibrationRod:
     end_px: tuple[float, float] | None = None
     real_length: float | None = None
     unit: str = "cm"
+    y_positive: str = "up"
 
     def label(self) -> str:
         if self.start_px is None or self.end_px is None or self.real_length is None:
@@ -528,6 +529,11 @@ class ProjectTaskController:
                 raise ValueError("project task $.roi could not be applied")
         rod = self.calibration_rod_from_dict(snapshot.calibration_rod)
         if rod is not None:
+            if (
+                "y_positive" not in snapshot.calibration_rod
+                and isinstance(task.pipeline.coordinate_model, LinearWorldCoordinate)
+            ):
+                rod.y_positive = task.pipeline.coordinate_model.y_positive
             self.apply_calibration_rod_to_task(task, rod)
         task.pipeline.results = list(snapshot.results)
         if persisted_debug_is_compact:
@@ -625,13 +631,18 @@ class ProjectTaskController:
     def calibration_rod_to_dict(rod: CalibrationRod | None) -> dict[str, object] | None:
         if rod is None or rod.start_px is None or rod.end_px is None or rod.real_length is None:
             return None
-        if rod.unit_per_pixel() is None or not all(_finite_values(*point) for point in (rod.start_px, rod.end_px)):
+        if (
+            rod.unit_per_pixel() is None
+            or rod.y_positive not in {"up", "down"}
+            or not all(_finite_values(*point) for point in (rod.start_px, rod.end_px))
+        ):
             return None
         return {
             "start_px": [float(rod.start_px[0]), float(rod.start_px[1])],
             "end_px": [float(rod.end_px[0]), float(rod.end_px[1])],
             "real_length": float(rod.real_length),
             "unit": rod.unit,
+            "y_positive": rod.y_positive,
         }
 
     @staticmethod
@@ -645,10 +656,17 @@ class ProjectTaskController:
             end_px = (float(end[0]), float(end[1]))  # type: ignore[index]
             real_length = float(data["real_length"])
             unit = str(data.get("unit", "cm")).strip()
+            y_positive = str(data.get("y_positive", "up"))
         except (KeyError, TypeError, ValueError, IndexError, OverflowError):
             return None
-        rod = CalibrationRod(start_px=start_px, end_px=end_px, real_length=real_length, unit=unit)
-        if not unit or rod.unit_per_pixel() is None:
+        rod = CalibrationRod(
+            start_px=start_px,
+            end_px=end_px,
+            real_length=real_length,
+            unit=unit,
+            y_positive=y_positive,
+        )
+        if not unit or y_positive not in {"up", "down"} or rod.unit_per_pixel() is None:
             return None
         return rod
 
@@ -761,7 +779,13 @@ class ProjectTaskController:
     @classmethod
     def apply_calibration_rod_to_task(cls, task: DesktopTask, rod: CalibrationRod) -> bool:
         unit_per_pixel = rod.unit_per_pixel()
-        if rod.start_px is None or rod.end_px is None or unit_per_pixel is None or not rod.unit.strip():
+        if (
+            rod.start_px is None
+            or rod.end_px is None
+            or unit_per_pixel is None
+            or not rod.unit.strip()
+            or rod.y_positive not in {"up", "down"}
+        ):
             return False
         task.calibration_rod = rod
         old_coordinate_model = task.pipeline.coordinate_model
@@ -774,6 +798,7 @@ class ProjectTaskController:
                 end_px=rod.end_px,
                 real_length=float(rod.real_length),  # type: ignore[arg-type]
                 unit=rod.unit,
+                y_positive=rod.y_positive,
             )
         elif isinstance(task.pipeline.coordinate_model, AnnularCoordinate):
             old = task.pipeline.coordinate_model

@@ -151,6 +151,8 @@ class PreviewCanvas(QLabel):
         self.roi_rect: tuple[float, float, float, float] | None = None
         self.roi_config: dict[str, object] | None = None
         self.calibration_line: tuple[tuple[float, float], tuple[float, float]] | None = None
+        self.calibration_has_axis = False
+        self.calibration_y_positive = "up"
         self.trajectory_points: list[tuple[float, float]] = []
         self.measurement_points: list[tuple[float, float]] = []
         self.candidate_points: list[tuple[float, float, float, bool]] = []
@@ -293,6 +295,11 @@ class PreviewCanvas(QLabel):
 
     def set_calibration_line(self, line: tuple[tuple[float, float], tuple[float, float]] | None) -> None:
         self.calibration_line = line
+        self.update()
+
+    def set_calibration_axis(self, available: bool, y_positive: str = "up") -> None:
+        self.calibration_has_axis = bool(available)
+        self.calibration_y_positive = "down" if y_positive == "down" else "up"
         self.update()
 
     def set_tracking_overlay(
@@ -1028,6 +1035,15 @@ class PreviewCanvas(QLabel):
         painter.drawLine(start, end)
         painter.drawEllipse(start, 3.5, 3.5)
         painter.drawEllipse(end, 3.5, 3.5)
+        if self.calibration_has_axis:
+            painter.drawText(end + QPointF(6.0, -6.0), "+X")
+            dx, dy = end.x() - start.x(), end.y() - start.y()
+            length = math.hypot(dx, dy)
+            if length > 1e-6:
+                sign = 1.0 if self.calibration_y_positive == "up" else -1.0
+                y_end = start + QPointF(sign * dy * 24.0 / length, -sign * dx * 24.0 / length)
+                painter.drawLine(start, y_end)
+                painter.drawText(y_end + QPointF(6.0, -6.0), "+Y")
         mid = QPointF((start.x() + end.x()) * 0.5, (start.y() + end.y()) * 0.5)
         painter.drawText(mid + QPointF(6.0, -6.0), label)
 

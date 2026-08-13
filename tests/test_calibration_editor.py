@@ -33,9 +33,11 @@ class CalibrationEditorTests(unittest.TestCase):
 
         editor.length_spin.setValue(25.0)
         editor.unit_combo.setCurrentText("mm")
+        editor.y_direction_combo.setCurrentIndex(1)
         editor.apply_button.click()
         self.assertEqual(applied[-1]["real_length"], 25.0)
         self.assertEqual(applied[-1]["unit"], "mm")
+        self.assertEqual(applied[-1]["y_positive"], "down")
         self.assertEqual(applied[-1]["start_px"], [10.0, 20.0])
 
     def test_existing_calibration_can_be_corrected_and_reverted_without_remarking(self) -> None:
@@ -46,6 +48,7 @@ class CalibrationEditorTests(unittest.TestCase):
             "end_px": [110.0, 20.0],
             "real_length": 50.0,
             "unit": "cm",
+            "y_positive": "down",
         }
         drafts: list[object] = []
         editor.draftChanged.connect(drafts.append)
@@ -58,6 +61,7 @@ class CalibrationEditorTests(unittest.TestCase):
         editor.revert_button.click()
 
         self.assertEqual(editor.current_config(), baseline)
+        self.assertEqual(editor.y_direction_combo.currentData(), "down")
         self.assertFalse(editor.is_dirty())
         self.assertEqual(drafts[-1], baseline)
 
@@ -77,6 +81,10 @@ class CalibrationEditorTests(unittest.TestCase):
         editor.unit_combo.setCurrentText("custom")
         self.assertTrue(editor.apply_button.isEnabled())
         self.assertEqual(editor.message_label.property("calibrationState"), "dirty")
+
+        editor.set_axis_direction_available(False)
+        self.assertTrue(editor.y_direction_combo.isHidden())
+        self.assertTrue(editor.y_direction_label.isHidden())
 
 
 if __name__ == "__main__":
