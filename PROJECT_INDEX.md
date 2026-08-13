@@ -19,7 +19,7 @@
 - `collab/FROM_INTEGRATION_V03.md`：Physics Analysis v0.3 集成状态、验收数字、风险与分支交接。
 - `artifacts/integration-v03/`：当前集成 SHA 的 100k、项目打开、真实 SloMo 与验收证据。
 - `artifacts/v0.3.0-alpha/final-summary.md`：Physics Analysis v0.3 工单最终交付报告。
-- `PROJECT_FILE_INDEX.sha256`：当前 595 个稳定文件的内容索引（排除 `.DS_Store`、`*.pyc`、`__pycache__`、`.git/` 与索引自身），可用于完整性校验。
+- `PROJECT_FILE_INDEX.sha256`：当前 596 个稳定文件的内容索引（排除 `.DS_Store`、`*.pyc`、`__pycache__`、`.git/` 与索引自身），可用于完整性校验。
 - `MIGRATION_RECORD.md`：本次目录迁移、备份和验证记录。
 
 ## 代码索引
@@ -42,6 +42,7 @@ neo_tracker/
   kinematics/         immutable SampleSeries、VFR/gap-aware derivative、Savitzky–Golay、线性/二次/可选非线性 fit、residual/unit、atomic CSV/NPZ/Markdown export 与 cancellation runtime
   application/kinematics_workspace_coordinator.py 后台 series/derivative/smoothing/export、task/generation/revision 陈旧校验、单终态与 close gate
   application/kinematics_coordinator.py 后台 fit protocol、取消/陈旧结果拒绝与单终态
+  application/qt_worker_lifecycle.py terminal worker 迁回主事件循环、QThread 退出与延迟销毁的共享边界
   visualization.py    叠加层和环形时序热图
   ui/main_window.py   PySide6 桌面界面、1024×768 响应式 Preview/固定高度工具栏、Add/Open/Save 后台准备与原子提交、O(1) dirty 标记、Tracking 来源绑定/漂移隔离/恢复入口、取消/关闭终态与运行生命周期编排
   ui/shell/review_editing_mixin.py Review 点修正/Mark Lost 的会话内一步撤销、结果 generation 守卫与精确 dirty 状态恢复
@@ -73,7 +74,7 @@ neo_tracker/
   ui/selection_session.py Video/Data/Plot/Fit 唯一 true-time selection transaction、source revision 守卫、nearest/tie 与防回环
   ui/workspaces/physics_workspace.py Data/Plot/Fit 底部实验台、100k 虚拟表、Action Registry 路由、响应式/键盘/AX 文本
   ui/physics_plot.py VFR true-time 绘图、有界 envelope decimation、gap、fit/residual、Retina 导出与键盘选择
-tests/                 676 项 unittest 回归测试（含 14 类解析 fixture、Engine/Workspace/Schema v3/四组 Integration、media/source identity、项目数据保护、后台生命周期、100k、VFR、导出与 UI 回归）
+tests/                 679 项 unittest 回归测试（含 14 类解析 fixture、Engine/Workspace/Schema v3/四组 Integration、media/source identity、项目数据保护、后台生命周期、100k、VFR、导出与 UI 回归）
 benchmarks/            可重复的 kinematics 100k/derivative/fit/export、Physics UI/plot、项目打开 heartbeat，以及 tracking/media/ROI/Review/Signal/WAV 工作集和语义对照基准
                         P0-B 真实媒体矩阵（real H.264/HEVC/1080p Full Run、取消、来源替换、截断、重开；主进程 CPU/RSS 采样；stdout JSON / stderr 分离）
 assets/                App 图标与封面资产
@@ -99,6 +100,14 @@ ground truth、完整实验类型矩阵、原生 VoiceOver/文本缩放与发行
 统一在终态先调度 worker 退休、再退出线程，修复已复现的 Qt/GIL 析构死锁。
 最终 `676/676`（121.742 s），`compileall`、`pip check`、`git diff --check`
 通过；未发现新增 Python crash report、QThread warning或遗留 unittest 进程。
+
+定标轴方向增量（2026-08-13）：二维两点定标复用已有
+`LinearWorldCoordinate.y_positive`，在 Calib 提供相对 `+X` 左/右侧选择，并在
+Preview 绘制 `+X/+Y`；方向随项目保存并兼容旧文件。全量压力复现同时暴露
+QThread 终态的 Python wrapper 析构竞态；全部 Application coordinator 现先把
+terminal worker 迁回主事件循环、再退出 QThread，最后在主线程延迟删除。Analysis
+生命周期修复前循环稳定原生退出，修复后 200/200；最终 `679/679`
+（125.662 s）通过，15:08 后无新 `.ips`。
 
 ## 常用命令
 
