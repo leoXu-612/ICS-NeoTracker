@@ -6316,15 +6316,16 @@ class NeoTrackerWindow(
     def _clear_tracking_results(self, message: str | None = None) -> None:
         self._review_undo = None
         self._invalidate_review_responses(self.current_task)
+        had_result_state = self._task_has_tracking_result_state(self.current_task)
         self.current_task.tracking_outcome = ""
         self.current_task.tracking_note = ""
-        had_results = bool(self.current_task.pipeline.results)
-        if had_results:
+        if had_result_state:
             self.analysis_controller.invalidate_source_cache()
             self.current_task.pipeline.reset()
             self.current_task.mark_results_changed()
             self.current_task.edit_history.clear()
             self._render_edit_history(self.current_task)
+            self._sync_review_undo_action()
             self._clear_analysis_result()
             self._reset_physics_context()
             if message:
@@ -6332,7 +6333,7 @@ class NeoTrackerWindow(
         self._render_results(self.current_task)
         self._refresh_analysis_sources()
         self._render_tracking_status(self.current_task)
-        if had_results:
+        if had_result_state:
             self._render_preview()
         self._mark_project_changed()
 

@@ -74,7 +74,7 @@ neo_tracker/
   ui/selection_session.py Video/Data/Plot/Fit 唯一 true-time selection transaction、source revision 守卫、nearest/tie 与防回环
   ui/workspaces/physics_workspace.py Data/Plot/Fit 底部实验台、100k 虚拟表、Action Registry 路由、响应式/键盘/AX 文本
   ui/physics_plot.py VFR true-time 绘图、有界 envelope decimation、gap、fit/residual、Retina 导出与键盘选择
-tests/                 680 项 unittest 回归测试（含 14 类解析 fixture、Engine/Workspace/Schema v3/四组 Integration、media/source identity、项目数据保护、后台生命周期、100k、VFR、导出与 UI 回归）
+tests/                 681 项 unittest 回归测试（含 14 类解析 fixture、Engine/Workspace/Schema v3/四组 Integration、media/source identity、项目数据保护、后台生命周期、100k、VFR、导出与 UI 回归）
 benchmarks/            可重复的 kinematics 100k/derivative/fit/export、Physics UI/plot、项目打开 heartbeat，以及 tracking/media/ROI/Review/Signal/WAV 工作集和语义对照基准
                         P0-B 真实媒体矩阵（real H.264/HEVC/1080p Full Run、取消、来源替换、截断、重开；主进程 CPU/RSS 采样；stdout JSON / stderr 分离）
 assets/                App 图标与封面资产
@@ -113,6 +113,11 @@ terminal worker 迁回主事件循环、再退出 QThread，最后在主线程�
 草稿端点，Preview 立即更新，但 task、Results 和坐标模型在 Apply 前保持不变；
 Revert 精确恢复基线，非二维坐标模型不显示该操作。1024×768 无横向滚动；最终
 `680/680`（120.680 s）、`compileall`、`pip check` 与 `git diff --check` 通过。
+
+结果状态失效增量（2026-08-13）：配置变化不再只用非空 Results 判断旧数据；
+合法的 edit-only/outcome-only 状态也会统一清理 Edits/outcome/note、重置 pipeline、
+递增 results generation 并失效 Signal/Physics 缓存，Runs 审计保持不变。最终
+`681/681`（121.051 s）、`compileall`、`pip check` 与 `git diff --check` 通过。
 
 ## 常用命令
 

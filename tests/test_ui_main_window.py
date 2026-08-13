@@ -2605,6 +2605,42 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertIn('"type": "image"', window.advanced_config_view.toPlainText())
         self.assertNotIn('"linear_world"', window.advanced_config_view.toPlainText())
 
+    def test_calibration_change_clears_edit_only_result_state(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        task = window.current_task
+        task.edit_history = [{"type": "manual_correction", "frame_index": 4}]
+        task.tracking_outcome = "partial"
+        task.tracking_note = "Results were removed outside the editor."
+        task.run_history = [
+            TrackingRunRecord(
+                started_at="2026-08-13T00:00:00Z",
+                duration_s=1.0,
+                mode="full",
+                outcome="partial",
+                start_frame=0,
+                end_frame=4,
+                processed_frames=5,
+                result_count=0,
+                pipeline_config=task.pipeline.to_config(),
+            )
+        ]
+        run_history = list(task.run_history)
+        generation = task.results_generation
+        window._render_task()
+
+        with patch.object(task.pipeline, "reset", wraps=task.pipeline.reset) as reset:
+            self.assertTrue(window._apply_calibration_rod((0.0, 0.0), (100.0, 0.0), 50.0, "cm"))
+
+        reset.assert_called_once_with()
+        self.assertEqual(task.edit_history, [])
+        self.assertEqual(task.tracking_outcome, "")
+        self.assertEqual(task.tracking_note, "")
+        self.assertEqual(task.run_history, run_history)
+        self.assertEqual(task.results_generation, generation + 1)
+        self.assertEqual(window.edit_history_panel.visible_edits, ())
+        self.assertEqual(window.review_history_tabs.tabText(1), "Edits (0)")
+
     def test_marker_color_sampling_updates_observation_controls_and_json(self) -> None:
         window = NeoTrackerWindow()
         self.addCleanup(close_window_safely, window)

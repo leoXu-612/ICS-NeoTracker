@@ -1,8 +1,8 @@
 a382de1396d6906cf2d7e9b3f830b7a76c623c09e881e72e4f1970ecdc1d226c  ./.gitignore
 19f5f9cce580d2b4ee9d32b7549a197dbab324e3e96858de34acb5f35971f997  ./FORDEEPSEEK.md
 a68e9c529565944c873530a399fdaab7906e80221369865486544ca46d20d36b  ./MIGRATION_RECORD.md
-00b8234553ab7a5d681f234c930dc1896d7fb9db9c82c9fe5b1f9a99d41e4789  ./PROJECT_INDEX.md
-c4d0e4bc48694710d1c1e3fe6456fa0d50adc658c76023e44f09f2ef355fcfe9  ./README.md
+0f44664752d6a59caa00b83a6720b289c65110c92c391bd7824390f89ddca801  ./PROJECT_INDEX.md
+f130682421bf652a623ee0fdcc062ab6786cf8b297bd75cabc61a8dc94b5c209  ./README.md
 2cff680330304f0dd6a811106f707df5f94e562f3b0bfc4213d638991881f746  ./artifacts/code-review-ui-2026-07-22/01-media-ready.png
 2b98f252469573d4cab7bc2802788e5f4c1993689ff553e3eb018cdef1fda35f  ./artifacts/code-review-ui-2026-07-22/01b-media-ready-1024x768.png
 6f8b2f8beb7dcefa6cbafbf8a2586135ea9f07961906ea2d64f6c9411974fee7  ./artifacts/code-review-ui-2026-07-22/02-tracking-running.png
@@ -489,7 +489,7 @@ a34d83d69bfc9e7a2179d6c221ac53ea40283009624abcc9791a9de77e4189c9  ./neo_tracker/
 d72ad94fb5baa92653341cf72a63961bfef4e182ed97d92efd5e50ac0ae5e4d4  ./neo_tracker/ui/inspectors/__init__.py
 b733633116d1b529b3d1a4444f0694dbb3292af2bd68909f604651b59673c103  ./neo_tracker/ui/inspectors/physics_inspector.py
 1a393a374506ced69f114a2b638429a6e6cb566edb142e4128066545907c9c82  ./neo_tracker/ui/isolated_media.py
-4ec3cdacc8313308eed50cb9353318d3b2f58792ee6b562ce3af64c560cadde8  ./neo_tracker/ui/main_window.py
+e74b6a8bf10ae5dca0f626de00afbc3552d973acadf74e01e03b118722554b66  ./neo_tracker/ui/main_window.py
 91fd97ead83ef8f59c674f31b88d5cc41940b1cc84c698adc31c3abcb3fd30ca  ./neo_tracker/ui/media_probe_worker.py
 971b3607af71ba3c90173559384a6b24555c0a38b9d512e3e1327a653e6fbda5  ./neo_tracker/ui/media_relink_panel.py
 42d8aca265331a8cbc4ddf215f6288bc43eb47d4f5beddb18870e19f98ef16f1  ./neo_tracker/ui/physics_plot.py
@@ -591,6 +591,6 @@ c17661815cd19899305810d7038acd1db5c2c566ecbaf15b6eda1331db65e546  ./tests/test_t
 f1c3b95059946b815710d2ab1bb0873ebf11e0bc45d8f0bb52fa62368948f38d  ./tests/test_tracking_coordinator.py
 832fa5aedb68e50e5d6b70eed4695678c35d6c6eb0b7b4ad2db75d67e39e6280  ./tests/test_tracking_pipeline.py
 d3c3292de09a9e0581d1b5a8aae9de409d3a13b2fed8a6b01d422519aaacc635  ./tests/test_tracking_worker.py
-6573c88698227c335a8a3643a8413af7b098564ea232653b717adce897ef2571  ./tests/test_ui_main_window.py
+141ff00293c017e80eba50fb9be90913f4c1d35d244f59c89dba5bb18ee46c40  ./tests/test_ui_main_window.py
 96ed1ce0a75fc7903aeca67c8c02619bd6b42ab4a2f33945ebcf41989d79dedc  ./tests/test_view_state.py
-b377f82504f2e585e68d235e7940e3eec0da1f7cb69c9c1cca6cdf43eebf55fe  ./交接.md
+7416edecc871d8c87470716d0e16d0a5c0de60c7f1ebdbd63db7d21b2c47928c  ./交接.md
