@@ -8,6 +8,7 @@ from typing import Any
 from PySide6.QtCore import QObject, QThread, Signal
 
 from neo_tracker.application.job_state import TrackingJob
+from neo_tracker.application.qt_worker_lifecycle import bind_worker_retirement
 from neo_tracker.application.task_supervisor import BackgroundTaskToken, TaskSupervisor
 from neo_tracker.core import TrackerResult
 from neo_tracker.observations import observation_backend_info
@@ -169,10 +170,7 @@ class TrackingCoordinator(QObject):
             worker.progress.connect(self.handle_progressed)
             worker.completed.connect(self.handle_completed)
             worker.failed.connect(self.handle_failed)
-            worker.completed.connect(worker.deleteLater)
-            worker.failed.connect(worker.deleteLater)
-            worker.completed.connect(thread.quit)
-            worker.failed.connect(thread.quit)
+            bind_worker_retirement(worker, thread, worker.completed, worker.failed)
             thread.finished.connect(self.handle_thread_finished)
             thread.finished.connect(thread.deleteLater)
         except Exception:
@@ -287,12 +285,15 @@ class TrackingCoordinator(QObject):
         job = self._job
         terminal_received = self._terminal_received
         domain_finalized = self._domain_finalized
+        worker = self._worker
         self._worker = None
         self._thread = None
         self._job = None
         self._terminal_received = False
         self._domain_finalized = False
         self._cancel_requested = False
+        if worker is not None:
+            worker.deleteLater()
         if job is not None:
             self.supervisor.finish(job.token)
             if not terminal_received:

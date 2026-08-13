@@ -8,6 +8,7 @@ from typing import Any
 from PySide6.QtCore import QObject, QThread, Signal
 
 from neo_tracker.application.job_state import ProjectOpenJob, ProjectSaveJob
+from neo_tracker.application.qt_worker_lifecycle import bind_worker_retirement
 from neo_tracker.application.task_supervisor import BackgroundTaskToken, TaskSupervisor
 from neo_tracker.project import NeoTrackerProject
 from neo_tracker.ui.project_controller import ProjectTaskController
@@ -170,14 +171,9 @@ class ProjectIOCoordinator(QObject):
             worker.completed.connect(self.handle_open_completed)
             worker.failed.connect(self.handle_open_failed)
             worker.canceled.connect(self.handle_open_canceled)
-            worker.completed.connect(worker.deleteLater)
-            worker.failed.connect(worker.deleteLater)
-            worker.canceled.connect(worker.deleteLater)
-            worker.completed.connect(thread.quit)
-            worker.failed.connect(thread.quit)
-            worker.canceled.connect(thread.quit)
-            thread.finished.connect(thread.deleteLater)
+            bind_worker_retirement(worker, thread, worker.completed, worker.failed, worker.canceled)
             thread.finished.connect(self.handle_open_thread_finished)
+            thread.finished.connect(thread.deleteLater)
         except Exception:
             self.supervisor.finish(token)
             raise
@@ -219,12 +215,9 @@ class ProjectIOCoordinator(QObject):
             thread.started.connect(worker.run)
             worker.completed.connect(self.handle_save_completed)
             worker.failed.connect(self.handle_save_failed)
-            worker.completed.connect(worker.deleteLater)
-            worker.failed.connect(worker.deleteLater)
-            worker.completed.connect(thread.quit)
-            worker.failed.connect(thread.quit)
-            thread.finished.connect(thread.deleteLater)
+            bind_worker_retirement(worker, thread, worker.completed, worker.failed)
             thread.finished.connect(self.handle_save_thread_finished)
+            thread.finished.connect(thread.deleteLater)
         except Exception:
             self.supervisor.finish(token)
             raise
@@ -301,10 +294,13 @@ class ProjectIOCoordinator(QObject):
     def handle_open_thread_finished(self) -> None:
         job = self._open_job
         prepared = self._prepared_open
+        worker = self._open_worker
         self._open_thread = None
         self._open_worker = None
         self._open_job = None
         self._prepared_open = None
+        if worker is not None:
+            worker.deleteLater()
         if job is not None:
             self.supervisor.finish(job.token)
         if not self.closing and job is not None:
@@ -340,10 +336,13 @@ class ProjectIOCoordinator(QObject):
     def handle_save_thread_finished(self) -> None:
         job = self._save_job
         completed = self._completed_save
+        worker = self._save_worker
         self._save_thread = None
         self._save_worker = None
         self._save_job = None
         self._completed_save = None
+        if worker is not None:
+            worker.deleteLater()
         if job is not None:
             self.supervisor.finish(job.token)
         if not self.closing and job is not None:

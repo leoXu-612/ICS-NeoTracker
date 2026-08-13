@@ -7,6 +7,7 @@ from typing import Any
 from PySide6.QtCore import QObject, QThread, Signal
 
 from neo_tracker.application.job_state import PreviewDecodeJob
+from neo_tracker.application.qt_worker_lifecycle import bind_worker_retirement
 from neo_tracker.application.task_supervisor import BackgroundTaskToken, TaskSupervisor
 from neo_tracker.ui.isolated_media import PreviewDecoderSession
 from neo_tracker.ui.preview_decode_worker import (
@@ -231,6 +232,7 @@ class PreviewCoordinator(QObject):
 
         job = self._job
         pending = self._pending
+        worker = self._worker
         job_is_desired = bool(
             job is not None
             and self._desired is not None
@@ -240,6 +242,8 @@ class PreviewCoordinator(QObject):
         self._thread = None
         self._job = None
         self._pending = None
+        if worker is not None:
+            worker.deleteLater()
         if job is not None:
             self.supervisor.finish(job.token)
             retire_session = bool(
@@ -300,14 +304,9 @@ class PreviewCoordinator(QObject):
         worker.completed.connect(self.handle_completed)
         worker.failed.connect(self.handle_failed)
         worker.canceled.connect(self.handle_canceled)
-        worker.completed.connect(worker.deleteLater)
-        worker.failed.connect(worker.deleteLater)
-        worker.canceled.connect(worker.deleteLater)
-        worker.completed.connect(thread.quit)
-        worker.failed.connect(thread.quit)
-        worker.canceled.connect(thread.quit)
-        thread.finished.connect(thread.deleteLater)
+        bind_worker_retirement(worker, thread, worker.completed, worker.failed, worker.canceled)
         thread.finished.connect(self.handle_thread_finished)
+        thread.finished.connect(thread.deleteLater)
         self._job = PreviewDecodeJob(token, request.owner, decode_request, session)
         self._thread = thread
         self._worker = worker

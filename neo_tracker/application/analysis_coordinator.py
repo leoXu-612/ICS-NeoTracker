@@ -8,6 +8,7 @@ from PySide6.QtCore import QObject, QThread, Signal
 
 from neo_tracker.analysis import AnalysisConfig
 from neo_tracker.application.job_state import AnalysisJob
+from neo_tracker.application.qt_worker_lifecycle import bind_worker_retirement
 from neo_tracker.application.task_supervisor import BackgroundTaskToken, TaskSupervisor
 from neo_tracker.ui.analysis_controller import AnalysisRun, AnalysisSource
 from neo_tracker.ui.analysis_worker import AnalysisWorker, SeriesLoader
@@ -134,12 +135,13 @@ class AnalysisCoordinator(QObject):
             worker.failed.connect(self._handle_failed)
             worker.canceled.connect(self._handle_canceled)
             worker.stage_changed.connect(self._handle_stage_changed)
-            worker.completed.connect(worker.deleteLater)
-            worker.failed.connect(worker.deleteLater)
-            worker.canceled.connect(worker.deleteLater)
-            worker.completed.connect(thread.quit)
-            worker.failed.connect(thread.quit)
-            worker.canceled.connect(thread.quit)
+            bind_worker_retirement(
+                worker,
+                thread,
+                worker.completed,
+                worker.failed,
+                worker.canceled,
+            )
             thread.finished.connect(self._handle_thread_finished)
             thread.finished.connect(thread.deleteLater)
         except Exception:
@@ -227,10 +229,13 @@ class AnalysisCoordinator(QObject):
     def _handle_thread_finished(self) -> None:
         job = self._job
         terminal_received = self._terminal_received
+        worker = self._worker
         self._worker = None
         self._thread = None
         self._job = None
         self._terminal_received = False
+        if worker is not None:
+            worker.deleteLater()
         if job is not None:
             if not terminal_received and not job.cancelled:
                 job.failure_detail = "Analysis worker ended without a terminal result."

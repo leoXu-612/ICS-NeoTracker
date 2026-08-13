@@ -25,7 +25,34 @@ class MainWindowArchitectureTests(unittest.TestCase):
                 continue
             with self.subTest(coordinator=path.name):
                 self.assertNotIn("thread.finished.connect(worker.deleteLater)", source)
+                self.assertNotIn("worker.completed.connect(worker.deleteLater)", source)
+                self.assertNotIn("worker.failed.connect(worker.deleteLater)", source)
+                self.assertNotIn("worker.canceled.connect(worker.deleteLater)", source)
+                tree = ast.parse(source)
+                handlers = [
+                    node
+                    for node in ast.walk(tree)
+                    if isinstance(node, ast.FunctionDef)
+                    and node.name.endswith("thread_finished")
+                ]
+                self.assertTrue(handlers)
+                self.assertNotIn(".wait()", source)
+                self.assertIn("bind_worker_retirement", source)
+                self.assertIn("worker.deleteLater()", source)
                 lines = source.splitlines()
+                finished_handler_lines = [
+                    index
+                    for index, line in enumerate(lines)
+                    if "thread.finished.connect(self." in line
+                ]
+                delete_thread_lines = [
+                    index
+                    for index, line in enumerate(lines)
+                    if "thread.finished.connect(thread.deleteLater)" in line
+                ]
+                self.assertEqual(len(finished_handler_lines), len(delete_thread_lines))
+                for handler_line, delete_line in zip(finished_handler_lines, delete_thread_lines):
+                    self.assertLess(handler_line, delete_line)
                 for terminal in ("completed", "failed", "canceled"):
                     delete_lines = [
                         index
@@ -39,9 +66,7 @@ class MainWindowArchitectureTests(unittest.TestCase):
                     ]
                     if not quit_lines:
                         continue
-                    self.assertEqual(len(delete_lines), len(quit_lines), terminal)
-                    for delete_line, quit_line in zip(delete_lines, quit_lines):
-                        self.assertLess(delete_line, quit_line, terminal)
+                    self.fail(f"{path.name}: {terminal} must not quit before worker destruction")
 
     def test_background_job_dataclasses_live_in_application_layer(self) -> None:
         source_path = Path(__file__).parents[1] / "neo_tracker" / "ui" / "main_window.py"

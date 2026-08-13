@@ -7,6 +7,7 @@ from typing import Any
 from PySide6.QtCore import QObject, QThread, Signal
 
 from neo_tracker.application.job_state import MediaProbeJob
+from neo_tracker.application.qt_worker_lifecycle import bind_worker_retirement
 from neo_tracker.application.task_supervisor import BackgroundTaskToken, TaskSupervisor
 from neo_tracker.media import MediaInfo
 from neo_tracker.ui.media_probe_worker import MediaProbe, MediaProbeWorker
@@ -107,14 +108,9 @@ class MediaImportCoordinator(QObject):
             worker.completed.connect(self.handle_completed)
             worker.failed.connect(self.handle_failed)
             worker.canceled.connect(self.handle_canceled)
-            worker.completed.connect(worker.deleteLater)
-            worker.failed.connect(worker.deleteLater)
-            worker.canceled.connect(worker.deleteLater)
-            worker.completed.connect(thread.quit)
-            worker.failed.connect(thread.quit)
-            worker.canceled.connect(thread.quit)
-            thread.finished.connect(thread.deleteLater)
+            bind_worker_retirement(worker, thread, worker.completed, worker.failed, worker.canceled)
             thread.finished.connect(self.handle_thread_finished)
+            thread.finished.connect(thread.deleteLater)
         except Exception:
             self.supervisor.finish(token)
             raise
@@ -192,10 +188,13 @@ class MediaImportCoordinator(QObject):
 
         job = self._job
         results = self._validated_results
+        worker = self._worker
         self._thread = None
         self._worker = None
         self._job = None
         self._validated_results = None
+        if worker is not None:
+            worker.deleteLater()
         if job is not None:
             self.supervisor.finish(job.token)
         if self.closing:

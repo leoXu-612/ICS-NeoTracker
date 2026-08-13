@@ -7,6 +7,7 @@ from threading import Event
 
 from PySide6.QtCore import QCoreApplication, QObject, Signal, Slot
 from PySide6.QtWidgets import QApplication, QWidget
+import shiboken6
 
 from neo_tracker.analysis import AnalysisConfig
 from neo_tracker.application.analysis_coordinator import (
@@ -124,6 +125,21 @@ class AnalysisCoordinatorTests(unittest.TestCase):
         self.assertEqual(delivered[0].owner_token, id(request.owner))
         _pump_until(lambda: not coordinator.busy)
         self.assertTrue(supervisor.idle)
+
+    def test_terminal_worker_moves_to_main_loop_and_is_destroyed(self) -> None:
+        coordinator, _supervisor = self.make_coordinator()
+        request = self.request(object())
+
+        self.assertTrue(coordinator.start(request))
+        _pump_until(lambda: coordinator.thread is not None and coordinator.thread.isRunning())
+        worker = coordinator.worker
+        assert worker is not None
+        coordinator.worker.run_object = self.run_for(request)
+        coordinator.worker.release.set()
+        _pump_until(lambda: not coordinator.busy)
+        _pump_until(lambda: not shiboken6.isValid(worker))
+
+        self.assertFalse(shiboken6.isValid(worker))
 
     def test_settings_mismatch_is_rejected_as_stale(self) -> None:
         coordinator, _supervisor = self.make_coordinator()

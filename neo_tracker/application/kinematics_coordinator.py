@@ -8,6 +8,7 @@ from typing import Any
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 
 from neo_tracker.application.task_supervisor import BackgroundTaskToken, TaskSupervisor
+from neo_tracker.application.qt_worker_lifecycle import bind_worker_retirement
 from neo_tracker.kinematics import FitOperator, FitRequest, FitResult, FitStatus, SampleSeries
 
 
@@ -161,12 +162,7 @@ class KinematicsFitCoordinator(QObject):
             worker.completed.connect(self._handle_completed)
             worker.failed.connect(self._handle_failed)
             worker.canceled.connect(self._handle_canceled)
-            worker.completed.connect(worker.deleteLater)
-            worker.failed.connect(worker.deleteLater)
-            worker.canceled.connect(worker.deleteLater)
-            worker.completed.connect(thread.quit)
-            worker.failed.connect(thread.quit)
-            worker.canceled.connect(thread.quit)
+            bind_worker_retirement(worker, thread, worker.completed, worker.failed, worker.canceled)
             thread.finished.connect(self._handle_thread_finished)
             thread.finished.connect(thread.deleteLater)
         except Exception:
@@ -239,10 +235,13 @@ class KinematicsFitCoordinator(QObject):
     def _handle_thread_finished(self) -> None:
         job = self._job
         terminal = self._terminal_received
+        worker = self._worker
         self._thread = None
         self._worker = None
         self._job = None
         self._terminal_received = False
+        if worker is not None:
+            worker.deleteLater()
         if job is not None:
             if not terminal:
                 if job.cancelled:
