@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox, QPushButton, QWidget
 
 from neo_tracker.ui.project_status_panel import (
     ProjectStatusPanel,
+    build_config_result_protection_dialog,
     build_rerun_replacement_dialog,
     build_result_replacement_dialog,
     build_unapplied_drafts_dialog,
@@ -140,6 +141,48 @@ class ProjectStatusPanelTests(unittest.TestCase):
         self.assertIs(dialog.escapeButton(), keep)
         self.assertIn("mark affected manual edits superseded", replace.accessibleDescription())
         self.assertIn("unchanged", keep.accessibleDescription())
+
+    def test_config_result_protection_dialog_names_loss_and_defaults_to_keep_results(self) -> None:
+        parent = QWidget()
+        self.addCleanup(parent.close)
+        dialog = build_config_result_protection_dialog(
+            parent,
+            task_name="red-dot-tracking.mp4",
+            result_count=72,
+            edit_count=1,
+        )
+        self.addCleanup(dialog.close)
+
+        self.assertEqual(dialog.objectName(), "configResultProtectionDialog")
+        self.assertEqual(dialog.accessibleName(), "Confirm current tracking result replacement")
+        self.assertIn("red-dot-tracking.mp4", dialog.text())
+        self.assertIn("72 current results", dialog.informativeText())
+        self.assertIn("1 manual edit", dialog.informativeText())
+        self.assertIn("cannot restore", dialog.informativeText())
+        replace = dialog.findChild(QPushButton, "confirmConfigResultReplacementButton")
+        keep = dialog.findChild(QPushButton, "keepConfigCurrentResultsButton")
+        self.assertIsNotNone(replace)
+        self.assertIsNotNone(keep)
+        self.assertEqual(replace.text(), "Apply + Replace Results/Edits")
+        self.assertEqual(keep.text(), "Keep Current Results")
+        self.assertIs(dialog.defaultButton(), keep)
+        self.assertIs(dialog.escapeButton(), keep)
+        self.assertIn("permanently replace", replace.accessibleDescription())
+        self.assertIn("unchanged", keep.accessibleDescription())
+
+    def test_config_result_protection_dialog_covers_outcome_only_state(self) -> None:
+        parent = QWidget()
+        self.addCleanup(parent.close)
+        dialog = build_config_result_protection_dialog(
+            parent,
+            task_name="untitled.mp4",
+            result_count=0,
+            edit_count=0,
+        )
+        self.addCleanup(dialog.close)
+
+        self.assertIn("current tracking result summary", dialog.informativeText())
+        self.assertIn("cannot restore", dialog.informativeText())
 
 
 if __name__ == "__main__":

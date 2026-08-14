@@ -127,6 +127,7 @@ from neo_tracker.ui.project_open_worker import PreparedProjectOpen
 from neo_tracker.ui.project_save_worker import CompletedProjectSave, save_project
 from neo_tracker.ui.project_status_panel import (
     ProjectStatusPanel,
+    build_config_result_protection_dialog,
     build_rerun_replacement_dialog,
     build_result_replacement_dialog,
     build_unapplied_drafts_dialog,
@@ -338,6 +339,8 @@ class NeoTrackerWindow(
         self.color_tolerance_spin = QDoubleSpinBox()
         self.color_max_candidates_spin = QSpinBox()
         self.color_min_area_spin = QSpinBox()
+        for spin in (self.color_tolerance_spin, self.color_max_candidates_spin, self.color_min_area_spin):
+            spin.setKeyboardTracking(False)
         self.marker_controls_widget = QWidget()
         self.tracking_backend_label = QLabel("Detecting…")
         self.tracking_performance_title_label = QLabel("Live performance")
@@ -2623,6 +2626,20 @@ class NeoTrackerWindow(
         clicked = dialog.clickedButton()
         return clicked is not None and clicked.objectName() == "confirmResultReplacementButton"
 
+    def _confirm_config_result_replacement(self, task: DesktopTask) -> bool:
+        """Fail-closed gate before a configuration change invalidates current results."""
+        if not self._task_has_tracking_result_state(task):
+            return True
+        dialog = build_config_result_protection_dialog(
+            self, task_name=task.title(), result_count=len(task.pipeline.results), edit_count=len(task.edit_history)
+        )
+        dialog.exec()
+        clicked = dialog.clickedButton()
+        if clicked is not None and clicked.objectName() == "confirmConfigResultReplacementButton":
+            return True
+        self.statusBar().showMessage("Configuration change canceled. Current Results/Edits are unchanged.", 6000)
+        return False
+
     def _rerun_replacement_dialog(
         self,
         task: DesktopTask,
@@ -3346,28 +3363,26 @@ class NeoTrackerWindow(
             return
         descriptor = self.registry[key]
         draft_names = self._refresh_draft_state()
+        previous_index = self.preset_combo.findData(previous_key)
+        self.preset_combo.blockSignals(True)
+        try:
+            self.preset_combo.setCurrentIndex(previous_index)
+        finally:
+            self.preset_combo.blockSignals(False)
+        if draft_names and not self._ask_unapplied_drafts(
+            f"changing the preset to {descriptor.title}", draft_names
+        ):
+            self.statusBar().showMessage("Preset change canceled. Current editor work is still available.", 6000)
+            return
+        if not self._confirm_config_result_replacement(self.current_task):
+            return
         if draft_names:
-            previous_index = self.preset_combo.findData(previous_key)
-            self.preset_combo.blockSignals(True)
-            try:
-                self.preset_combo.setCurrentIndex(previous_index)
-            finally:
-                self.preset_combo.blockSignals(False)
-            if not self._ask_unapplied_drafts(
-                f"changing the preset to {descriptor.title}",
-                draft_names,
-            ):
-                self.statusBar().showMessage(
-                    "Preset change canceled. Current editor work is still available.",
-                    6000,
-                )
-                return
             self._discard_unapplied_drafts()
-            self.preset_combo.blockSignals(True)
-            try:
-                self.preset_combo.setCurrentIndex(index)
-            finally:
-                self.preset_combo.blockSignals(False)
+        self.preset_combo.blockSignals(True)
+        try:
+            self.preset_combo.setCurrentIndex(index)
+        finally:
+            self.preset_combo.blockSignals(False)
         self._invalidate_review_responses(self.current_task)
         self.current_task.pipeline_key = key
         self.current_task.pipeline = self.registry[key].factory()
@@ -3381,8 +3396,7 @@ class NeoTrackerWindow(
         self._mark_project_changed()
         if draft_names:
             self.statusBar().showMessage(
-                f"Preset changed to {descriptor.title}; previous editor drafts were discarded.",
-                6000,
+                f"Preset changed to {descriptor.title}; previous editor drafts were discarded.", 6000
             )
 
     def _preview_frame_changed(self, frame_index: int) -> None:
@@ -3511,6 +3525,11 @@ class NeoTrackerWindow(
             QMessageBox.warning(self, "Pipeline JSON", f"Could not apply pipeline JSON:\n{exc}")
             return False
 
+        if pipeline_key == task.pipeline_key and config == task.pipeline.to_config():
+            self.statusBar().showMessage("Pipeline JSON is unchanged.", 4000)
+            return True
+        if not self._confirm_config_result_replacement(task):
+            return False
         self._invalidate_review_responses(task)
         previous_coordinate_config = task.pipeline.coordinate_model.to_config()
         preserve_rod = config.get("coordinate_model") == previous_coordinate_config
@@ -5078,6 +5097,8 @@ class NeoTrackerWindow(
         x = max(0, min(width - 1, int(round(point_px[0]))))
         y = max(0, min(height - 1, int(round(point_px[1]))))
         rgb = tuple(float(value) for value in frame[y, x, :3])
+        if observation.sample_rgb == rgb or not self._confirm_config_result_replacement(task):
+            return
         observation.sample_rgb = rgb  # type: ignore[assignment]
         task.pipeline.metadata["marker_sample_rgb"] = [int(value) for value in self._rgb8(rgb)]
         self._render_marker_controls(task.pipeline)
@@ -5093,6 +5114,9 @@ class NeoTrackerWindow(
         observation = self._color_blob_observation()
         if observation is None:
             return
+        if float(value) == observation.tolerance or not self._confirm_config_result_replacement(self.current_task):
+            self._render_marker_controls(self.current_task.pipeline)
+            return
         observation.tolerance = float(value)
         self.current_task.pipeline.metadata["marker_tolerance"] = float(value)
         self._render_marker_controls(self.current_task.pipeline)
@@ -5105,8 +5129,15 @@ class NeoTrackerWindow(
         observation = self._color_blob_observation()
         if observation is None:
             return
-        observation.max_candidates = int(self.color_max_candidates_spin.value())
-        observation.min_component_area = int(self.color_min_area_spin.value())
+        new_max = int(self.color_max_candidates_spin.value())
+        new_min = int(self.color_min_area_spin.value())
+        if new_max == observation.max_candidates and new_min == observation.min_component_area:
+            return
+        if not self._confirm_config_result_replacement(self.current_task):
+            self._render_marker_controls(self.current_task.pipeline)
+            return
+        observation.max_candidates = new_max
+        observation.min_component_area = new_min
         self.current_task.pipeline.metadata["marker_max_candidates"] = observation.max_candidates
         self.current_task.pipeline.metadata["marker_min_component_area"] = observation.min_component_area
         self._clear_tracking_results("Marker candidate settings updated. Run tracking again.")
@@ -5124,6 +5155,10 @@ class NeoTrackerWindow(
 
     def _reset_roi_to_preset(self) -> None:
         task = self.current_task
+        if task.roi is None:
+            return
+        if not self._confirm_config_result_replacement(task):
+            return
         preset_pipeline = self.registry[task.pipeline_key].factory()
         task.roi = None
         task.pipeline.roi = preset_pipeline.roi
@@ -5176,9 +5211,13 @@ class NeoTrackerWindow(
         clear_message: str,
         status_message: str,
     ) -> bool:
+        is_noop = self._roi_config_for_task(task) == roi_config
+        if not is_noop and not self._confirm_config_result_replacement(task):
+            return False
         if not self._apply_roi_config_to_task(task, roi_config):
             return False
-        self._clear_tracking_results(clear_message)
+        if not is_noop:
+            self._clear_tracking_results(clear_message)
         self.preview_label.set_roi_config(task.roi)
         self._render_calibration(task)
         self._render_workflow(task.pipeline)
@@ -5323,6 +5362,10 @@ class NeoTrackerWindow(
                 "Calibration length, unit, and axis direction must be valid.",
             )
             return False
+        if self._calibration_rod_to_dict(task.calibration_rod) == self._calibration_rod_to_dict(rod):
+            return True
+        if not self._confirm_config_result_replacement(task):
+            return False
         if not self._apply_calibration_rod_to_task(task, rod):
             self.calibration_editor.show_error("Calibration could not be applied to this pipeline.")
             return False
@@ -5337,6 +5380,10 @@ class NeoTrackerWindow(
 
     def _reset_calibration(self) -> None:
         task = self.current_task
+        if self._calibration_rod_to_dict(task.calibration_rod) is None:
+            return
+        if not self._confirm_config_result_replacement(task):
+            return
         old_coordinate_model = task.pipeline.coordinate_model
         old_state_model = task.pipeline.state_model
         old_state_key = self._single_state_key(old_state_model)

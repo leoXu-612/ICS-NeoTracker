@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 import math
 import os
@@ -802,6 +803,7 @@ class MainWindowStructureTests(unittest.TestCase):
 
         self.assertTrue(window._validate_advanced_config())
         self.assertEqual(window.json_status_label.text(), "JSON valid")
+        window._confirm_config_result_replacement = lambda _task: True  # type: ignore[method-assign]
         self.assertTrue(window._apply_advanced_config())
 
         self.assertAlmostEqual(window.current_task.pipeline.observation_model.tolerance, 0.123)
@@ -2036,6 +2038,7 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertEqual(window.current_task.roi["x"], 10.0)
         self.assertTrue(window.roi_geometry_editor.apply_button.isEnabled())
 
+        window._confirm_config_result_replacement = lambda _task: True  # type: ignore[method-assign]
         window.roi_geometry_editor.apply_button.click()
         QCoreApplication.processEvents()
 
@@ -2204,6 +2207,7 @@ class MainWindowStructureTests(unittest.TestCase):
             )
         ]
 
+        window._confirm_config_result_replacement = lambda _task: True  # type: ignore[method-assign]
         window._reset_roi_to_preset()
 
         self.assertIsNone(window.current_task.roi)
@@ -2442,6 +2446,7 @@ class MainWindowStructureTests(unittest.TestCase):
         editor.reverse_x_button.click()
         self.assertEqual(window.preview_label.calibration_line, ((110.0, 20.0), (10.0, 20.0)))
         self.assertIsNone(task.calibration_rod.start_px)
+        window._confirm_config_result_replacement = lambda _task: True  # type: ignore[method-assign]
         editor.apply_button.click()
         self.assertEqual(task.calibration_rod.start_px, (110.0, 20.0))
         self.assertEqual(task.calibration_rod.end_px, (10.0, 20.0))
@@ -2563,6 +2568,7 @@ class MainWindowStructureTests(unittest.TestCase):
             [window.analysis_source_combo.itemText(i) for i in range(window.analysis_source_combo.count())],
         )
 
+        window._confirm_config_result_replacement = lambda _task: True  # type: ignore[method-assign]
         window._reset_calibration()
 
         reset_config = window.current_task.pipeline.to_config()
@@ -2590,6 +2596,7 @@ class MainWindowStructureTests(unittest.TestCase):
             )
         ]
 
+        window._confirm_config_result_replacement = lambda _task: True  # type: ignore[method-assign]
         window._reset_calibration()
 
         rod = window.current_task.calibration_rod
@@ -2630,6 +2637,7 @@ class MainWindowStructureTests(unittest.TestCase):
         window._render_task()
 
         with patch.object(task.pipeline, "reset", wraps=task.pipeline.reset) as reset:
+            window._confirm_config_result_replacement = lambda _task: True  # type: ignore[method-assign]
             self.assertTrue(window._apply_calibration_rod((0.0, 0.0), (100.0, 0.0), 50.0, "cm"))
 
         reset.assert_called_once_with()
@@ -5863,6 +5871,247 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertIn("manual_correction", text)
         self.assertIn("Tracking Run History", text)
         self.assertIn("| 1 |", text)
+
+
+class ConfigResultProtectionTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.app = QApplication.instance() or QApplication([])
+
+    def tearDown(self) -> None:
+        for widget in QApplication.topLevelWidgets():
+            if isinstance(widget, NeoTrackerWindow):
+                widget._discard_unapplied_drafts(show_status=False)
+                widget._set_project_clean()
+        QCoreApplication.processEvents()
+
+    def _seed_result_state(
+        self,
+        window: NeoTrackerWindow,
+        *,
+        results: bool = True,
+        edits: bool = True,
+        outcome: bool = True,
+    ) -> None:
+        task = window.current_task
+        if results:
+            task.pipeline.results = [
+                TrackerResult(0, 0.0, {"x_px": 10.0}, {"x_px": 10.0}, 0.9, "manual"),
+                TrackerResult(1, 0.1, {"x_px": 12.0}, {"x_px": 12.0}, 0.9, "manual"),
+            ]
+        if edits:
+            task.edit_history = [{"type": "manual_correction", "frame_index": 0, "point_px": [10.0, 12.0]}]
+        if outcome:
+            task.tracking_outcome = "complete"
+            task.tracking_note = "trusted"
+        task.run_history = [
+            TrackingRunRecord(
+                started_at="2026-08-13T00:00:00Z",
+                duration_s=1.0,
+                mode="full",
+                outcome="complete",
+                start_frame=0,
+                end_frame=1,
+                processed_frames=2,
+                result_count=2,
+                pipeline_config=task.pipeline.to_config(),
+            )
+        ]
+
+    def _snapshot(self, window: NeoTrackerWindow) -> dict[str, object]:
+        task = window.current_task
+        return {
+            "pipeline_key": task.pipeline_key,
+            "roi": copy.deepcopy(task.roi),
+            "config": copy.deepcopy(task.pipeline.to_config()),
+            "rod": window._calibration_rod_to_dict(task.calibration_rod),
+            "results": list(task.pipeline.results),
+            "edits": list(task.edit_history),
+            "outcome": task.tracking_outcome,
+            "note": task.tracking_note,
+            "generation": task.results_generation,
+            "dirty": window._project_dirty,
+        }
+
+    def _apply_json_change(self, window: NeoTrackerWindow) -> bool:
+        config = window.current_task.pipeline.to_config()
+        config["observation_model"]["tolerance"] = 0.5
+        window.advanced_config_view.setPlainText(json.dumps(config, indent=2))
+        return window._apply_advanced_config()
+
+    def test_config_change_reject_preserves_state_for_every_entry(self) -> None:
+        cases = [
+            ("preset", lambda w: w.preset_combo.setCurrentIndex(w.preset_combo.findData("circular_motion"))),
+            ("json", self._apply_json_change),
+            ("roi", lambda w: w._roi_selected((5.0, 5.0, 20.0, 20.0))),
+            ("roi-reset", lambda w: w._reset_roi_to_preset()),
+            ("calibration", lambda w: w._apply_calibration_rod((0.0, 0.0), (100.0, 0.0), 50.0, "cm")),
+            ("calibration-reset", lambda w: w._reset_calibration()),
+            ("marker", lambda w: w._color_tolerance_changed(0.5)),
+        ]
+        for entry, mutate in cases:
+            with self.subTest(entry=entry):
+                window = NeoTrackerWindow()
+                self.addCleanup(close_window_safely, window)
+                self._seed_result_state(window)
+                window._render_task()
+                window._confirm_config_result_replacement = lambda _task: False  # type: ignore[method-assign]
+                before = self._snapshot(window)
+                mutate(window)
+                QCoreApplication.processEvents()
+                self.assertEqual(self._snapshot(window), before)
+
+    def test_marker_reject_restores_control_value_and_confirms_once(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        self._seed_result_state(window)
+        window._render_task()
+        confirmations: list[object] = []
+        window._confirm_config_result_replacement = (  # type: ignore[method-assign]
+            lambda _task: confirmations.append(1) or False
+        )
+        old_tolerance = window.color_tolerance_spin.value()
+        observation = window.current_task.pipeline.observation_model
+        old_observation_tolerance = observation.tolerance
+
+        window.color_tolerance_spin.setValue(0.5)
+        QCoreApplication.processEvents()
+
+        self.assertEqual(len(confirmations), 1)
+        self.assertAlmostEqual(window.color_tolerance_spin.value(), old_tolerance)
+        self.assertAlmostEqual(observation.tolerance, old_observation_tolerance)
+
+    def test_marker_spins_disable_keyboard_tracking(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        self.assertFalse(window.color_tolerance_spin.keyboardTracking())
+        self.assertFalse(window.color_max_candidates_spin.keyboardTracking())
+        self.assertFalse(window.color_min_area_spin.keyboardTracking())
+
+    def test_accept_invalidates_once_and_preserves_runs(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        self._seed_result_state(window)
+        window._render_task()
+        generation_before = window.current_task.results_generation
+        runs_before = list(window.current_task.run_history)
+        window._confirm_config_result_replacement = lambda _task: True  # type: ignore[method-assign]
+
+        window._roi_selected((5.0, 5.0, 20.0, 20.0))
+
+        self.assertEqual(window.current_task.pipeline.results, [])
+        self.assertEqual(window.current_task.edit_history, [])
+        self.assertEqual(window.current_task.tracking_outcome, "")
+        self.assertEqual(window.current_task.tracking_note, "")
+        self.assertEqual(window.current_task.results_generation, generation_before + 1)
+        self.assertEqual(window.current_task.run_history, runs_before)
+
+    def test_protection_triggers_for_result_edit_outcome_but_not_empty(self) -> None:
+        class FakeDialog:
+            def exec(self) -> int:
+                return 0
+
+            def clickedButton(self) -> object:
+                return None
+
+        variants = [
+            ("result-only", {"results": True, "edits": False, "outcome": False}),
+            ("edit-only", {"results": False, "edits": True, "outcome": False}),
+            ("outcome-only", {"results": False, "edits": False, "outcome": True}),
+        ]
+        for mode, seed_kwargs in variants:
+            with self.subTest(mode=mode):
+                window = NeoTrackerWindow()
+                self.addCleanup(close_window_safely, window)
+                self._seed_result_state(window, **seed_kwargs)
+                window._render_task()
+                with patch(
+                    "neo_tracker.ui.main_window.build_config_result_protection_dialog",
+                    return_value=FakeDialog(),
+                ) as builder:
+                    window._roi_selected((5.0, 5.0, 20.0, 20.0))
+                    self.assertEqual(builder.call_count, 1)
+
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        window._render_task()
+        with patch(
+            "neo_tracker.ui.main_window.build_config_result_protection_dialog",
+            return_value=FakeDialog(),
+        ) as builder:
+            window._roi_selected((5.0, 5.0, 20.0, 20.0))
+            self.assertEqual(builder.call_count, 0)
+
+    def test_noop_change_does_not_prompt_or_invalidate(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        self._seed_result_state(window)
+        window._render_task()
+        calls: list[object] = []
+        window._confirm_config_result_replacement = (  # type: ignore[method-assign]
+            lambda _task: calls.append(1) or True
+        )
+        before = self._snapshot(window)
+
+        window._color_tolerance_changed(window.color_tolerance_spin.value())
+        self.assertEqual(len(calls), 0)
+        self.assertEqual(self._snapshot(window), before)
+
+    def test_preset_reject_results_keeps_pipeline_and_combo(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        self._seed_result_state(window)
+        window._render_task()
+        original_key = window.current_task.pipeline_key
+        original_pipeline = window.current_task.pipeline
+        original_combo_index = window.preset_combo.currentIndex()
+        window._confirm_config_result_replacement = lambda _task: False  # type: ignore[method-assign]
+
+        window.preset_combo.setCurrentIndex(window.preset_combo.findData("circular_motion"))
+        QCoreApplication.processEvents()
+
+        self.assertEqual(window.current_task.pipeline_key, original_key)
+        self.assertIs(window.current_task.pipeline, original_pipeline)
+        self.assertEqual(window.preset_combo.currentIndex(), original_combo_index)
+        self.assertEqual(len(window.current_task.pipeline.results), 2)
+
+    def test_preset_change_with_draft_reject_keeps_draft_pipeline_and_combo(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        self._seed_result_state(window)
+        window._render_task()
+        window._calibration_rod_selected(((10.0, 20.0), (110.0, 20.0)))
+        self.assertTrue(window.calibration_editor.is_dirty())
+        window._ask_unapplied_drafts = lambda _action, _names: False  # type: ignore[method-assign]
+        original_key = window.current_task.pipeline_key
+        original_combo_index = window.preset_combo.currentIndex()
+
+        window.preset_combo.setCurrentIndex(window.preset_combo.findData("circular_motion"))
+        QCoreApplication.processEvents()
+
+        self.assertTrue(window.calibration_editor.is_dirty())
+        self.assertEqual(window.current_task.pipeline_key, original_key)
+        self.assertEqual(window.preset_combo.currentIndex(), original_combo_index)
+
+    def test_preset_accept_discard_then_reject_results_keeps_draft(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        self._seed_result_state(window)
+        window._render_task()
+        window._calibration_rod_selected(((10.0, 20.0), (110.0, 20.0)))
+        self.assertTrue(window.calibration_editor.is_dirty())
+        window._ask_unapplied_drafts = lambda _action, _names: True  # type: ignore[method-assign]
+        window._confirm_config_result_replacement = lambda _task: False  # type: ignore[method-assign]
+        original_key = window.current_task.pipeline_key
+        original_combo_index = window.preset_combo.currentIndex()
+
+        window.preset_combo.setCurrentIndex(window.preset_combo.findData("circular_motion"))
+        QCoreApplication.processEvents()
+
+        self.assertTrue(window.calibration_editor.is_dirty())
+        self.assertEqual(window.current_task.pipeline_key, original_key)
+        self.assertEqual(window.preset_combo.currentIndex(), original_combo_index)
+        self.assertEqual(len(window.current_task.pipeline.results), 2)
 
 
 if __name__ == "__main__":

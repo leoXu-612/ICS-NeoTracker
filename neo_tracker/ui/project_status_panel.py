@@ -187,3 +187,47 @@ def build_rerun_replacement_dialog(
     dialog.setDefaultButton(keep_button)
     dialog.setEscapeButton(keep_button)
     return dialog
+
+
+def build_config_result_protection_dialog(
+    parent: QWidget,
+    *,
+    task_name: str,
+    result_count: int,
+    edit_count: int,
+) -> QMessageBox:
+    dialog = QMessageBox(parent)
+    dialog.setObjectName("configResultProtectionDialog")
+    dialog.setAccessibleName("Confirm current tracking result replacement")
+    dialog.setWindowTitle("Replace current tracking results")
+    dialog.setIcon(QMessageBox.Icon.Warning)
+    dialog.setText(
+        f"Apply this configuration change and replace the current Results/Edits for {task_name}?"
+    )
+    if result_count or edit_count:
+        result_label = "result" if result_count == 1 else "results"
+        edit_label = "manual edit" if edit_count == 1 else "manual edits"
+        affected = f"{result_count:,} current {result_label} and {edit_count:,} {edit_label}"
+    else:
+        affected = "the current tracking result summary"
+    dialog.setInformativeText(
+        f"This configuration change replaces {affected}. "
+        "Runs keeps configuration and outcome audit only; "
+        "it cannot restore the old result values or manual anchors."
+    )
+    replace_button = dialog.addButton(
+        "Apply + Replace Results/Edits",
+        QMessageBox.ButtonRole.DestructiveRole,
+    )
+    replace_button.setObjectName("confirmConfigResultReplacementButton")
+    replace_button.setAccessibleDescription(
+        "Apply the configuration change and permanently replace the current result values and manual edits."
+    )
+    keep_button = dialog.addButton("Keep Current Results", QMessageBox.ButtonRole.RejectRole)
+    keep_button.setObjectName("keepConfigCurrentResultsButton")
+    keep_button.setAccessibleDescription(
+        "Cancel the configuration change and leave current Results and Edits unchanged."
+    )
+    dialog.setDefaultButton(keep_button)
+    dialog.setEscapeButton(keep_button)
+    return dialog
