@@ -1,0 +1,194 @@
+# DeepSeek → ICS-NeoTracker（V04-CONFIG-RESULT-PROTECTION 交付记录）
+
+> 本文件保留 V04 原始交付报告与 R1 修正记录；`collab/FROM_DEEPSEEK.md` 已恢复为
+> 基线 `1ad69c976ee3cf9d4c869d5697ed73f3deb80d1f` 的原始历史，未改写旧审计记录。
+
+---
+
+## 第一部分：V04 原始交付（commit `4738745`）
+
+## 结论
+
+在基线 `1ad69c976ee3cf9d4c869d5697ed73f3deb80d1f` 上新建独立 worktree / 分支
+`feature/ds-config-result-protection-v04`，实现“配置变更前保护当前结果”闭环并原子提交
+`fix(ui): protect results before configuration changes`。任务状态：`READY_FOR_CODEX_REVIEW`。
+
+保护覆盖 preset、Apply JSON、ROI apply/draw/commit/reset、calibration apply/reset、
+marker color/tolerance/candidate limit 共 9 个失效入口；拒绝路径零永久 mutation（默认按钮、
+Escape、关闭均安全取消，拒绝后控件经 signal blocker 恢复、草稿保留），接受路径只失效一次、
+Runs 保留、result generation 只递增一次，同值/no-op 不提示不失效。全量 692 tests
+（124.373 s）、定向 162 tests（61.680 s）、compileall、pip check、`git diff --check`
+全部通过；工作树 clean，main 未改动。
+
+## 修改文件
+
+- `neo_tracker/ui/main_window.py`：新增局部保护入口 `_confirm_config_result_replacement()`，
+  并为 9 个配置失效入口前置确认；marker 三个数字控件关闭 keyboard tracking。
+- `neo_tracker/ui/project_status_panel.py`：新增 `build_config_result_protection_dialog()`
+  （复用 Full Run 对话框风格，默认/Escape 均为“Keep Current Results”）。
+- `tests/test_ui_main_window.py`：新增 `ConfigResultProtectionTests`（9 项），并给 7 个既有
+  验收用例注入 `_confirm_config_result_replacement = True` 以保留其“接受”语义。
+- `tests/test_project_status_panel.py`：新增对话框结构测试（2 项）。
+- `collab/FROM_DEEPSEEK.md`：本交付报告。
+
+## 各入口的保护方式
+
+| 入口 | 触发方法 | 保护与拒绝行为 |
+| --- | --- | --- |
+| preset 切换 | `_preset_changed` | 先收齐“丢弃草稿”与“替换结果”两个肯定答复再 mutation；任一取消都恢复 combo、保留草稿/pipeline |
+| Apply JSON | `_apply_advanced_config` | 解析后同值/no-op 直接返回；否则确认，拒绝不改 pipeline/results/edits |
+| ROI draw/commit | `_commit_roi_config` | 同值/no-op 不清结果；否则确认，拒绝不 apply、不清结果 |
+| ROI reset | `_reset_roi_to_preset` | 已为 preset（`task.roi is None`）即 no-op；否则确认，拒绝保持原 ROI |
+| calibration apply | `_apply_calibration_rod` | 同值/no-op 直接返回；否则确认，拒绝不 apply |
+| calibration reset | `_reset_calibration` | 无有效 rod 即 no-op；否则确认，拒绝保持原 rod/坐标 |
+| marker color | `_color_sample_selected` | 同色/no-op 直接返回；否则确认，拒绝不写入 sample_rgb |
+| marker tolerance | `_color_tolerance_changed` | 同值/no-op 直接返回；拒绝时 `_render_marker_controls` 恢复 spin |
+| marker candidates | `_color_candidate_settings_changed` | 同值/no-op 直接返回；拒绝时 `_render_marker_controls` 恢复两个 spin |
+
+保护条件统一复用既有 `_task_has_tracking_result_state()`（Results / Edits /
+tracking_outcome / tracking_note 任一存在即触发；完全空状态不触发）。拒绝路径在
+`_confirm_config_result_replacement()` 内统一给出状态栏提示，不写 task 配置、不替换
+pipeline、不清 Results/Edits、不递增 generation、不标 dirty。marker 数字控件已
+`setKeyboardTracking(False)`，只在 Enter/焦点离开时提交一次，避免逐字符重复弹窗。
+
+## 测试结果
+
+```bash
+# 定向（§6 命令）
+PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen \
+  python3 -m unittest tests.test_project_status_panel tests.test_ui_main_window -q
+# Ran 162 tests in 61.680s ... OK（exit 0）
+
+# 全量
+PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen python3 -m unittest discover -s tests -q
+# Ran 692 tests in 124.373s ... OK（exit 0）
+
+PYTHONDONTWRITEBYTECODE=1 python3 -m compileall -q neo_tracker tests   # exit 0
+python3 -m pip check                                                  # No broken requirements found.
+git diff --check 1ad69c976ee3cf9d4c869d5697ed73f3deb80d1f..HEAD        # 无空白告警
+git status --short                                                    # 空（clean）
+```
+
+新增测试 11 项：对话框默认/Escape/accessible 安全取消（2）、全入口拒绝零 mutation 表驱动（1）、
+marker 拒绝恢复控件值且单次提交单次确认（1）、marker keyboard tracking 关闭（1）、
+接受仅失效一次且 Runs 保留（1）、result-only/edit-only/outcome-only 触发而空状态不触发（1）、
+同值/no-op 不提示不失效（1）、preset 多确认顺序（2，含“先接受丢弃草稿后拒绝结果仍保留草稿”）。
+
+## 未解决风险与范围外事项
+
+- 保护入口只覆盖现有失效 handler；未新增配置功能、未重构无关 handler（按 §3.B 边界）。
+- 对话框默认/Escape/关闭安全取消通过对话框结构测试与 `_confirm_config_result_replacement`
+  fail-closed 逻辑证明；未做真实原生窗口的手动模态点击验证（offscreen 测试注入代替）。
+- marker 拒绝恢复依赖 `_render_marker_controls`（无信号递归，内部已 blockSignals）。
+- 本工单不改 `PROJECT_FILE_INDEX.sha256`、README、路线文档与 `build/lib/`；索引与路线
+  文档由 Codex 最终集成时统一处理。
+- main_window.py 行数控制在 7000 以下（6997），满足应用壳架构守卫。
+
+## Suggested Commit Message
+
+```text
+fix(ui): protect results before configuration changes
+
+- Add a fail-closed confirmation gate before any configuration change
+  (preset, JSON, ROI, calibration, marker) would invalidate current
+  Results/Edits; default/Escape/close keep results and cancel the change
+- Reject path performs zero mutation and restores transient widget values
+  via signal blockers; preset collects both draft-discard and result-replace
+  answers before mutating; marker spins disable keyboard tracking
+- Same-value/no-op changes neither prompt nor invalidate; accept path
+  invalidates once, preserves Runs, and increments generation once
+- Tests: 11 new protection tests (162 targeted / 692 full, all green),
+  compileall and pip check pass, git diff --check clean
+```
+
+---
+
+## 第二部分：R1 修正（commit `fix(ui): close configuration protection review gaps`）
+
+## 结论
+
+Codex 审阅（`V04-CONFIG-RESULT-PROTECTION-R1`）指出的 5 项缺口已全部关闭，修正提交叠加在
+`4738745` 之上（未修改/压缩原提交）：preset 接受路径清除旧 Edits 与 Undo、ROI 取消不再
+显示为应用错误、Apply JSON no-op 结束假草稿状态、补齐全入口覆盖测试证据、恢复被覆盖的
+`collab/FROM_DEEPSEEK.md` 历史并新建 `collab/FROM_DEEPSEEK_V04.md`。任务状态：
+`READY_FOR_CODEX_REVIEW`。
+
+## A. preset 接受路径清除旧 Edits 与 Undo（CLOSED）
+
+- 复现（`4738745`）：preset 批准后 pipeline 已切换、Results=0、generation +1，但旧
+  `edit_history` 保留。
+- 修复：两个确认均通过后的事务中追加 `edit_history.clear()`、`_review_undo = None`、
+  `_sync_review_undo_action()`；未调用 `_clear_tracking_results()`，generation 仍只递增一次，
+  `run_history` 原样保留，拒绝路径保持零 mutation。
+- 回归：`test_preset_accept_clears_edits_and_preserves_runs`（result+edit）、
+  `test_preset_accept_edit_only_clears_edits_and_preserves_runs`（edit-only），断言
+  Edits=0、`_review_undo is None`、undo action 不可用、Runs 不变、generation 仅 +1。
+
+## B. ROI 取消不再显示为应用错误（CLOSED）
+
+- 复现（`4738745`）：ROI Geometry Apply 的结果替换确认选“保留结果”后，编辑器进入 error
+  状态并显示 `The ROI geometry could not be applied.`。
+- 修复：`_commit_roi_config()` 对“用户取消”返回 `None`（区别于 apply 失败的 `False`）；
+  `_roi_geometry_applied()` 对 `None` 不显示 error（编辑器保持草稿/非错误状态），仅对
+  真实失败（`False`）显示 error；invalid config 校验仍先于确认显示 error。
+- 回归：`test_roi_geometry_cancel_keeps_draft_without_error`（cancel 非 error、草稿保留）、
+  `test_roi_geometry_real_apply_failure_still_shows_error`（真实失败仍 error）。
+
+## C. Apply JSON no-op 结束假草稿状态（CLOSED）
+
+- 复现（`4738745`）：JSON 与当前 pipeline 语义相同，`_apply_advanced_config()` 返回 True
+  且不确认、不失效，但 `_advanced_config_dirty` 仍为 True、状态显示 `Edited`。
+- 修复：no-op 分支调用 `_sync_advanced_config_view()`（`_advanced_config_dirty = False`、
+  JSON 状态 `Synced`、刷新全局 draft 状态），不弹确认、不改 Results/Edits/generation/
+  project dirty。
+- 回归：`test_json_noop_apply_ends_draft_state`（no-op 后 dirty=False、状态 Synced、
+  草稿列表为空、结果不变）。
+
+## D. 补齐全入口覆盖测试证据（CLOSED）
+
+- marker color 拒绝：model/metadata/Results/Edits 不变
+  （`test_marker_color_reject_preserves_model_metadata_and_results`）。
+- marker candidates 拒绝：两个 spin 与 model 恢复、单次提交单次确认
+  （`test_marker_candidates_reject_restores_controls_and_confirms_once`）。
+- JSON/ROI/calibration 拒绝后各自未应用草稿仍存在
+  （`test_config_change_reject_keeps_unapplied_drafts` 表驱动）。
+- preset 接受路径不变量（A 项）见上。
+
+## E. 恢复被覆盖的 DeepSeek 历史交付（CLOSED）
+
+- `collab/FROM_DEEPSEEK.md` 恢复为基线 `1ad69c9` 原始内容（658 行，原样未改写）。
+- 新建 `collab/FROM_DEEPSEEK_V04.md` 保存 V04 原始交付报告（本文件第一部分）并追加
+  本轮修正结果（本文件第二部分）。
+- `4738745` 原提交未修改、未压缩；`git diff --check 基线..HEAD` 通过。
+
+## 修改文件
+
+- `neo_tracker/ui/main_window.py`（A/B/C 修复，行数 6997，保持 <7000 架构门槛）
+- `tests/test_ui_main_window.py`（新增回归测试）
+- `collab/FROM_DEEPSEEK.md`（仅恢复基线内容）
+- `collab/FROM_DEEPSEEK_V04.md`（新增交付记录）
+
+## 测试结果
+
+```bash
+# 定向（§5 命令）
+PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen \
+  python3 -m unittest tests.test_project_status_panel tests.test_ui_main_window -q
+# Ran 170 tests in 63.334s ... OK（exit 0）
+
+# 全量
+PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen python3 -m unittest discover -s tests -q
+# Ran 700 tests in 127.603s ... OK（exit 0）
+
+PYTHONDONTWRITEBYTECODE=1 python3 -m compileall -q neo_tracker tests   # exit 0
+python3 -m pip check                                                  # No broken requirements found.
+git diff --check 1ad69c976ee3cf9d4c869d5697ed73f3deb80d1f..HEAD        # 无空白告警
+git status --short                                                    # 空（clean）
+```
+
+## 剩余风险
+
+- 对话框默认/Escape/关闭安全取消仍由结构测试 + fail-closed 逻辑证明，未做真实原生窗口
+  手动模态点击。
+- 按工单边界未改 `PROJECT_FILE_INDEX.sha256`、README、路线文档与 `build/lib/`（由 Codex
+  最终集成处理）；`project_status_panel.py` 未改动。

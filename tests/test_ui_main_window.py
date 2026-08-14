@@ -6113,6 +6113,187 @@ class ConfigResultProtectionTests(unittest.TestCase):
         self.assertEqual(window.preset_combo.currentIndex(), original_combo_index)
         self.assertEqual(len(window.current_task.pipeline.results), 2)
 
+    def test_preset_accept_clears_edits_and_preserves_runs(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        self._seed_result_state(window)
+        window._render_task()
+        generation_before = window.current_task.results_generation
+        runs_before = list(window.current_task.run_history)
+        window._confirm_config_result_replacement = lambda _task: True  # type: ignore[method-assign]
+
+        window.preset_combo.setCurrentIndex(window.preset_combo.findData("circular_motion"))
+        QCoreApplication.processEvents()
+
+        task = window.current_task
+        self.assertEqual(task.pipeline.results, [])
+        self.assertEqual(task.edit_history, [])
+        self.assertEqual(task.tracking_outcome, "")
+        self.assertEqual(task.tracking_note, "")
+        self.assertEqual(task.results_generation, generation_before + 1)
+        self.assertEqual(task.run_history, runs_before)
+        self.assertIsNone(window._review_undo)
+        self.assertFalse(window.undo_review_edit_button.isEnabled())
+
+    def test_preset_accept_edit_only_clears_edits_and_preserves_runs(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        self._seed_result_state(window, results=False, edits=True, outcome=False)
+        window._render_task()
+        generation_before = window.current_task.results_generation
+        runs_before = list(window.current_task.run_history)
+        window._confirm_config_result_replacement = lambda _task: True  # type: ignore[method-assign]
+
+        window.preset_combo.setCurrentIndex(window.preset_combo.findData("circular_motion"))
+        QCoreApplication.processEvents()
+
+        task = window.current_task
+        self.assertEqual(task.edit_history, [])
+        self.assertEqual(task.results_generation, generation_before + 1)
+        self.assertEqual(task.run_history, runs_before)
+        self.assertIsNone(window._review_undo)
+        self.assertFalse(window.undo_review_edit_button.isEnabled())
+
+    def test_roi_geometry_cancel_keeps_draft_without_error(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        self._seed_result_state(window)
+        window._render_task()
+        window.roi_geometry_editor.rectangle_x_spin.setValue(14.5)
+        QCoreApplication.processEvents()
+        self.assertTrue(window.roi_geometry_editor.is_dirty())
+        window._confirm_config_result_replacement = lambda _task: False  # type: ignore[method-assign]
+
+        window.roi_geometry_editor.apply_button.click()
+        QCoreApplication.processEvents()
+
+        self.assertTrue(window.roi_geometry_editor.is_dirty())
+        self.assertNotEqual(window.roi_geometry_editor.message_label.property("roiGeometryState"), "error")
+        self.assertEqual(len(window.current_task.pipeline.results), 2)
+        self.assertEqual(
+            window.current_task.edit_history,
+            [{"type": "manual_correction", "frame_index": 0, "point_px": [10.0, 12.0]}],
+        )
+        self.assertEqual(window.current_task.results_generation, 0)
+
+    def test_roi_geometry_real_apply_failure_still_shows_error(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        self._seed_result_state(window)
+        window._render_task()
+        window.roi_geometry_editor.rectangle_x_spin.setValue(14.5)
+        QCoreApplication.processEvents()
+        window._confirm_config_result_replacement = lambda _task: True  # type: ignore[method-assign]
+        window._apply_roi_config_to_task = lambda _task, _roi: False  # type: ignore[method-assign]
+
+        window.roi_geometry_editor.apply_button.click()
+        QCoreApplication.processEvents()
+
+        self.assertEqual(window.roi_geometry_editor.message_label.property("roiGeometryState"), "error")
+        self.assertIn("could not be applied", window.roi_geometry_editor.message_label.text())
+
+    def test_json_noop_apply_ends_draft_state(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        self._seed_result_state(window)
+        window._render_task()
+        window.advanced_config_view.setPlainText(json.dumps(window.current_task.pipeline.to_config(), indent=4))
+        QCoreApplication.processEvents()
+        self.assertTrue(window._advanced_config_dirty)
+        before_results = list(window.current_task.pipeline.results)
+        before_generation = window.current_task.results_generation
+
+        self.assertTrue(window._apply_advanced_config())
+
+        self.assertFalse(window._advanced_config_dirty)
+        self.assertEqual(window.json_status_label.text(), "Synced")
+        self.assertEqual(window.current_task.pipeline.results, before_results)
+        self.assertEqual(window.current_task.results_generation, before_generation)
+        self.assertNotIn("Pipeline JSON", window._unapplied_draft_names())
+
+    def test_marker_color_reject_preserves_model_metadata_and_results(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        frame = np.zeros((40, 50, 3), dtype=np.uint8)
+        frame[11, 13, :] = [12, 180, 70]
+        reader = FakeReader([frame])
+        window.current_task.media_path = "synthetic.mp4"
+        window.current_task.media_info = reader.info
+        window._reader_for_task = lambda _task: reader  # type: ignore[method-assign]
+        window._tracking_reader_for_path = lambda _path: reader  # type: ignore[method-assign]
+        window.project_controller.media_probe = lambda _path: reader.info
+        self._seed_result_state(window)
+        window._render_task()
+        observation = window.current_task.pipeline.observation_model
+        old_rgb = observation.sample_rgb
+        old_metadata = dict(window.current_task.pipeline.metadata)
+        window._confirm_config_result_replacement = lambda _task: False  # type: ignore[method-assign]
+
+        window._color_sample_selected((13.2, 10.8))
+
+        self.assertEqual(observation.sample_rgb, old_rgb)
+        self.assertEqual(window.current_task.pipeline.metadata, old_metadata)
+        self.assertEqual(len(window.current_task.pipeline.results), 2)
+        self.assertEqual(len(window.current_task.edit_history), 1)
+        self.assertEqual(window.current_task.results_generation, 0)
+
+    def test_marker_candidates_reject_restores_controls_and_confirms_once(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        self._seed_result_state(window)
+        window._render_task()
+        confirmations: list[object] = []
+        window._confirm_config_result_replacement = (  # type: ignore[method-assign]
+            lambda _task: confirmations.append(1) or False
+        )
+        old_max = window.color_max_candidates_spin.value()
+        old_min = window.color_min_area_spin.value()
+
+        window.color_max_candidates_spin.setValue(6)
+        QCoreApplication.processEvents()
+
+        self.assertEqual(len(confirmations), 1)
+        self.assertEqual(window.color_max_candidates_spin.value(), old_max)
+        self.assertEqual(window.color_min_area_spin.value(), old_min)
+        observation = window.current_task.pipeline.observation_model
+        self.assertEqual(observation.max_candidates, 4)
+        self.assertEqual(observation.min_component_area, 1)
+
+    def test_config_change_reject_keeps_unapplied_drafts(self) -> None:
+        for entry in ("json", "roi", "calibration"):
+            with self.subTest(entry=entry):
+                window = NeoTrackerWindow()
+                self.addCleanup(close_window_safely, window)
+                self._seed_result_state(window)
+                window._render_task()
+                window._confirm_config_result_replacement = lambda _task: False  # type: ignore[method-assign]
+
+                if entry == "json":
+                    config = window.current_task.pipeline.to_config()
+                    config["observation_model"]["tolerance"] = 0.5
+                    window.advanced_config_view.setPlainText(json.dumps(config, indent=2))
+                    QCoreApplication.processEvents()
+                    self.assertTrue(window._advanced_config_dirty)
+                    self.assertFalse(window._apply_advanced_config())
+                    self.assertTrue(window._advanced_config_dirty)
+                    self.assertIn("Pipeline JSON", window._unapplied_draft_names())
+                elif entry == "roi":
+                    window.roi_geometry_editor.rectangle_x_spin.setValue(14.5)
+                    QCoreApplication.processEvents()
+                    self.assertTrue(window.roi_geometry_editor.is_dirty())
+                    window.roi_geometry_editor.apply_button.click()
+                    QCoreApplication.processEvents()
+                    self.assertTrue(window.roi_geometry_editor.is_dirty())
+                    self.assertNotEqual(
+                        window.roi_geometry_editor.message_label.property("roiGeometryState"), "error"
+                    )
+                else:
+                    window._calibration_rod_selected(((10.0, 20.0), (110.0, 20.0)))
+                    self.assertTrue(window.calibration_editor.is_dirty())
+                    window.calibration_editor.apply_button.click()
+                    QCoreApplication.processEvents()
+                    self.assertTrue(window.calibration_editor.is_dirty())
+
 
 if __name__ == "__main__":
     unittest.main()

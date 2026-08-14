@@ -3365,10 +3365,8 @@ class NeoTrackerWindow(
         draft_names = self._refresh_draft_state()
         previous_index = self.preset_combo.findData(previous_key)
         self.preset_combo.blockSignals(True)
-        try:
-            self.preset_combo.setCurrentIndex(previous_index)
-        finally:
-            self.preset_combo.blockSignals(False)
+        self.preset_combo.setCurrentIndex(previous_index)
+        self.preset_combo.blockSignals(False)
         if draft_names and not self._ask_unapplied_drafts(
             f"changing the preset to {descriptor.title}", draft_names
         ):
@@ -3379,10 +3377,8 @@ class NeoTrackerWindow(
         if draft_names:
             self._discard_unapplied_drafts()
         self.preset_combo.blockSignals(True)
-        try:
-            self.preset_combo.setCurrentIndex(index)
-        finally:
-            self.preset_combo.blockSignals(False)
+        self.preset_combo.setCurrentIndex(index)
+        self.preset_combo.blockSignals(False)
         self._invalidate_review_responses(self.current_task)
         self.current_task.pipeline_key = key
         self.current_task.pipeline = self.registry[key].factory()
@@ -3390,6 +3386,9 @@ class NeoTrackerWindow(
         self.current_task.tracking_outcome = ""
         self.current_task.tracking_note = ""
         self.current_task.roi = None
+        self.current_task.edit_history.clear()
+        self._review_undo = None
+        self._sync_review_undo_action()
         self._reset_physics_context()
         self._clear_analysis_result()
         self._render_task(sync_combo=False, refresh_project_state=False)
@@ -3526,6 +3525,7 @@ class NeoTrackerWindow(
             return False
 
         if pipeline_key == task.pipeline_key and config == task.pipeline.to_config():
+            self._sync_advanced_config_view()
             self.statusBar().showMessage("Pipeline JSON is unchanged.", 4000)
             return True
         if not self._confirm_config_result_replacement(task):
@@ -5192,15 +5192,15 @@ class NeoTrackerWindow(
         if error is not None:
             self.roi_geometry_editor.show_error(error)
             return
-        applied = self._commit_roi_config(
+        result = self._commit_roi_config(
             self.current_task,
             config,
             clear_message="ROI geometry updated. Run tracking again.",
             status_message="ROI geometry applied. Run tracking again.",
         )
-        if applied:
+        if result is True:
             self.roi_geometry_editor.show_applied()
-        else:
+        elif result is False:
             self.roi_geometry_editor.show_error("The ROI geometry could not be applied.")
 
     def _commit_roi_config(
@@ -5210,10 +5210,10 @@ class NeoTrackerWindow(
         *,
         clear_message: str,
         status_message: str,
-    ) -> bool:
+    ) -> bool | None:
         is_noop = self._roi_config_for_task(task) == roi_config
         if not is_noop and not self._confirm_config_result_replacement(task):
-            return False
+            return None
         if not self._apply_roi_config_to_task(task, roi_config):
             return False
         if not is_noop:
