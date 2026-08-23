@@ -6026,7 +6026,7 @@ class ConfigResultProtectionTests(unittest.TestCase):
                 self._seed_result_state(window, **seed_kwargs)
                 window._render_task()
                 with patch(
-                    "neo_tracker.ui.main_window.build_config_result_protection_dialog",
+                    "neo_tracker.ui.shell.configuration_protection_mixin.build_config_result_protection_dialog",
                     return_value=FakeDialog(),
                 ) as builder:
                     window._roi_selected((5.0, 5.0, 20.0, 20.0))
@@ -6036,7 +6036,7 @@ class ConfigResultProtectionTests(unittest.TestCase):
         self.addCleanup(close_window_safely, window)
         window._render_task()
         with patch(
-            "neo_tracker.ui.main_window.build_config_result_protection_dialog",
+            "neo_tracker.ui.shell.configuration_protection_mixin.build_config_result_protection_dialog",
             return_value=FakeDialog(),
         ) as builder:
             window._roi_selected((5.0, 5.0, 20.0, 20.0))
@@ -6293,6 +6293,117 @@ class ConfigResultProtectionTests(unittest.TestCase):
                     window.calibration_editor.apply_button.click()
                     QCoreApplication.processEvents()
                     self.assertTrue(window.calibration_editor.is_dirty())
+
+    def test_cross_editor_changes_do_not_silently_replace_pipeline_json_draft(self) -> None:
+        cases = (
+            ("roi", lambda w: w._roi_selected((5.0, 5.0, 20.0, 20.0))),
+            ("calibration", lambda w: w._apply_calibration_rod((0.0, 0.0), (100.0, 0.0), 50.0)),
+            ("marker", lambda w: w.color_tolerance_spin.setValue(0.5)),
+        )
+        for entry, mutate in cases:
+            with self.subTest(entry=entry):
+                window = NeoTrackerWindow()
+                self.addCleanup(close_window_safely, window)
+                window._render_task()
+                config = copy.deepcopy(window.current_task.pipeline.to_config())
+                config["observation_model"]["tolerance"] = 0.323
+                draft = json.dumps(config, indent=2)
+                window.advanced_config_view.setPlainText(draft)
+                QCoreApplication.processEvents()
+                before = self._snapshot(window)
+                prompts: list[tuple[str, tuple[str, ...]]] = []
+                window._ask_unapplied_drafts = (  # type: ignore[method-assign]
+                    lambda action, names: prompts.append((action, names)) or False
+                )
+
+                mutate(window)
+                QCoreApplication.processEvents()
+
+                self.assertEqual(self._snapshot(window), before)
+                self.assertEqual(window.advanced_config_view.toPlainText(), draft)
+                self.assertTrue(window._advanced_config_dirty)
+                self.assertEqual(len(prompts), 1)
+                self.assertEqual(prompts[0][1], ("Pipeline JSON",))
+
+    def test_json_discard_approval_is_not_committed_before_result_replacement_approval(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        self._seed_result_state(window)
+        window._render_task()
+        config = copy.deepcopy(window.current_task.pipeline.to_config())
+        config["observation_model"]["tolerance"] = 0.323
+        draft = json.dumps(config, indent=2)
+        window.advanced_config_view.setPlainText(draft)
+        QCoreApplication.processEvents()
+        before = self._snapshot(window)
+        window._ask_unapplied_drafts = lambda _action, _names: True  # type: ignore[method-assign]
+        window._confirm_config_result_replacement = lambda _task: False  # type: ignore[method-assign]
+
+        window._roi_selected((5.0, 5.0, 20.0, 20.0))
+
+        self.assertEqual(self._snapshot(window), before)
+        self.assertEqual(window.advanced_config_view.toPlainText(), draft)
+        self.assertTrue(window._advanced_config_dirty)
+
+    def test_cross_editor_change_applies_only_after_both_replacement_approvals(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        self._seed_result_state(window)
+        window._render_task()
+        config = copy.deepcopy(window.current_task.pipeline.to_config())
+        config["observation_model"]["tolerance"] = 0.323
+        window.advanced_config_view.setPlainText(json.dumps(config, indent=2))
+        QCoreApplication.processEvents()
+        generation_before = window.current_task.results_generation
+        window._ask_unapplied_drafts = lambda _action, _names: True  # type: ignore[method-assign]
+        window._confirm_config_result_replacement = lambda _task: True  # type: ignore[method-assign]
+
+        window._roi_selected((5.0, 5.0, 20.0, 20.0))
+
+        self.assertEqual(window.current_task.roi["x"], 5.0)
+        self.assertEqual(window.current_task.pipeline.results, [])
+        self.assertEqual(window.current_task.edit_history, [])
+        self.assertEqual(window.current_task.results_generation, generation_before + 1)
+        self.assertFalse(window._advanced_config_dirty)
+        rendered = json.loads(window.advanced_config_view.toPlainText())
+        self.assertEqual(rendered["observation_model"]["tolerance"], 0.2)
+
+    def test_noop_roi_does_not_prompt_or_replace_pipeline_json_draft(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        window._render_task()
+        config = copy.deepcopy(window.current_task.pipeline.to_config())
+        config["observation_model"]["tolerance"] = 0.323
+        draft = json.dumps(config, indent=2)
+        window.advanced_config_view.setPlainText(draft)
+        QCoreApplication.processEvents()
+        prompts: list[object] = []
+        window._ask_unapplied_drafts = (  # type: ignore[method-assign]
+            lambda _action, _names: prompts.append(1) or False
+        )
+
+        result = window._commit_roi_config(
+            window.current_task,
+            window._roi_config_for_task(window.current_task),
+            clear_message="unused",
+            status_message="unused",
+        )
+
+        self.assertTrue(result)
+        self.assertEqual(prompts, [])
+        self.assertEqual(window.advanced_config_view.toPlainText(), draft)
+        self.assertTrue(window._advanced_config_dirty)
+
+    def test_preset_change_restores_the_previous_signal_block_state(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        target_index = window.preset_combo.findData("circular_motion")
+        window.preset_combo.blockSignals(True)
+        try:
+            window._preset_changed(target_index)
+            self.assertTrue(window.preset_combo.signalsBlocked())
+        finally:
+            window.preset_combo.blockSignals(False)
 
 
 if __name__ == "__main__":

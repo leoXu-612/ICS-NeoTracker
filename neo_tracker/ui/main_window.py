@@ -9,7 +9,7 @@ from pathlib import Path
 from time import monotonic
 
 import numpy as np
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import QSignalBlocker, Qt, QTimer, Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (
@@ -127,7 +127,6 @@ from neo_tracker.ui.project_open_worker import PreparedProjectOpen
 from neo_tracker.ui.project_save_worker import CompletedProjectSave, save_project
 from neo_tracker.ui.project_status_panel import (
     ProjectStatusPanel,
-    build_config_result_protection_dialog,
     build_rerun_replacement_dialog,
     build_result_replacement_dialog,
     build_unapplied_drafts_dialog,
@@ -139,6 +138,7 @@ from neo_tracker.ui.project_controller import (
     MediaRelinkAssessment,
     ProjectTaskController,
 )
+from neo_tracker.ui.shell.configuration_protection_mixin import ConfigurationProtectionMixin
 from neo_tracker.ui.roi_geometry_editor import ROIGeometryEditor
 from neo_tracker.ui.run_history_panel import (
     RunHistoryComparisonDialog,
@@ -232,6 +232,7 @@ class ElidingLabel(QLabel):
 
 
 class NeoTrackerWindow(
+    ConfigurationProtectionMixin,
     ReviewEditingMixin,
     PhysicsWorkspaceMixin,
     CoordinatorCompatibilityMixin,
@@ -2626,20 +2627,6 @@ class NeoTrackerWindow(
         clicked = dialog.clickedButton()
         return clicked is not None and clicked.objectName() == "confirmResultReplacementButton"
 
-    def _confirm_config_result_replacement(self, task: DesktopTask) -> bool:
-        """Fail-closed gate before a configuration change invalidates current results."""
-        if not self._task_has_tracking_result_state(task):
-            return True
-        dialog = build_config_result_protection_dialog(
-            self, task_name=task.title(), result_count=len(task.pipeline.results), edit_count=len(task.edit_history)
-        )
-        dialog.exec()
-        clicked = dialog.clickedButton()
-        if clicked is not None and clicked.objectName() == "confirmConfigResultReplacementButton":
-            return True
-        self.statusBar().showMessage("Configuration change canceled. Current Results/Edits are unchanged.", 6000)
-        return False
-
     def _rerun_replacement_dialog(
         self,
         task: DesktopTask,
@@ -3364,9 +3351,8 @@ class NeoTrackerWindow(
         descriptor = self.registry[key]
         draft_names = self._refresh_draft_state()
         previous_index = self.preset_combo.findData(previous_key)
-        self.preset_combo.blockSignals(True)
-        self.preset_combo.setCurrentIndex(previous_index)
-        self.preset_combo.blockSignals(False)
+        with QSignalBlocker(self.preset_combo):
+            self.preset_combo.setCurrentIndex(previous_index)
         if draft_names and not self._ask_unapplied_drafts(
             f"changing the preset to {descriptor.title}", draft_names
         ):
@@ -3376,9 +3362,8 @@ class NeoTrackerWindow(
             return
         if draft_names:
             self._discard_unapplied_drafts()
-        self.preset_combo.blockSignals(True)
-        self.preset_combo.setCurrentIndex(index)
-        self.preset_combo.blockSignals(False)
+        with QSignalBlocker(self.preset_combo):
+            self.preset_combo.setCurrentIndex(index)
         self._invalidate_review_responses(self.current_task)
         self.current_task.pipeline_key = key
         self.current_task.pipeline = self.registry[key].factory()
@@ -5097,7 +5082,9 @@ class NeoTrackerWindow(
         x = max(0, min(width - 1, int(round(point_px[0]))))
         y = max(0, min(height - 1, int(round(point_px[1]))))
         rgb = tuple(float(value) for value in frame[y, x, :3])
-        if observation.sample_rgb == rgb or not self._confirm_config_result_replacement(task):
+        if observation.sample_rgb == rgb:
+            return
+        if not self._confirm_configuration_change(task, "sampling a new marker color"):
             return
         observation.sample_rgb = rgb  # type: ignore[assignment]
         task.pipeline.metadata["marker_sample_rgb"] = [int(value) for value in self._rgb8(rgb)]
@@ -5114,7 +5101,10 @@ class NeoTrackerWindow(
         observation = self._color_blob_observation()
         if observation is None:
             return
-        if float(value) == observation.tolerance or not self._confirm_config_result_replacement(self.current_task):
+        if float(value) == observation.tolerance:
+            self._render_marker_controls(self.current_task.pipeline)
+            return
+        if not self._confirm_configuration_change(self.current_task, "changing the marker tolerance"):
             self._render_marker_controls(self.current_task.pipeline)
             return
         observation.tolerance = float(value)
@@ -5133,7 +5123,7 @@ class NeoTrackerWindow(
         new_min = int(self.color_min_area_spin.value())
         if new_max == observation.max_candidates and new_min == observation.min_component_area:
             return
-        if not self._confirm_config_result_replacement(self.current_task):
+        if not self._confirm_configuration_change(self.current_task, "changing marker candidate settings"):
             self._render_marker_controls(self.current_task.pipeline)
             return
         observation.max_candidates = new_max
@@ -5157,7 +5147,7 @@ class NeoTrackerWindow(
         task = self.current_task
         if task.roi is None:
             return
-        if not self._confirm_config_result_replacement(task):
+        if not self._confirm_configuration_change(task, "resetting the ROI to its preset"):
             return
         preset_pipeline = self.registry[task.pipeline_key].factory()
         task.roi = None
@@ -5212,12 +5202,13 @@ class NeoTrackerWindow(
         status_message: str,
     ) -> bool | None:
         is_noop = self._roi_config_for_task(task) == roi_config
-        if not is_noop and not self._confirm_config_result_replacement(task):
+        if is_noop:
+            return True
+        if not self._confirm_configuration_change(task, "applying ROI geometry"):
             return None
         if not self._apply_roi_config_to_task(task, roi_config):
             return False
-        if not is_noop:
-            self._clear_tracking_results(clear_message)
+        self._clear_tracking_results(clear_message)
         self.preview_label.set_roi_config(task.roi)
         self._render_calibration(task)
         self._render_workflow(task.pipeline)
@@ -5364,7 +5355,7 @@ class NeoTrackerWindow(
             return False
         if self._calibration_rod_to_dict(task.calibration_rod) == self._calibration_rod_to_dict(rod):
             return True
-        if not self._confirm_config_result_replacement(task):
+        if not self._confirm_configuration_change(task, "applying calibration"):
             return False
         if not self._apply_calibration_rod_to_task(task, rod):
             self.calibration_editor.show_error("Calibration could not be applied to this pipeline.")
@@ -5382,7 +5373,7 @@ class NeoTrackerWindow(
         task = self.current_task
         if self._calibration_rod_to_dict(task.calibration_rod) is None:
             return
-        if not self._confirm_config_result_replacement(task):
+        if not self._confirm_configuration_change(task, "resetting calibration"):
             return
         old_coordinate_model = task.pipeline.coordinate_model
         old_state_model = task.pipeline.state_model
