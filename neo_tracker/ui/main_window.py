@@ -3513,6 +3513,8 @@ class NeoTrackerWindow(
             self._sync_advanced_config_view()
             self.statusBar().showMessage("Pipeline JSON is unchanged.", 4000)
             return True
+        if not self._confirm_draft_replacement("applying Pipeline JSON", ("ROI geometry", "Calibration")):
+            return False
         if not self._confirm_config_result_replacement(task):
             return False
         self._invalidate_review_responses(task)
@@ -5147,7 +5149,9 @@ class NeoTrackerWindow(
         task = self.current_task
         if task.roi is None:
             return
-        if not self._confirm_configuration_change(task, "resetting the ROI to its preset"):
+        if not self._confirm_configuration_change(
+            task, "resetting the ROI to its preset", ("Pipeline JSON", "ROI geometry", "Calibration")
+        ):
             return
         preset_pipeline = self.registry[task.pipeline_key].factory()
         task.roi = None
@@ -5172,6 +5176,7 @@ class NeoTrackerWindow(
             roi_config,
             clear_message="ROI updated. Run tracking again.",
             status_message="ROI drawing applied. Run tracking again.",
+            replaced_drafts=("Pipeline JSON", "ROI geometry", "Calibration"),
         )
 
     def _roi_geometry_applied(self, config: object) -> None:
@@ -5200,11 +5205,12 @@ class NeoTrackerWindow(
         *,
         clear_message: str,
         status_message: str,
+        replaced_drafts: tuple[str, ...] = ("Pipeline JSON", "Calibration"),
     ) -> bool | None:
         is_noop = self._roi_config_for_task(task) == roi_config
         if is_noop:
             return True
-        if not self._confirm_configuration_change(task, "applying ROI geometry"):
+        if not self._confirm_configuration_change(task, "applying ROI geometry", replaced_drafts):
             return None
         if not self._apply_roi_config_to_task(task, roi_config):
             return False
@@ -5355,7 +5361,9 @@ class NeoTrackerWindow(
             return False
         if self._calibration_rod_to_dict(task.calibration_rod) == self._calibration_rod_to_dict(rod):
             return True
-        if not self._confirm_configuration_change(task, "applying calibration"):
+        if not self._confirm_configuration_change(
+            task, "applying calibration", ("Pipeline JSON", "ROI geometry")
+        ):
             return False
         if not self._apply_calibration_rod_to_task(task, rod):
             self.calibration_editor.show_error("Calibration could not be applied to this pipeline.")
@@ -5373,7 +5381,9 @@ class NeoTrackerWindow(
         task = self.current_task
         if self._calibration_rod_to_dict(task.calibration_rod) is None:
             return
-        if not self._confirm_configuration_change(task, "resetting calibration"):
+        if not self._confirm_configuration_change(
+            task, "resetting calibration", ("Pipeline JSON", "ROI geometry", "Calibration")
+        ):
             return
         old_coordinate_model = task.pipeline.coordinate_model
         old_state_model = task.pipeline.state_model

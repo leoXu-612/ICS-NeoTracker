@@ -6405,6 +6405,77 @@ class ConfigResultProtectionTests(unittest.TestCase):
         finally:
             window.preset_combo.blockSignals(False)
 
+    def test_roi_and_calibration_changes_protect_the_other_editor_draft(self) -> None:
+        for entry in ("roi", "calibration"):
+            with self.subTest(entry=entry):
+                window = NeoTrackerWindow()
+                self.addCleanup(close_window_safely, window)
+                window._render_task()
+                if entry == "roi":
+                    window._calibration_rod_selected(((10.0, 20.0), (110.0, 20.0)))
+                    expected_draft = "Calibration"
+                    mutate = lambda: window._roi_selected((5.0, 5.0, 20.0, 20.0))
+                    is_dirty = window.calibration_editor.is_dirty
+                else:
+                    window.roi_geometry_editor.rectangle_x_spin.setValue(14.5)
+                    QCoreApplication.processEvents()
+                    expected_draft = "ROI geometry"
+                    mutate = lambda: window._apply_calibration_rod(
+                        (0.0, 0.0), (100.0, 0.0), 50.0
+                    )
+                    is_dirty = window.roi_geometry_editor.is_dirty
+                self.assertTrue(is_dirty())
+                before = self._snapshot(window)
+                prompts: list[tuple[str, tuple[str, ...]]] = []
+                window._ask_unapplied_drafts = (  # type: ignore[method-assign]
+                    lambda action, names: prompts.append((action, names)) or False
+                )
+
+                mutate()
+                QCoreApplication.processEvents()
+
+                self.assertEqual(self._snapshot(window), before)
+                self.assertTrue(is_dirty())
+                self.assertEqual(prompts[0][1], (expected_draft,))
+
+    def test_json_apply_protects_roi_and_calibration_drafts(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        window._render_task()
+        window.roi_geometry_editor.rectangle_x_spin.setValue(14.5)
+        window._calibration_rod_selected(((10.0, 20.0), (110.0, 20.0)))
+        config = copy.deepcopy(window.current_task.pipeline.to_config())
+        config["observation_model"]["tolerance"] = 0.323
+        window.advanced_config_view.setPlainText(json.dumps(config, indent=2))
+        QCoreApplication.processEvents()
+        prompts: list[tuple[str, tuple[str, ...]]] = []
+        window._ask_unapplied_drafts = (  # type: ignore[method-assign]
+            lambda action, names: prompts.append((action, names)) or False
+        )
+
+        self.assertFalse(window._apply_advanced_config())
+
+        self.assertTrue(window.roi_geometry_editor.is_dirty())
+        self.assertTrue(window.calibration_editor.is_dirty())
+        self.assertTrue(window._advanced_config_dirty)
+        self.assertEqual(prompts[0][1], ("ROI geometry", "Calibration"))
+
+    def test_editor_draft_discard_is_not_committed_before_result_replacement_approval(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        self._seed_result_state(window)
+        window._render_task()
+        window._calibration_rod_selected(((10.0, 20.0), (110.0, 20.0)))
+        self.assertTrue(window.calibration_editor.is_dirty())
+        before = self._snapshot(window)
+        window._ask_unapplied_drafts = lambda _action, _names: True  # type: ignore[method-assign]
+        window._confirm_config_result_replacement = lambda _task: False  # type: ignore[method-assign]
+
+        window._roi_selected((5.0, 5.0, 20.0, 20.0))
+
+        self.assertEqual(self._snapshot(window), before)
+        self.assertTrue(window.calibration_editor.is_dirty())
+
 
 if __name__ == "__main__":
     unittest.main()

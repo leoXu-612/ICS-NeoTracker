@@ -448,8 +448,6 @@ class PhysicsWorkspaceMixin:
         self._physics_replay_active_operation = None
 
     def _kinematics_workspace_canceled(self, job: KinematicsWorkspaceJob) -> None:
-        if job.task.owner is self.current_task and not self._background_tasks.closing:
-            self.statusBar().showMessage("Physics operation canceled or superseded.", 4000)
         self._mark_active_physics_replay("canceled")
         self._physics_replay_active_id = None
         self._physics_replay_active_operation = None

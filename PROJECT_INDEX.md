@@ -45,7 +45,7 @@ neo_tracker/
   application/qt_worker_lifecycle.py terminal worker 迁回主事件循环、QThread 退出与延迟销毁的共享边界
   visualization.py    叠加层和环形时序热图
   ui/main_window.py   PySide6 桌面界面、1024×768 响应式 Preview/固定高度工具栏、Add/Open/Save 后台准备与原子提交、O(1) dirty 标记、Tracking 来源绑定/漂移隔离/恢复入口、取消/关闭终态与运行生命周期编排
-  ui/shell/configuration_protection_mixin.py 配置变更前的 Pipeline JSON 草稿与 Results/Edits 双阶段保护、fail-closed 取消语义
+  ui/shell/configuration_protection_mixin.py 配置变更前的受影响草稿交集与 Results/Edits 双阶段保护、fail-closed 取消语义
   ui/shell/review_editing_mixin.py Review 点修正/Mark Lost 的会话内一步撤销、结果 generation 守卫与精确 dirty 状态恢复
   ui/playback_controller.py elapsed wall time 到源帧的播放时钟、低 FPS 间隔与 preview skip 计数
   ui/background_tasks.py 后台任务 generation、当前 token 与窗口关闭门控
@@ -120,11 +120,12 @@ Revert 精确恢复基线，非二维坐标模型不显示该操作。1024×768 
 递增 results generation 并失效 Signal/Physics 缓存，Runs 审计保持不变。最终
 `681/681`（121.051 s）、`compileall`、`pip check` 与 `git diff --check` 通过。
 
-跨编辑器草稿保护（2026-08-24）：ROI、Calibration 与 Marker 操作在同步 Advanced
-JSON 前先保护未 Apply 的 Pipeline JSON；第一阶段同意丢弃、第二阶段取消 Results/Edits
-替换时仍保持原草稿。no-op 不提示也不覆盖草稿，preset combo 使用 `QSignalBlocker`
-恢复进入 handler 前的信号状态。最终 `705/705`、`compileall`、`pip check` 与
-`git diff --check` 通过。
+跨编辑器草稿保护（2026-08-24）：ROI、Calibration、Marker 与 Pipeline JSON Apply
+只确认其成功路径实际会覆盖的其他草稿；第一阶段同意丢弃、第二阶段取消 Results/Edits
+替换时仍保持全部原草稿。no-op 不提示也不覆盖草稿，preset combo 使用 `QSignalBlocker`
+恢复进入 handler 前的信号状态。Results 重建自动替换旧 Physics build 时不再用通用取消
+提示覆盖更具体的 Tracking 终态。最终 `708/708`、竞态回归连续 `20/20`、`compileall`、
+`pip check` 与 `git diff --check` 通过。
 
 ## 常用命令
 

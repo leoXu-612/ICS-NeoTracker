@@ -26,16 +26,25 @@ class ConfigurationProtectionMixin:
         )
         return False
 
-    def _confirm_pipeline_json_replacement(self, action: str) -> bool:
-        if not self._advanced_config_dirty:
+    def _confirm_draft_replacement(self, action: str, replaced_drafts: tuple[str, ...]) -> bool:
+        active_drafts = self._refresh_draft_state()
+        conflicts = tuple(name for name in replaced_drafts if name in active_drafts)
+        if not conflicts:
             return True
-        if self._ask_unapplied_drafts(action, ("Pipeline JSON",)):
+        if self._ask_unapplied_drafts(action, conflicts):
             return True
         self.statusBar().showMessage(
-            "Configuration change canceled. The Pipeline JSON draft is unchanged.",
+            "Configuration change canceled. Unapplied editor work is unchanged.",
             6000,
         )
         return False
 
-    def _confirm_configuration_change(self, task: DesktopTask, action: str) -> bool:
-        return self._confirm_pipeline_json_replacement(action) and self._confirm_config_result_replacement(task)
+    def _confirm_configuration_change(
+        self,
+        task: DesktopTask,
+        action: str,
+        replaced_drafts: tuple[str, ...] = ("Pipeline JSON",),
+    ) -> bool:
+        return self._confirm_draft_replacement(
+            action, replaced_drafts
+        ) and self._confirm_config_result_replacement(task)
