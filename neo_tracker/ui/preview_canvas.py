@@ -648,12 +648,14 @@ class PreviewCanvas(QLabel):
         ):
             super().mouseReleaseEvent(event)
             return
+        completed = False
         point = self._widget_to_image(event.position(), clamp=True)
         if point is not None and self._drag_start is not None:
             if self._selection_mode == "roi_rectangle":
                 rect = self._normalized_image_rect(self._drag_start, point)
                 if rect[2] >= 3.0 and rect[3] >= 3.0:
                     self.roiSelected.emit(rect)
+                    completed = True
             elif self._selection_mode == "roi_circle":
                 radius = self._distance(self._drag_start, point)
                 if radius >= 3.0:
@@ -664,6 +666,7 @@ class PreviewCanvas(QLabel):
                             "radius": radius,
                         }
                     )
+                    completed = True
             elif self._selection_mode == "roi_annulus":
                 outer_radius = self._distance(self._drag_start, point)
                 if outer_radius >= 6.0:
@@ -675,15 +678,24 @@ class PreviewCanvas(QLabel):
                             "outer_radius": outer_radius,
                         }
                     )
+                    completed = True
             elif self._selection_mode == "calibration":
                 length = float(np.linalg.norm(np.asarray(point) - np.asarray(self._drag_start)))
                 if length >= 3.0:
                     self.calibrationRodSelected.emit((self._drag_start, point))
+                    completed = True
             elif self._selection_mode == "manual_point":
                 self.manualPointSelected.emit(point)
+                completed = True
             elif self._selection_mode == "sample_color":
                 self.colorSampleSelected.emit(point)
-        self.cancel_selection()
+                completed = True
+        if completed:
+            self.cancel_selection()
+        else:
+            self._drag_start = None
+            self._drag_current = None
+            self.update()
         event.accept()
 
     def leaveEvent(self, event) -> None:  # noqa: N802

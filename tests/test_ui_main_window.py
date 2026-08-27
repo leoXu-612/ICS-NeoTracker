@@ -1857,6 +1857,44 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertIsNone(canvas._selection_mode)
         self.assertEqual(canvas._curve_band_points, [])
 
+    def test_preview_canvas_short_drag_keeps_selection_tool_active_for_retry(self) -> None:
+        canvas = PreviewCanvas()
+        self.addCleanup(canvas.close)
+        canvas.resize(600, 400)
+        canvas.show()
+        canvas.set_frame(np.zeros((80, 120, 3), dtype=np.uint8))
+        QCoreApplication.processEvents()
+        point = canvas._image_point_to_widget((20.0, 20.0))
+        self.assertIsNotNone(point)
+
+        starters = (
+            ("roi_rectangle", canvas.begin_roi_selection),
+            ("roi_circle", canvas.begin_circular_roi_selection),
+            ("roi_annulus", canvas.begin_annular_roi_selection),
+            ("calibration", canvas.begin_calibration_selection),
+        )
+        for mode, start_selection in starters:
+            with self.subTest(mode=mode):
+                self.assertTrue(start_selection())
+                QTest.mousePress(canvas, Qt.MouseButton.LeftButton, pos=point.toPoint())  # type: ignore[union-attr]
+                QTest.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=point.toPoint())  # type: ignore[union-attr]
+                self.assertEqual(canvas.selection_mode(), mode)
+                self.assertIsNone(canvas._drag_start)
+                self.assertIsNone(canvas._drag_current)
+                canvas.cancel_selection()
+
+        emitted: list[object] = []
+        canvas.roiSelected.connect(emitted.append)
+        end = canvas._image_point_to_widget((40.0, 35.0))
+        self.assertIsNotNone(end)
+        self.assertTrue(canvas.begin_roi_selection())
+        QTest.mousePress(canvas, Qt.MouseButton.LeftButton, pos=point.toPoint())  # type: ignore[union-attr]
+        QTest.mouseMove(canvas, end.toPoint())  # type: ignore[union-attr]
+        QTest.mouseRelease(canvas, Qt.MouseButton.LeftButton, pos=end.toPoint())  # type: ignore[union-attr]
+
+        self.assertEqual(len(emitted), 1)
+        self.assertIsNone(canvas.selection_mode())
+
     def test_preview_canvas_selects_and_drags_existing_curve_node(self) -> None:
         canvas = PreviewCanvas()
         self.addCleanup(canvas.close)
