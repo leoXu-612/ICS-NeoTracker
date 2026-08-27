@@ -4374,9 +4374,11 @@ class MainWindowStructureTests(unittest.TestCase):
         window._set_project_clean()
         window.current_task.edit_history.append({"type": "mark_lost", "frame_index": 3})
         window._refresh_project_state()
+        window.calibration_editor.set_line((20.0, 30.0), (220.0, 30.0))
         window._background_tasks.begin_close()
         window._close_requested_by_user = True
         window.centralWidget().setEnabled(False)
+        window._ask_unapplied_drafts = lambda _action, _names: True  # type: ignore[method-assign]
         window._ask_unsaved_changes = (  # type: ignore[method-assign]
             lambda _action: QMessageBox.StandardButton.Cancel
         )
@@ -4389,6 +4391,7 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertTrue(window.centralWidget().isEnabled())
         self.assertFalse(window._close_requested_by_user)
         self.assertTrue(window._project_dirty)
+        self.assertTrue(window.calibration_editor.is_dirty())
         self.assertIn("Close canceled", window.statusBar().currentMessage())
 
     def test_application_level_close_all_windows_cannot_bypass_unsaved_confirmation(self) -> None:

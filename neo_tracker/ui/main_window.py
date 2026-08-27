@@ -2312,15 +2312,18 @@ class NeoTrackerWindow(
     def _project_io_open_canceled(self, job: ProjectOpenJob) -> None:
         self._finish_project_open_ui(job)
 
+    def _restore_task_view_after_aborted_transition(self) -> None:
+        if self._unapplied_draft_names():
+            self._render_tracking_status(self.current_task)
+            return
+        self._render_task(refresh_project_state=False)
+
     def _finish_project_open_ui(self, job: ProjectOpenJob) -> None:
         if self._background_tasks.closing:
             return
         self._set_media_probe_busy(False)
         if not job.completed:
-            if self._unapplied_draft_names():
-                self._render_tracking_status(self.current_task)
-            else:
-                self._render_task(refresh_project_state=False)
+            self._restore_task_view_after_aborted_transition()
         if job.failure_detail:
             QMessageBox.warning(
                 self,
@@ -6857,7 +6860,7 @@ class NeoTrackerWindow(
             self.fit_panel.apply_state(self.analysis_workspace_controller.state)
         if self._media_probe_thread is None and self._project_open_thread is None:
             self._set_media_probe_busy(False)
-        self._render_task(refresh_project_state=False)
+        self._restore_task_view_after_aborted_transition()
 
     def closeEvent(self, event) -> None:  # noqa: N802
         if not self._background_tasks.closing:
