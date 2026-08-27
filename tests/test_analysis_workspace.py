@@ -175,6 +175,20 @@ class MainWindowPhysicsWorkspaceTests(unittest.TestCase):
         self.assertEqual(state.match.value, "nearest")
         self.assertIn("frame 8 · nearest", window.physics_workspace.cursor_label.text())
 
+        window.preview_label.set_frame(np.zeros((80, 120, 3), dtype=np.uint8))
+        window._start_polygon_roi_selection()
+        window.preview_label._polygon_points[:] = [(10.0, 10.0), (30.0, 10.0)]
+        window._ask_unapplied_drafts = lambda _action, _names: False  # type: ignore[method-assign]
+        window.physics_workspace.series_table.selectRow(2)
+        QApplication.processEvents()
+
+        state = window.selection_session.state
+        self.assertEqual(window.current_task.preview_frame_index, 8)
+        self.assertEqual(state.selected_frame_index, 8)
+        self.assertEqual(state.selected_sample_index, 1)
+        self.assertEqual(window.preview_label.selection_mode(), "roi_polygon")
+        self.assertEqual(window.preview_label._polygon_points, [(10.0, 10.0), (30.0, 10.0)])
+
     def test_one_plot_keyboard_action_commits_one_canonical_revision(self) -> None:
         window = self.make_window()
         window.current_task.media_info = MediaInfo(

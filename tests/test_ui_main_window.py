@@ -2137,6 +2137,70 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertEqual(window.preview_label.selection_mode(), "calibration")
         self.assertEqual(window.preview_label._polygon_points, [])
 
+    def test_preview_navigation_and_playback_protect_active_selection(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        task = window.current_task
+        task.media_path = "/synthetic/video.mp4"
+        task.media_info = MediaInfo(
+            fps=30.0,
+            frame_count=3,
+            width=120,
+            height=80,
+            duration_s=0.1,
+            available=True,
+        )
+        frame = np.zeros((80, 120, 3), dtype=np.uint8)
+        window.preview_label.set_frame(frame)
+        window._start_polygon_roi_selection()
+        window.preview_label._polygon_points[:] = [(10.0, 10.0), (30.0, 10.0)]
+        prompts: list[tuple[str, tuple[str, ...]]] = []
+        window._ask_unapplied_drafts = (  # type: ignore[method-assign]
+            lambda action, names: prompts.append((action, names)) or False
+        )
+
+        with patch.object(window, "_queue_preview_decode") as queue_decode:
+            self.assertFalse(window._preview_frame_changed(1))
+            self.assertEqual(task.preview_frame_index, 0)
+            self.assertEqual(window.preview_frame_spin.value(), 0)
+            self.assertEqual(window.preview_label.selection_mode(), "roi_polygon")
+            self.assertEqual(window.preview_label._polygon_points, [(10.0, 10.0), (30.0, 10.0)])
+            queue_decode.assert_not_called()
+
+            window._ask_unapplied_drafts = lambda _action, _names: True  # type: ignore[method-assign]
+            self.assertTrue(window._preview_frame_changed(1))
+            self.assertEqual(task.preview_frame_index, 1)
+            self.assertIsNone(window.preview_label.selection_mode())
+            queue_decode.assert_called_once()
+
+        window.preview_label.set_frame(frame)
+        window._start_polygon_roi_selection()
+        window._ask_unapplied_drafts = lambda _action, _names: False  # type: ignore[method-assign]
+        window._toggle_playback()
+        self.assertFalse(window._playback_coordinator.active)
+        self.assertEqual(window.preview_label.selection_mode(), "roi_polygon")
+
+        window._ask_unapplied_drafts = lambda _action, _names: True  # type: ignore[method-assign]
+        window._toggle_playback()
+        self.assertTrue(window._playback_coordinator.active)
+        self.assertIsNone(window.preview_label.selection_mode())
+        window._start_polygon_roi_selection()
+        self.assertFalse(window._playback_coordinator.active)
+        self.assertEqual(window.preview_label.selection_mode(), "roi_polygon")
+        window.preview_label._polygon_points[:] = [(10.0, 10.0), (30.0, 10.0)]
+        task.pipeline.results = [
+            TrackerResult(1, 1.0 / 30.0, {"x_px": 10.0}, {"x_px": 10.0}, 0.9, "ok"),
+            TrackerResult(2, 2.0 / 30.0, {"x_px": 20.0}, {"x_px": 20.0}, 0.9, "ok"),
+        ]
+        window._render_results(task)
+        window._ask_unapplied_drafts = lambda _action, _names: False  # type: ignore[method-assign]
+        window.results_table.selectRow(1)
+        QCoreApplication.processEvents()
+        self.assertEqual(task.preview_frame_index, 1)
+        self.assertEqual(current_result_row(window), 0)
+        self.assertEqual(window.preview_label._polygon_points, [(10.0, 10.0), (30.0, 10.0)])
+        self.assertEqual(prompts[0], ("moving to frame 1", ("ROI drawing",)))
+
     def test_circular_roi_selection_updates_roi_and_polar_mapping(self) -> None:
         window = NeoTrackerWindow()
         self.addCleanup(close_window_safely, window)

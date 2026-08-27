@@ -3376,10 +3376,36 @@ class NeoTrackerWindow(
                 f"Preset changed to {descriptor.title}; previous editor drafts were discarded.", 6000
             )
 
-    def _preview_frame_changed(self, frame_index: int) -> None:
-        self.current_task.preview_frame_index = self._clamped_preview_frame(self.current_task, frame_index)
+    def _preview_frame_changed(
+        self,
+        frame_index: int,
+        *,
+        sync_review_selection: bool = True,
+    ) -> bool:
+        target_frame = self._clamped_preview_frame(self.current_task, frame_index)
+        if (
+            target_frame != int(self.current_task.preview_frame_index)
+            and not self._finish_preview_selection_before(f"moving to frame {target_frame}")
+        ):
+            self._stop_playback()
+            self._sync_preview_position_controls(self.current_task)
+            self._sync_review_selection_to_frame()
+            if self._applying_selection_revision is not None:
+                current_frame = int(self.current_task.preview_frame_index)
+                source_revision = self.selection_session.state.source_revision
+                QTimer.singleShot(
+                    0,
+                    lambda: self.selection_session.select_frame(
+                        current_frame,
+                        origin=SelectionOrigin.VIDEO,
+                        expected_source_revision=source_revision,
+                    ),
+                )
+            return False
+        self.current_task.preview_frame_index = target_frame
         self._sync_preview_position_controls(self.current_task)
-        self._sync_review_selection_to_frame()
+        if sync_review_selection:
+            self._sync_review_selection_to_frame()
         self._render_preview()
         if (
             self._applying_selection_revision is None
@@ -3391,6 +3417,7 @@ class NeoTrackerWindow(
                 origin=SelectionOrigin.VIDEO,
                 expected_source_revision=state.source_revision,
             )
+        return True
 
     def _render_task(self, sync_combo: bool = True, *, refresh_project_state: bool = True) -> None:
         task = self.current_task
@@ -4224,7 +4251,8 @@ class NeoTrackerWindow(
     def _jump_to_edit_frame(self, frame_index: int) -> None:
         frame_index = self._clamped_preview_frame(self.current_task, int(frame_index))
         self._stop_playback()
-        self._preview_frame_changed(frame_index)
+        if not self._preview_frame_changed(frame_index):
+            return
         if self.review_tab is not None:
             self.sidebar_tabs.setCurrentWidget(self.review_tab)
         self.statusBar().showMessage(f"Jumped to edit frame {frame_index}.", 4000)
@@ -4232,7 +4260,8 @@ class NeoTrackerWindow(
     def _jump_to_diagnostic_frame(self, frame_index: int) -> None:
         frame_index = self._clamped_preview_frame(self.current_task, int(frame_index))
         self._stop_playback()
-        self._preview_frame_changed(frame_index)
+        if not self._preview_frame_changed(frame_index):
+            return
         if self.review_tab is not None:
             self.sidebar_tabs.setCurrentWidget(self.review_tab)
         self.statusBar().showMessage(f"Selected diagnostic frame {frame_index}.", 4000)
@@ -4729,7 +4758,11 @@ class NeoTrackerWindow(
         task = self.current_task
         if not task.media_info or not task.media_info.available:
             return
+        if self._playback_coordinator.closing:
+            return
         info = task.media_info
+        if not self._finish_preview_selection_before("starting preview playback"):
+            return
         if not self._playback_coordinator.start(
             current_frame=task.preview_frame_index,
             frame_count=info.frame_count,
@@ -4791,7 +4824,8 @@ class NeoTrackerWindow(
             if tick.reached_end:
                 self._stop_playback(reached_end=True)
             return
-        self._preview_frame_changed(tick.frame_index)
+        if not self._preview_frame_changed(tick.frame_index):
+            return
         if not self._playback_coordinator.active:
             return
         self._set_playback_status(
@@ -6059,12 +6093,10 @@ class NeoTrackerWindow(
         if index < 0 or index >= len(results):
             return
         self._stop_playback()
-        self.current_task.preview_frame_index = self._clamped_preview_frame(
-            self.current_task,
+        self._preview_frame_changed(
             results[index].frame_index,
+            sync_review_selection=False,
         )
-        self._sync_preview_position_controls(self.current_task)
-        self._render_preview()
 
     def _sync_review_selection_to_frame(self) -> None:
         index = self.review_controller.preferred_result_index(

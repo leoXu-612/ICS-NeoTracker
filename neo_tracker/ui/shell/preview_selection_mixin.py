@@ -22,8 +22,22 @@ class PreviewSelectionMixin:
         draft_name = self._active_preview_selection_draft_name()
         return draft_name is None or self._confirm_draft_replacement(action, (draft_name,))
 
+    def _prepare_preview_selection(self, action: str) -> bool:
+        if not self._confirm_preview_selection_replacement(action):
+            return False
+        self._stop_playback()
+        return True
+
+    def _finish_preview_selection_before(self, action: str) -> bool:
+        if self._active_preview_selection_draft_name() is None:
+            return True
+        if not self._confirm_preview_selection_replacement(action):
+            return False
+        self.preview_label.cancel_selection()
+        return True
+
     def _start_roi_selection(self) -> None:
-        if not self._confirm_preview_selection_replacement("starting a rectangle ROI drawing"):
+        if not self._prepare_preview_selection("starting a rectangle ROI drawing"):
             return
         if not self.preview_label.begin_roi_selection():
             QMessageBox.information(
@@ -36,7 +50,7 @@ class PreviewSelectionMixin:
             self.sidebar_tabs.setCurrentWidget(self.calibration_tab)
 
     def _start_circular_roi_selection(self) -> None:
-        if not self._confirm_preview_selection_replacement("starting a circle ROI drawing"):
+        if not self._prepare_preview_selection("starting a circle ROI drawing"):
             return
         if not self.preview_label.begin_circular_roi_selection():
             QMessageBox.information(
@@ -49,7 +63,7 @@ class PreviewSelectionMixin:
             self.sidebar_tabs.setCurrentWidget(self.calibration_tab)
 
     def _start_annular_roi_selection(self) -> None:
-        if not self._confirm_preview_selection_replacement("starting an annular ROI drawing"):
+        if not self._prepare_preview_selection("starting an annular ROI drawing"):
             return
         if not self.preview_label.begin_annular_roi_selection():
             QMessageBox.information(
@@ -62,7 +76,7 @@ class PreviewSelectionMixin:
             self.sidebar_tabs.setCurrentWidget(self.calibration_tab)
 
     def _start_polygon_roi_selection(self) -> None:
-        if not self._confirm_preview_selection_replacement("starting a polygon ROI drawing"):
+        if not self._prepare_preview_selection("starting a polygon ROI drawing"):
             return
         if not self.preview_label.begin_polygon_roi_selection():
             QMessageBox.information(
@@ -79,7 +93,7 @@ class PreviewSelectionMixin:
         )
 
     def _start_curve_band_roi_selection(self) -> None:
-        if not self._confirm_preview_selection_replacement("starting a curve-band ROI drawing"):
+        if not self._prepare_preview_selection("starting a curve-band ROI drawing"):
             return
         if not self.preview_label.begin_curve_band_roi_selection(self.curve_half_width_spin.value()):
             QMessageBox.information(
@@ -96,7 +110,7 @@ class PreviewSelectionMixin:
         )
 
     def _start_calibration_selection(self) -> None:
-        if not self._confirm_preview_selection_replacement("starting a calibration drawing"):
+        if not self._prepare_preview_selection("starting a calibration drawing"):
             return
         if not self.preview_label.begin_calibration_selection():
             QMessageBox.information(
@@ -116,7 +130,7 @@ class PreviewSelectionMixin:
                 "The selected preset does not use color-marker detection.",
             )
             return
-        if not self._confirm_preview_selection_replacement("starting color sampling"):
+        if not self._prepare_preview_selection("starting color sampling"):
             return
         if not self.preview_label.begin_color_sample_selection():
             QMessageBox.information(
