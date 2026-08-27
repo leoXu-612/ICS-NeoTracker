@@ -34,7 +34,7 @@ class ConfigurationProtectionMixin:
         if self._ask_unapplied_drafts(action, conflicts):
             return True
         self.statusBar().showMessage(
-            "Configuration change canceled. Unapplied editor work is unchanged.",
+            f"Canceled: {action}. Unapplied editor work is unchanged.",
             6000,
         )
         return False

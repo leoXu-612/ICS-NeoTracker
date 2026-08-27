@@ -2177,6 +2177,7 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertEqual(prompts, [("starting a calibration drawing", ("ROI drawing",))])
         self.assertEqual(window.preview_label.selection_mode(), "roi_polygon")
         self.assertEqual(window.preview_label._polygon_points, [(10.0, 10.0), (30.0, 10.0)])
+        self.assertIn("Canceled: starting a calibration drawing", window.statusBar().currentMessage())
 
         window._ask_unapplied_drafts = lambda _action, _names: True  # type: ignore[method-assign]
         window._start_calibration_selection()
