@@ -3686,6 +3686,8 @@ class MainWindowStructureTests(unittest.TestCase):
         window = NeoTrackerWindow()
         self.addCleanup(close_window_safely, window)
         paths = ["/media/slow-a.mp4", "/media/slow-b.mp4"]
+        window.advanced_config_view.insertPlainText(" ")
+        window._ask_unapplied_drafts = lambda _action, _names: True  # type: ignore[method-assign]
 
         def slow_probe(_path: str) -> MediaInfo:
             time.sleep(0.05)
@@ -3702,6 +3704,7 @@ class MainWindowStructureTests(unittest.TestCase):
         wait_for_media_probe(window)
 
         self.assertEqual(window.tasks, [])
+        self.assertTrue(window._advanced_config_dirty)
         self.assertEqual(window.add_media_button.text(), "Add media")
         self.assertTrue(window.add_media_button.isEnabled())
         self.assertIn("No selected files were added", window.statusBar().currentMessage())
@@ -3743,6 +3746,7 @@ class MainWindowStructureTests(unittest.TestCase):
 
         with patch.object(QFileDialog, "getOpenFileNames", return_value=(["/offline/take-a.mp4"], "")):
             window._add_media()
+        wait_for_media_probe(window)
 
         self.assertEqual(window.tasks, [])
         self.assertIs(window.current_task, scratch)

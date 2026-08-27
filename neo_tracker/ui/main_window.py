@@ -2030,15 +2030,6 @@ class NeoTrackerWindow(
         )
         if not paths:
             return
-        replacing_scratch_context = not self.tasks
-        if replacing_scratch_context and not self._confirm_editor_context_transition(
-            "adding media to this project"
-        ):
-            self.statusBar().showMessage(
-                "Add media canceled. Current editor work is still available.",
-                6000,
-            )
-            return
         self._start_media_probe(paths)
 
     def _start_media_probe(
@@ -2081,6 +2072,14 @@ class NeoTrackerWindow(
         if self._background_tasks.closing:
             return
         self._set_media_probe_busy(False)
+        if not self.tasks and not self._confirm_editor_context_transition(
+            "adding media to this project"
+        ):
+            self.statusBar().showMessage(
+                "Add media canceled. Current editor work is still available.",
+                6000,
+            )
+            return
         self._discard_removed_task_undo()
         self._explicit_empty_project = False
         if not self.tasks:
