@@ -1625,6 +1625,53 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertEqual(task.tracking_outcome, "")
         self.assertEqual(task.tracking_note, "")
 
+    def test_media_relink_protects_other_editor_and_preview_drafts(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        task = window.current_task
+        original_path = "/experiments/original.mp4"
+        replacement_path = "/experiments/replacement.mp4"
+        info = MediaInfo(
+            fps=30.0,
+            frame_count=120,
+            width=120,
+            height=80,
+            duration_s=4.0,
+            available=True,
+        )
+        task.media_path = original_path
+        task.media_info = info
+        window.preview_label.set_frame(np.zeros((80, 120, 3), dtype=np.uint8))
+        window.roi_geometry_editor.rectangle_x_spin.setValue(14.5)
+        window._start_polygon_roi_selection()
+        window.preview_label._polygon_points[:] = [(10.0, 10.0), (30.0, 10.0)]
+        window._stage_media_relink(replacement_path, info)
+        prompts: list[tuple[str, tuple[str, ...]]] = []
+        window._ask_unapplied_drafts = (  # type: ignore[method-assign]
+            lambda action, names: prompts.append((action, names)) or False
+        )
+
+        self.assertFalse(window._apply_media_relink())
+        self.assertEqual(
+            prompts,
+            [("applying media replacement", ("ROI geometry", "ROI drawing"))],
+        )
+        self.assertEqual(task.media_path, original_path)
+        self.assertTrue(window.roi_geometry_editor.is_dirty())
+        self.assertEqual(window.preview_label.selection_mode(), "roi_polygon")
+        self.assertEqual(window.preview_label._polygon_points, [(10.0, 10.0), (30.0, 10.0)])
+        self.assertEqual(window._media_relink_candidate_path, replacement_path)
+
+        window._ask_unapplied_drafts = lambda _action, _names: True  # type: ignore[method-assign]
+        with patch.object(window, "_queue_preview_decode"):
+            self.assertTrue(window._apply_media_relink())
+
+        self.assertEqual(task.media_path, replacement_path)
+        self.assertFalse(window.roi_geometry_editor.is_dirty())
+        self.assertIsNone(window.preview_label.selection_mode())
+        self.assertEqual(window.preview_label._polygon_points, [])
+        self.assertEqual(window._unapplied_draft_names(), ())
+
     def test_preview_canvas_accepts_frames_and_roi_overlay(self) -> None:
         window = NeoTrackerWindow()
         self.addCleanup(close_window_safely, window)

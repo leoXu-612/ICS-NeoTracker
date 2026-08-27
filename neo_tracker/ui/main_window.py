@@ -2393,6 +2393,11 @@ class NeoTrackerWindow(
             return False
         if not assessment.can_apply:
             return False
+        replaced_drafts = tuple(
+            name for name in self._unapplied_draft_names() if name != "Media replacement"
+        )
+        if not self._confirm_draft_replacement("applying media replacement", replaced_drafts):
+            return False
 
         self._stop_playback()
         self._invalidate_review_responses(task)
@@ -2412,6 +2417,7 @@ class NeoTrackerWindow(
 
         results_preserved = not assessment.clear_results
         self._cancel_media_relink(render=False)
+        self.preview_label.cancel_selection()
         self._render_task(refresh_project_state=False)
         self._mark_project_changed()
         self.media_relink_panel.show_applied(info, results_preserved=results_preserved)
