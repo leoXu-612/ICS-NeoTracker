@@ -3422,7 +3422,7 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertFalse(window._advanced_config_dirty)
         self.assertNotIn("Pipeline JSON", window._unapplied_draft_names())
 
-    def test_draft_transition_keep_editing_preserves_work_and_discard_clears_it(self) -> None:
+    def test_draft_transition_approval_defers_discard_until_commit(self) -> None:
         window = NeoTrackerWindow()
         self.addCleanup(close_window_safely, window)
         window.project_path = Path("/experiments/session-04.ntproj")
@@ -3440,10 +3440,8 @@ class MainWindowStructureTests(unittest.TestCase):
 
         window._ask_unapplied_drafts = lambda _action, _names: True  # type: ignore[method-assign]
         self.assertTrue(window._confirm_project_transition("opening another project"))
-        self.assertFalse(window.calibration_editor.is_dirty())
-        self.assertEqual(window._unapplied_draft_names(), ())
-        self.assertTrue(window.global_draft_label.isHidden())
-        self.assertIn("editor work discarded", window.statusBar().currentMessage())
+        self.assertTrue(window.calibration_editor.is_dirty())
+        self.assertIn("Calibration", window._unapplied_draft_names())
 
     def test_unsaved_cancel_does_not_prematurely_discard_approved_drafts(self) -> None:
         window = NeoTrackerWindow()
@@ -3463,7 +3461,7 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertTrue(window.calibration_editor.is_dirty())
         self.assertIn("Calibration", window._unapplied_draft_names())
 
-    def test_open_cancel_preserves_unapplied_draft_and_current_project(self) -> None:
+    def test_project_open_discards_draft_only_after_successful_commit(self) -> None:
         window = NeoTrackerWindow()
         self.addCleanup(close_window_safely, window)
         window._apply_project(
@@ -3496,9 +3494,17 @@ class MainWindowStructureTests(unittest.TestCase):
                 window._ask_unapplied_drafts = lambda _action, _names: False  # type: ignore[method-assign]
                 window._open_project()
 
-        self.assertEqual(window.project_path, Path("/experiments/current.ntproj"))
-        self.assertTrue(window.calibration_editor.is_dirty())
-        self.assertIn("Current project and editor work", window.statusBar().currentMessage())
+                self.assertEqual(window.project_path, Path("/experiments/current.ntproj"))
+                self.assertTrue(window.calibration_editor.is_dirty())
+                self.assertIn("Current project and editor work", window.statusBar().currentMessage())
+
+                window._ask_unapplied_drafts = lambda _action, _names: True  # type: ignore[method-assign]
+                window._open_project()
+                wait_for_project_open(window)
+
+        self.assertEqual(window.project_path, target_path)
+        self.assertFalse(window.calibration_editor.is_dirty())
+        self.assertEqual(window._unapplied_draft_names(), ())
 
     def test_apply_project_defensively_cancels_active_preview_selection(self) -> None:
         window = NeoTrackerWindow()
@@ -4245,6 +4251,8 @@ class MainWindowStructureTests(unittest.TestCase):
         current_path = Path("/experiments/current.ntproj")
         window.project_path = current_path
         window._set_project_clean()
+        window.calibration_editor.set_line((20.0, 30.0), (220.0, 30.0))
+        window._ask_unapplied_drafts = lambda _action, _names: True  # type: ignore[method-assign]
         with tempfile.TemporaryDirectory() as tmpdir:
             target_path = Path(tmpdir) / "invalid.ntproj"
             target_path.write_text("not-json", encoding="utf-8")
@@ -4258,6 +4266,7 @@ class MainWindowStructureTests(unittest.TestCase):
 
         self.assertEqual(window.project_path, current_path)
         self.assertIs(window.current_task, window.scratch_task)
+        self.assertTrue(window.calibration_editor.is_dirty())
         warning.assert_called_once()
         self.assertIn("Could not open project", warning.call_args.args[2])
 
@@ -4278,6 +4287,8 @@ class MainWindowStructureTests(unittest.TestCase):
         )
         window.project_path = current_path
         window._set_project_clean()
+        window.calibration_editor.set_line((20.0, 30.0), (220.0, 30.0))
+        window._ask_unapplied_drafts = lambda _action, _names: True  # type: ignore[method-assign]
 
         def slow_probe(_path: str) -> MediaInfo:
             time.sleep(0.05)
@@ -4304,6 +4315,7 @@ class MainWindowStructureTests(unittest.TestCase):
 
         self.assertEqual(window.project_path, current_path)
         self.assertEqual([task.media_path for task in window.tasks], ["/media/current.mp4"])
+        self.assertTrue(window.calibration_editor.is_dirty())
         self.assertEqual(window.open_project_button.text(), "Open Project")
         self.assertIn("current project is unchanged", window.statusBar().currentMessage())
 

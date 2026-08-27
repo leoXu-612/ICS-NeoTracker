@@ -2317,7 +2317,10 @@ class NeoTrackerWindow(
             return
         self._set_media_probe_busy(False)
         if not job.completed:
-            self._render_task(refresh_project_state=False)
+            if self._unapplied_draft_names():
+                self._render_tracking_status(self.current_task)
+            else:
+                self._render_task(refresh_project_state=False)
         if job.failure_detail:
             QMessageBox.warning(
                 self,
@@ -2760,8 +2763,6 @@ class NeoTrackerWindow(
             elif decision != QMessageBox.StandardButton.Discard:
                 return False
 
-        if draft_names:
-            self._discard_unapplied_drafts()
         return True
 
     def _project_from_window(self, path: Path | None = None) -> NeoTrackerProject:
