@@ -35,6 +35,8 @@ class ReviewEditingMixin:
         if not self.current_task.pipeline.results:
             QMessageBox.information(self, "Correct point", "Run tracking before correcting a result.")
             return
+        if not self._confirm_preview_selection_replacement("starting a manual correction"):
+            return
         if not self.preview_label.begin_manual_point_selection():
             QMessageBox.information(
                 self, "Correct point", "Load a readable video frame before correcting a point."

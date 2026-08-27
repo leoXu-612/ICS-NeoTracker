@@ -172,6 +172,7 @@ from neo_tracker.ui.shell.bindings import (
     PRIMARY_BUTTON_ATTRIBUTES,
 )
 from neo_tracker.ui.shell.physics_workspace_mixin import PhysicsWorkspaceMixin
+from neo_tracker.ui.shell.preview_selection_mixin import PreviewSelectionMixin
 from neo_tracker.ui.shell.review_editing_mixin import ReviewEditingMixin, ReviewUndo
 from neo_tracker.ui.tracking_worker import (
     TRACKING_SOURCE_CHANGED_PREFIX,
@@ -233,6 +234,7 @@ class ElidingLabel(QLabel):
 
 class NeoTrackerWindow(
     ConfigurationProtectionMixin,
+    PreviewSelectionMixin,
     ReviewEditingMixin,
     PhysicsWorkspaceMixin,
     CoordinatorCompatibilityMixin,
@@ -2676,16 +2678,7 @@ class NeoTrackerWindow(
         if self._media_relink_task is self.current_task and self._media_relink_candidate_path is not None:
             names.append("Media replacement")
 
-        selection_name = {
-            "roi_rectangle": "ROI drawing",
-            "roi_circle": "ROI drawing",
-            "roi_annulus": "ROI drawing",
-            "roi_polygon": "ROI drawing",
-            "roi_curve_band": "ROI drawing",
-            "calibration": "Calibration drawing",
-            "manual_point": "Manual correction",
-            "sample_color": "Color sampling",
-        }.get(self.preview_label.selection_mode())
+        selection_name = self._active_preview_selection_draft_name()
         if selection_name is not None and selection_name not in names:
             names.append(selection_name)
         return tuple(names)
@@ -4870,17 +4863,6 @@ class NeoTrackerWindow(
         fps = task.media_info.fps if task.media_info and task.media_info.fps > 0 else 30.0
         return PlaybackCoordinator.timer_interval_ms(fps)
 
-    def _start_roi_selection(self) -> None:
-        if not self.preview_label.begin_roi_selection():
-            QMessageBox.information(
-                self,
-                "ROI selection",
-                "Load a readable video frame before marking an ROI.",
-            )
-            return
-        if self.calibration_tab is not None:
-            self.sidebar_tabs.setCurrentWidget(self.calibration_tab)
-
     def _preview_selection_mode_changed(self, mode: object) -> None:
         selection_mode = str(mode) if mode is not None else ""
         self.finish_roi_drawing_button.setEnabled(selection_mode in {"roi_polygon", "roi_curve_band"})
@@ -4951,58 +4933,6 @@ class NeoTrackerWindow(
             return
         self.roi_geometry_editor.move_node(index, point)
 
-    def _start_circular_roi_selection(self) -> None:
-        if not self.preview_label.begin_circular_roi_selection():
-            QMessageBox.information(
-                self,
-                "Circle ROI selection",
-                "Load a readable video frame before marking a circle ROI.",
-            )
-            return
-        if self.calibration_tab is not None:
-            self.sidebar_tabs.setCurrentWidget(self.calibration_tab)
-
-    def _start_annular_roi_selection(self) -> None:
-        if not self.preview_label.begin_annular_roi_selection():
-            QMessageBox.information(
-                self,
-                "Annular ROI selection",
-                "Load a readable video frame before marking an annular ROI.",
-            )
-            return
-        if self.calibration_tab is not None:
-            self.sidebar_tabs.setCurrentWidget(self.calibration_tab)
-
-    def _start_polygon_roi_selection(self) -> None:
-        if not self.preview_label.begin_polygon_roi_selection():
-            QMessageBox.information(
-                self,
-                "Polygon ROI selection",
-                "Load a readable video frame before marking a polygon ROI.",
-            )
-            return
-        if self.calibration_tab is not None:
-            self.sidebar_tabs.setCurrentWidget(self.calibration_tab)
-        self.statusBar().showMessage(
-            "Click polygon vertices in the preview, then use Finish Drawing, right click, or double click.",
-            8000,
-        )
-
-    def _start_curve_band_roi_selection(self) -> None:
-        if not self.preview_label.begin_curve_band_roi_selection(self.curve_half_width_spin.value()):
-            QMessageBox.information(
-                self,
-                "Curve band ROI selection",
-                "Load a readable video frame before marking a curve band ROI.",
-            )
-            return
-        if self.calibration_tab is not None:
-            self.sidebar_tabs.setCurrentWidget(self.calibration_tab)
-        self.statusBar().showMessage(
-            "Click curve centerline points in the preview, then use Finish Drawing, right click, or double click.",
-            8000,
-        )
-
     def _finish_roi_drawing_selection(self) -> None:
         if self.preview_label.finish_polygon_roi_selection() or self.preview_label.finish_curve_band_roi_selection():
             self.statusBar().showMessage("ROI updated. Run tracking again.", 6000)
@@ -5016,36 +4946,6 @@ class NeoTrackerWindow(
     def _cancel_preview_selection(self) -> None:
         self.preview_label.cancel_selection()
         self.statusBar().showMessage("Preview drawing cancelled.", 3000)
-
-    def _start_calibration_selection(self) -> None:
-        if not self.preview_label.begin_calibration_selection():
-            QMessageBox.information(
-                self,
-                "Calibration rod selection",
-                "Load a readable video frame before marking a calibration rod.",
-            )
-            return
-        if self.calibration_tab is not None:
-            self.sidebar_tabs.setCurrentWidget(self.calibration_tab)
-
-    def _start_color_sampling(self) -> None:
-        if self._color_blob_observation() is None:
-            QMessageBox.information(
-                self,
-                "Marker color",
-                "The selected preset does not use color-marker detection.",
-            )
-            return
-        if not self.preview_label.begin_color_sample_selection():
-            QMessageBox.information(
-                self,
-                "Marker color",
-                "Load a readable video frame before sampling marker color.",
-            )
-            return
-        if self.tracking_tab is not None:
-            self.sidebar_tabs.setCurrentWidget(self.tracking_tab)
-        self.statusBar().showMessage("Click the marker color in the preview canvas.", 6000)
 
     def _color_sample_selected(self, point: object) -> None:
         observation = self._color_blob_observation()

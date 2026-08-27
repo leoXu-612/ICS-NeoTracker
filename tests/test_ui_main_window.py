@@ -2074,6 +2074,31 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertFalse(window.finish_roi_drawing_button.isEnabled())
         self.assertTrue(window.cancel_roi_drawing_button.isEnabled())
 
+    def test_preview_selection_switch_requires_explicit_draft_discard(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        window.preview_label.set_frame(np.zeros((80, 120, 3), dtype=np.uint8))
+        window._start_polygon_roi_selection()
+        window.preview_label._polygon_points[:] = [(10.0, 10.0), (30.0, 10.0)]
+        prompts: list[tuple[str, tuple[str, ...]]] = []
+
+        def reject_replacement(action: str, names: tuple[str, ...]) -> bool:
+            prompts.append((action, names))
+            return False
+
+        window._ask_unapplied_drafts = reject_replacement  # type: ignore[method-assign]
+        window._start_calibration_selection()
+
+        self.assertEqual(prompts, [("starting a calibration drawing", ("ROI drawing",))])
+        self.assertEqual(window.preview_label.selection_mode(), "roi_polygon")
+        self.assertEqual(window.preview_label._polygon_points, [(10.0, 10.0), (30.0, 10.0)])
+
+        window._ask_unapplied_drafts = lambda _action, _names: True  # type: ignore[method-assign]
+        window._start_calibration_selection()
+
+        self.assertEqual(window.preview_label.selection_mode(), "calibration")
+        self.assertEqual(window.preview_label._polygon_points, [])
+
     def test_circular_roi_selection_updates_roi_and_polar_mapping(self) -> None:
         window = NeoTrackerWindow()
         self.addCleanup(close_window_safely, window)
