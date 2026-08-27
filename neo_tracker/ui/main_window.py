@@ -2701,6 +2701,18 @@ class NeoTrackerWindow(
         self.global_draft_label.setVisible(bool(draft_names))
         return draft_names
 
+    def _block_tracking_for_unapplied_drafts(self, action: str) -> bool:
+        draft_names = self._refresh_draft_state()
+        if not draft_names:
+            return False
+        self.statusBar().showMessage(
+            f"{action} not started. Finish, apply, or cancel drafts first: "
+            + ", ".join(draft_names)
+            + ".",
+            8000,
+        )
+        return True
+
     def _confirm_editor_context_transition(self, action: str) -> bool:
         draft_names = self._refresh_draft_state()
         if not draft_names:
@@ -5467,6 +5479,8 @@ class NeoTrackerWindow(
         if task.media_path is None:
             QMessageBox.information(self, "Run tracking", "Add a video file before running tracking.")
             return
+        if self._block_tracking_for_unapplied_drafts("Full tracking"):
+            return
         info = self._fresh_tracking_media(task, action="Tracking")
         if info is None:
             return
@@ -5505,6 +5519,8 @@ class NeoTrackerWindow(
         index = self._current_result_index()
         if index is None:
             QMessageBox.information(self, "Rerun after", "Select a result row or move to a tracked frame first.")
+            return
+        if self._block_tracking_for_unapplied_drafts("Rerun"):
             return
         info = self._fresh_tracking_media(task, action="Rerun")
         if task.media_path is None or info is None or not info.available or info.frame_count <= 0:

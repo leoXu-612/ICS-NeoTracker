@@ -2201,6 +2201,33 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertEqual(window.preview_label._polygon_points, [(10.0, 10.0), (30.0, 10.0)])
         self.assertEqual(prompts[0], ("moving to frame 1", ("ROI drawing",)))
 
+    def test_tracking_entries_block_unapplied_preview_draft_before_media_probe(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        task = window.current_task
+        task.media_path = "/synthetic/video.mp4"
+        task.pipeline.results = [
+            TrackerResult(0, 0.0, {"x_px": 10.0}, {"x_px": 10.0}, 0.9, "ok")
+        ]
+        window.preview_label.set_frame(np.zeros((80, 120, 3), dtype=np.uint8))
+        window._start_polygon_roi_selection()
+        window.preview_label._polygon_points[:] = [(10.0, 10.0), (30.0, 10.0)]
+
+        with (
+            patch.object(window, "_fresh_tracking_media") as fresh_media,
+            patch.object(window, "_start_tracking_job") as start_job,
+            patch.object(window, "_current_result_index", return_value=0),
+        ):
+            window._run_tracking()
+            self.assertIn("Full tracking not started", window.statusBar().currentMessage())
+            window._rerun_after_current_result()
+
+        fresh_media.assert_not_called()
+        start_job.assert_not_called()
+        self.assertIn("Rerun not started", window.statusBar().currentMessage())
+        self.assertEqual(window.preview_label.selection_mode(), "roi_polygon")
+        self.assertEqual(window.preview_label._polygon_points, [(10.0, 10.0), (30.0, 10.0)])
+
     def test_circular_roi_selection_updates_roi_and_polar_mapping(self) -> None:
         window = NeoTrackerWindow()
         self.addCleanup(close_window_safely, window)
