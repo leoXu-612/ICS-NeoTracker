@@ -188,6 +188,15 @@ class PhysicsWorkspaceMixin:
             expected_source_revision=state.source_revision,
         )
 
+    def _physics_series_activated(self, series_id: str) -> None:
+        source = self._physics_series_by_id.get(series_id)
+        if source is not None:
+            self.selection_session.select_series(
+                source.series_id,
+                origin=SelectionOrigin.TABLE,
+                expected_source_revision=source.source_revision,
+            )
+
     def _physics_plot_sample_activated(self, series_id: str, sample_index: int) -> None:
         state = self.selection_session.state
         self.selection_session.select_sample(
@@ -865,15 +874,16 @@ class PhysicsWorkspaceMixin:
             state.match.value,
         )
         source = self._physics_series_by_id.get(state.selected_series_id or "")
-        if source is not None and state.selected_sample_index is not None:
+        if source is not None:
             self.analysis_workspace_controller.select_series(source.series_id)
-            self.physics_inspector.show_sample(
-                source,
-                state.selected_sample_index,
-                match=state.match.value,
-            )
-        elif source is not None:
-            self.physics_inspector.show_series(source)
+            if state.selected_sample_index is not None:
+                self.physics_inspector.show_sample(
+                    source,
+                    state.selected_sample_index,
+                    match=state.match.value,
+                )
+            else:
+                self.physics_inspector.show_series(source)
         if (
             event.origin is not SelectionOrigin.VIDEO
             and state.selected_frame_index is not None

@@ -31,6 +31,7 @@ from neo_tracker.ui.view_state import PHYSICS_WORKSPACE_PAGES, PhysicsWorkspaceS
 class PhysicsWorkspace(QFrame):
     """Collapsible bottom instrument tray for data, plot, fit, and legacy routes."""
 
+    seriesActivated = Signal(str)
     sampleActivated = Signal(str, int)
     plotSampleActivated = Signal(str, int)
     rangeSelected = Signal(float, float)
@@ -422,6 +423,7 @@ class PhysicsWorkspace(QFrame):
             self.copy_status_label.setText(
                 f"{len(source):,} aligned samples · {source.source_kind} · {unit}"
             )
+            self.seriesActivated.emit(source.series_id)
 
     def _table_selection_changed(self) -> None:
         rows = self.series_table.selectionModel().selectedRows()

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from dataclasses import replace
+from pathlib import Path
 import tempfile
 import unittest
-from pathlib import Path
 from unittest.mock import patch
 
 import numpy as np
@@ -204,6 +205,24 @@ class MainWindowPhysicsWorkspaceTests(unittest.TestCase):
         self.assertEqual(state.selected_sample_index, 1)
         self.assertEqual(window.preview_label.selection_mode(), "roi_polygon")
         self.assertEqual(window.preview_label._polygon_points, [(10.0, 10.0), (30.0, 10.0)])
+
+    def test_data_quantity_change_updates_the_shared_action_source(self) -> None:
+        window = self.make_window()
+        source = self.sparse_series()
+        other = replace(source, series_id="filtered:y", name="Filtered y")
+        self.assertTrue(window.set_physics_series((source, other)))
+
+        window.physics_workspace.series_combo.setCurrentIndex(
+            window.physics_workspace.series_combo.findData(other.series_id)
+        )
+        QApplication.processEvents()
+
+        self.assertIs(window.physics_workspace.series_model.series, other)
+        self.assertEqual(window.selection_session.state.selected_series_id, other.series_id)
+        self.assertEqual(
+            window.analysis_workspace_controller.state.selected_series_id,
+            other.series_id,
+        )
 
     def test_one_plot_keyboard_action_commits_one_canonical_revision(self) -> None:
         window = self.make_window()

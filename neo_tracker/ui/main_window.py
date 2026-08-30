@@ -482,6 +482,7 @@ class NeoTrackerWindow(
         self.export_physics_analysis_button = self.physics_inspector.export_analysis_button
         self.show_residual_button = self.physics_inspector.show_residual_button
         self.physics_workspace.set_fit_widget(self.fit_panel)
+        self.physics_workspace.seriesActivated.connect(self._physics_series_activated)
         self.physics_workspace.sampleActivated.connect(self._physics_sample_activated)
         self.physics_workspace.plotSampleActivated.connect(
             self._physics_plot_sample_activated
