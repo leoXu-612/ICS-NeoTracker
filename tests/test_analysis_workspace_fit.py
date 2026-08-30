@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication, QWidget
 from neo_tracker.core import TrackerResult
 from neo_tracker.media import MediaInfo
 from neo_tracker.project import NeoTrackerProject, ProjectTaskSnapshot
-from neo_tracker.ui.analysis_workspace_controller import FitDraft
+from neo_tracker.ui.analysis_workspace_controller import AnalysisWorkspaceState, FitDraft
 from neo_tracker.ui.fit_panel import FitPanel
 from neo_tracker.ui.main_window import NeoTrackerWindow
 from tests.test_application_kinematics_controller import (
@@ -87,7 +87,14 @@ class FitPanelTests(unittest.TestCase):
         self.assertTrue(panel.residual_checkbox.isEnabled())
         self.assertTrue(panel.export_button.isEnabled())
 
-        panel.clear_result()
+        panel.apply_state(
+            AnalysisWorkspaceState(
+                engine_available=True,
+                status="running",
+                message="Running a replacement fit…",
+            )
+        )
+        self.assertEqual(panel.parameter_table.rowCount(), 0)
         self.assertEqual(panel.summary_label.text(), "No fit result")
         self.assertEqual(
             panel.summary_label.accessibleDescription(),

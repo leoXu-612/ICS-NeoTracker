@@ -289,7 +289,7 @@ class FitPanel(QWidget):
         self._set_status(state.message)
         if state.fit_result is not None:
             self.show_result(state.fit_result)
-        elif state.status in {"dirty", "failed", "stale", "unavailable", "empty"}:
+        else:
             self.clear_result()
         self.residual_checkbox.blockSignals(True)
         self.residual_checkbox.setChecked(state.residual_visible)
