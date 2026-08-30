@@ -80,7 +80,8 @@ class PhysicsPlotWidgetTests(unittest.TestCase):
     def test_keyboard_moves_selection_and_exports_image(self) -> None:
         plot = PhysicsPlot()
         plot.resize(640, 280)
-        plot.set_series((make_series(200),))
+        source = make_series(200)
+        plot.set_series((source,))
         plot.set_selected_sample(10)
         activated: list[tuple[str, int, float]] = []
         plot.sampleActivated.connect(lambda series_id, index, time_s: activated.append((series_id, index, time_s)))
@@ -91,10 +92,24 @@ class PhysicsPlotWidgetTests(unittest.TestCase):
 
         self.assertEqual(activated[-1][:2], ("raw:x", 11))
         self.assertIn("true time", plot.accessibleDescription().lower())
+        self.assertIn(
+            f"from {source.time_s[0]:.6g} to {source.time_s[-1]:.6g} seconds",
+            plot.accessibleDescription(),
+        )
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "plot.png"
             self.assertTrue(plot.export_image(path))
             self.assertGreater(path.stat().st_size, 0)
+            image = QImage(str(path))
+        plot_rect = plot._plot_rect()
+        background = image.pixelColor(0, 0).rgba()
+        self.assertTrue(
+            any(
+                image.pixelColor(x, y).rgba() != background
+                for x in range(round(plot_rect.left()), round(plot_rect.left()) + 40)
+                for y in range(round(plot_rect.bottom()) + 2, round(plot_rect.bottom()) + 14)
+            )
+        )
         plot.close()
 
     def test_mouse_selection_is_limited_to_the_data_rectangle(self) -> None:

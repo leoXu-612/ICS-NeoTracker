@@ -385,8 +385,20 @@ class PhysicsPlot(QWidget):
         self._paint_layer_labels(painter, plot_rect, endpoints)
         self._paint_cursor(painter, plot_rect, bounds)
         painter.setPen(QColor("#626A70"))
+        half_width = plot_rect.width() / 2.0
+        tick_alignment = Qt.AlignmentFlag.AlignVCenter
         painter.drawText(
-            QRectF(plot_rect.left(), plot_rect.bottom() + 8.0, plot_rect.width(), 20.0),
+            QRectF(plot_rect.left(), plot_rect.bottom() + 1.0, half_width, 14.0),
+            tick_alignment | Qt.AlignmentFlag.AlignLeft,
+            f"{time_min:.6g}",
+        )
+        painter.drawText(
+            QRectF(plot_rect.left() + half_width, plot_rect.bottom() + 1.0, half_width, 14.0),
+            tick_alignment | Qt.AlignmentFlag.AlignRight,
+            f"{time_max:.6g}",
+        )
+        painter.drawText(
+            QRectF(plot_rect.left(), plot_rect.bottom() + 14.0, plot_rect.width(), 18.0),
             Qt.AlignmentFlag.AlignCenter,
             "true time (s)",
         )
@@ -557,8 +569,14 @@ class PhysicsPlot(QWidget):
             f"{index} {prepared.name}"
             for index, prepared in enumerate(self._prepared, 1)
         )
+        time_range = self.time_range
+        extent = (
+            f" from {time_range[0]:.6g} to {time_range[1]:.6g} seconds"
+            if time_range is not None
+            else ""
+        )
         self.setAccessibleDescription(
-            f"{len(self._prepared)} visible plot layers against stored true time with "
+            f"{len(self._prepared)} visible plot layers against stored true time{extent} with "
             f"vertical unit {unit}: {labels}. "
             "Invalid samples are visible as line gaps. Use Left and Right Arrow to move the "
             "selected sample."
