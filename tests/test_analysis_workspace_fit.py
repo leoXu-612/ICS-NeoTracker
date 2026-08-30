@@ -79,6 +79,14 @@ class FitPanelTests(unittest.TestCase):
         self.assertTrue(panel.residual_checkbox.isEnabled())
         self.assertTrue(panel.export_button.isEnabled())
 
+        panel.clear_result()
+        self.assertEqual(panel.summary_label.text(), "No fit result")
+        self.assertEqual(
+            panel.summary_label.accessibleDescription(),
+            "No fit result is available.",
+        )
+        self.assertEqual(panel.summary_label.toolTip(), "No fit result is available.")
+
     def test_busy_state_exposes_cancel_and_disables_mutating_inputs(self) -> None:
         panel = FitPanel()
         panel.set_series((make_series(),))

@@ -333,6 +333,8 @@ class FitPanel(QWidget):
     def clear_result(self) -> None:
         self.parameter_table.setRowCount(0)
         self.summary_label.setText("No fit result")
+        self.summary_label.setToolTip("No fit result is available.")
+        self.summary_label.setAccessibleDescription("No fit result is available.")
         self.residual_checkbox.setEnabled(False)
         self.export_button.setEnabled(False)
 
