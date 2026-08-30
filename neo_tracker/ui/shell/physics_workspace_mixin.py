@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import re
 from collections.abc import Sequence
+from dataclasses import replace
 from pathlib import Path
 
 from PySide6.QtCore import QTimer, Qt
@@ -48,6 +49,7 @@ class PhysicsWorkspaceMixin:
         self._physics_replay_queue = []
         self._physics_replay_active_id = None
         self._physics_replay_active_operation = None
+        self._physics_active_definition_id = None
         self._physics_definition_states = {}
         self._physics_series_owner_token = id(task)
         self._physics_series_by_id = {}
@@ -268,6 +270,7 @@ class PhysicsWorkspaceMixin:
             self._physics_replay_active_id = None
             self._physics_replay_active_operation = None
             if definition is not None:
+                self._physics_active_definition_id = definition.analysis_id
                 self._apply_replayed_definition_view(definition, fit_result=result)
             return
         request = state.active_request
@@ -297,7 +300,10 @@ class PhysicsWorkspaceMixin:
                     ),
                     fit_config=request.to_dict(),
                     selected_range_s=(result.range_start_s, result.range_end_s),
-                    view_state={"page": "Fit", "residual_visible": False},
+                    view_state={
+                        "page": self.physics_workspace.current_page,
+                        "residual_visible": False,
+                    },
                     provenance={"engine": "neo-tracker-kinematics-v0.3"},
                 )
             except (TypeError, ValueError) as exc:
@@ -307,6 +313,7 @@ class PhysicsWorkspaceMixin:
                 )
                 return
             self._store_physics_definition(definition)
+            self._physics_active_definition_id = definition.analysis_id
 
     def _export_physics_analysis(self) -> None:
         if not self.analysis_workspace_controller.request_export():
@@ -331,6 +338,7 @@ class PhysicsWorkspaceMixin:
     def _toggle_physics_residual(self) -> None:
         state = self.analysis_workspace_controller.state
         self.analysis_workspace_controller.set_residual_visible(not state.residual_visible)
+        self._persist_active_physics_view()
 
     def _physics_operation_requested(self, request: object) -> None:
         if not isinstance(request, KinematicsOperationRequest):
@@ -649,6 +657,11 @@ class PhysicsWorkspaceMixin:
         *,
         fit_result: FitResult | None = None,
     ) -> None:
+        if fit_result is not None:
+            residual_visible = definition.view_state.get("residual_visible", False)
+            self.analysis_workspace_controller.set_residual_visible(
+                bool(residual_visible)
+            )
         page = definition.view_state.get("page")
         if isinstance(page, str):
             try:
@@ -657,11 +670,6 @@ class PhysicsWorkspaceMixin:
                 pass
         if definition.selected_range_s is not None:
             self.physics_workspace.plot.set_selected_range(*definition.selected_range_s)
-        if fit_result is not None:
-            residual_visible = definition.view_state.get("residual_visible", False)
-            self.analysis_workspace_controller.set_residual_visible(
-                bool(residual_visible)
-            )
         self._physics_definition_states[definition.analysis_id] = "current"
 
     def _persist_operation_definition(
@@ -718,6 +726,22 @@ class PhysicsWorkspaceMixin:
             return
         self._physics_definition_states[definition.analysis_id] = "current"
         self._mark_project_changed()
+
+    def _persist_active_physics_view(self) -> None:
+        analysis_id = getattr(self, "_physics_active_definition_id", None)
+        state = self.analysis_workspace_controller.state
+        if analysis_id is None or state.fit_result is None:
+            return
+        definition = self._physics_definition_by_id(analysis_id)
+        if definition is None:
+            return
+        view_state = dict(definition.view_state)
+        view_state.update(
+            page=self.physics_workspace.current_page,
+            residual_visible=state.residual_visible,
+        )
+        if view_state != dict(definition.view_state):
+            self._store_physics_definition(replace(definition, view_state=view_state))
 
     def _update_physics_actions(self, state: AnalysisWorkspaceState) -> None:
         has_series = bool(
@@ -776,6 +800,7 @@ class PhysicsWorkspaceMixin:
             self.physics_inspector.show_series(source)
         else:
             self.physics_inspector.clear()
+        self._persist_active_physics_view()
 
     def _selection_session_changed(self, event: SelectionEvent) -> None:
         state = event.current

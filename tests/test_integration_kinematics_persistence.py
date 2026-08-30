@@ -145,11 +145,17 @@ class KinematicsPersistenceIntegrationTests(unittest.TestCase):
         fit_definition = next(
             item for item in task.analysis_workspace.definitions if item.fit_config is not None
         )
-        restored_view = replace(
-            fit_definition,
-            view_state={"page": "Plot", "residual_visible": True},
+        source_window._set_project_clean()
+        source_window.physics_workspace.show_page("Plot")
+        source_window._toggle_physics_residual()
+        fit_definition = next(
+            item for item in task.analysis_workspace.definitions if item.fit_config is not None
         )
-        task.analysis_workspace = AnalysisWorkspaceSnapshot((restored_view,))
+        self.assertEqual(
+            fit_definition.view_state,
+            {"page": "Plot", "residual_visible": True},
+        )
+        self.assertTrue(source_window._project_dirty)
 
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "fit-replay.ntproj"
@@ -174,8 +180,9 @@ class KinematicsPersistenceIntegrationTests(unittest.TestCase):
         self.assertFalse(restored_window.fit_panel.valid_only_checkbox.isChecked())
         self.assertNotIn("Physics fit", restored_window._unapplied_draft_names())
         self.assertTrue(restored_window.analysis_workspace_controller.state.residual_visible)
+        self.assertFalse(restored_window._project_dirty)
         self.assertEqual(
-            restored_window._physics_definition_states[restored_view.analysis_id],
+            restored_window._physics_definition_states[fit_definition.analysis_id],
             "current",
         )
 
