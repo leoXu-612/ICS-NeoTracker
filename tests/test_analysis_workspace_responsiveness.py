@@ -82,6 +82,10 @@ class PhysicsWorkspaceResponsiveTests(unittest.TestCase):
         self.assertTrue(window.right_sidebar.isHidden())
         self.assertTrue(window.physics_workspace.collapsed)
         self.assertEqual(window.canvas_focus_button.text(), "Exit Focus")
+        self.assertIn(
+            "Restore the inspector",
+            window.canvas_focus_button.accessibleDescription(),
+        )
         self.assertEqual(store.load(), PhysicsWorkspaceState(False, "Plot", 320))
 
         window.action_registry.action("view.canvas_focus").trigger()
@@ -91,6 +95,10 @@ class PhysicsWorkspaceResponsiveTests(unittest.TestCase):
         self.assertFalse(window.physics_workspace.collapsed)
         self.assertEqual(window.physics_workspace.current_page, "Plot")
         self.assertEqual(window.canvas_focus_button.text(), "Canvas Focus")
+        self.assertIn(
+            "Temporarily hide the inspector",
+            window.canvas_focus_button.accessibleDescription(),
+        )
         self.assertEqual(len(window.main_splitter.sizes()), len(before_sizes))
 
     def test_bounded_layout_state_is_restored_by_a_new_window(self) -> None:

@@ -995,6 +995,9 @@ class PhysicsWorkspaceMixin:
                 tool_tip="Restore the inspector and physics workspace layout.",
             )
             self.canvas_focus_button.setAccessibleName("Exit canvas focus mode")
+            self.canvas_focus_button.setAccessibleDescription(
+                "Restore the inspector and physics workspace layout."
+            )
             self.statusBar().showMessage("Canvas Focus · inspector hidden · physics workspace collapsed")
             return
         self._canvas_focus_active = False
@@ -1009,6 +1012,9 @@ class PhysicsWorkspaceMixin:
             tool_tip="Temporarily enlarge the video canvas.",
         )
         self.canvas_focus_button.setAccessibleName("Enter canvas focus mode")
+        self.canvas_focus_button.setAccessibleDescription(
+            "Temporarily hide the inspector and collapse this workspace to enlarge the video canvas."
+        )
         self.statusBar().showMessage("Canvas Focus ended · workspace layout restored", 4000)
 
     def _physics_route_requested(self, route: str) -> None:
