@@ -100,10 +100,10 @@ class PhysicsWorkspaceMixin:
         if not coordinator.start(request):
             return False
         self._physics_pending_build = None
+        detail = "Building immutable physical series from current tracking Results in the background."
         self.physics_workspace.cursor_label.setText("true time — · checking Results source revision")
-        self.physics_workspace.cursor_label.setAccessibleDescription(
-            "Building immutable physical series from current tracking Results in the background."
-        )
+        self.physics_workspace.cursor_label.setToolTip(detail)
+        self.physics_workspace.cursor_label.setAccessibleDescription(detail)
         self._update_physics_actions(self.analysis_workspace_controller.state)
         return True
 

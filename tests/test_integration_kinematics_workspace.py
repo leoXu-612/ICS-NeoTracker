@@ -186,6 +186,11 @@ class KinematicsWorkspaceIntegrationTests(unittest.TestCase):
         window._set_project_clean()
         window.refresh_physics_series()
         pump_until(lambda: window._kinematics_workspace_coordinator.busy)
+        self.assertIn("Building immutable physical series", window.physics_workspace.cursor_label.toolTip())
+        self.assertEqual(
+            window.physics_workspace.cursor_label.toolTip(),
+            window.physics_workspace.cursor_label.accessibleDescription(),
+        )
 
         window.close()
         pump_until(lambda: window._background_tasks.idle, timeout_s=10.0)
