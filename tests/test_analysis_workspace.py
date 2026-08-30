@@ -111,6 +111,10 @@ class PhysicsWorkspaceTests(unittest.TestCase):
             workspace.series_model.copy_rows([2]),
         )
         self.assertEqual(workspace.copy_status_label.text(), "Copied 1 physical data row.")
+        self.assertEqual(
+            workspace.copy_status_label.accessibleDescription(),
+            workspace.copy_status_label.text(),
+        )
 
         workspace.apply_selection(None, None, None, None, "unavailable")
         self.assertFalse(workspace.copy_row_button.isEnabled())

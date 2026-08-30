@@ -137,6 +137,7 @@ class PhysicsWorkspace(QFrame):
         data_header.addWidget(self.series_combo, 1)
         self.copy_status_label = QLabel("Select rows to inspect exact values and units.")
         self.copy_status_label.setAccessibleName("Physical data selection status")
+        self.copy_status_label.setAccessibleDescription(self.copy_status_label.text())
         self.copy_row_button = QPushButton("Copy Row")
         self.copy_row_button.setAccessibleName("Copy selected physical data row")
         self.copy_row_button.setAccessibleDescription(
@@ -465,12 +466,12 @@ class PhysicsWorkspace(QFrame):
     def _copy_selected_rows(self) -> None:
         rows = self.series_table.selectionModel().selectedRows()
         if not rows:
-            self.copy_status_label.setText("Select a physical data row to copy.")
+            self._set_data_status_text("Select a physical data row to copy.")
             return
         QApplication.clipboard().setText(
             self.series_model.copy_rows((rows[0].row(),))
         )
-        self.copy_status_label.setText("Copied 1 physical data row.")
+        self._set_data_status_text("Copied 1 physical data row.")
 
     def _plot_sample_activated(self, series_id: str, row: int, _time_s: float) -> None:
         source = self._series.get(series_id)
@@ -515,7 +516,11 @@ class PhysicsWorkspace(QFrame):
             )
             unit = source.unit or "unit unavailable"
             text = f"{validity} · {source.name} · {value} {unit}"
+        self._set_data_status_text(text)
+
+    def _set_data_status_text(self, text: str) -> None:
         self.copy_status_label.setText(text)
+        self.copy_status_label.setAccessibleDescription(text)
 
     def _page_changed(self, _index: int) -> None:
         self.pageChanged.emit(self.current_page)
