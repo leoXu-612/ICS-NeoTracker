@@ -96,6 +96,12 @@ class PhysicsPlotWidgetTests(unittest.TestCase):
             f"from {source.time_s[0]:.6g} to {source.time_s[-1]:.6g} seconds",
             plot.accessibleDescription(),
         )
+        bounds = plot._data_bounds()
+        assert bounds is not None
+        self.assertIn(
+            f"vertical values from {bounds[2]:.4g} to {bounds[3]:.4g} {source.unit}",
+            plot.accessibleDescription(),
+        )
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "plot.png"
             self.assertTrue(plot.export_image(path))
@@ -108,6 +114,13 @@ class PhysicsPlotWidgetTests(unittest.TestCase):
                 image.pixelColor(x, y).rgba() != background
                 for x in range(round(plot_rect.left()), round(plot_rect.left()) + 40)
                 for y in range(round(plot_rect.bottom()) + 2, round(plot_rect.bottom()) + 14)
+            )
+        )
+        self.assertTrue(
+            any(
+                image.pixelColor(x, y).rgba() != background
+                for x in range(4, round(plot_rect.left()) - 4)
+                for y in range(round(plot_rect.bottom()) - 14, round(plot_rect.bottom()))
             )
         )
         plot.close()

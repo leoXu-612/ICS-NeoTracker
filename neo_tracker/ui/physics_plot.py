@@ -403,7 +403,22 @@ class PhysicsPlot(QWidget):
             "true time (s)",
         )
         unit = next((item.unit for item in self._series if item.unit), "unit unavailable")
-        painter.drawText(QRectF(4.0, plot_rect.top(), 48.0, 20.0), Qt.AlignmentFlag.AlignRight, unit)
+        y_label_alignment = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        painter.drawText(
+            QRectF(4.0, plot_rect.top(), 48.0, 14.0),
+            y_label_alignment,
+            f"{value_max:.4g}",
+        )
+        painter.drawText(
+            QRectF(4.0, plot_rect.center().y() - 10.0, 48.0, 20.0),
+            y_label_alignment,
+            unit,
+        )
+        painter.drawText(
+            QRectF(4.0, plot_rect.bottom() - 14.0, 48.0, 14.0),
+            y_label_alignment,
+            f"{value_min:.4g}",
+        )
         self._paint_focus_ring(painter)
 
     def resizeEvent(self, event) -> None:  # noqa: N802
@@ -569,15 +584,20 @@ class PhysicsPlot(QWidget):
             f"{index} {prepared.name}"
             for index, prepared in enumerate(self._prepared, 1)
         )
-        time_range = self.time_range
+        bounds = self._data_bounds()
         extent = (
-            f" from {time_range[0]:.6g} to {time_range[1]:.6g} seconds"
-            if time_range is not None
+            f" from {bounds[0]:.6g} to {bounds[1]:.6g} seconds"
+            if bounds is not None
             else ""
         )
+        vertical = (
+            f" and vertical values from {bounds[2]:.4g} to {bounds[3]:.4g} {unit}"
+            if bounds is not None
+            else f" with vertical unit {unit}"
+        )
         self.setAccessibleDescription(
-            f"{len(self._prepared)} visible plot layers against stored true time{extent} with "
-            f"vertical unit {unit}: {labels}. "
+            f"{len(self._prepared)} visible plot layers against stored true time{extent}{vertical}: "
+            f"{labels}. "
             "Invalid samples are visible as line gaps. Use Left and Right Arrow to move the "
             "selected sample."
         )
