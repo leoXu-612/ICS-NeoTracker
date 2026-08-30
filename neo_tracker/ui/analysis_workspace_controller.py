@@ -63,6 +63,7 @@ class AnalysisWorkspaceState:
     series_ids: tuple[str, ...] = ()
     selected_series_id: str | None = None
     source_revision: str | None = None
+    engine_available: bool = False
     status: str = "empty"
     message: str = "No physical series is available."
     active_request: FitRequest | None = None
@@ -123,7 +124,7 @@ class AnalysisWorkspaceController(QObject):
         self._coordinator.idle_reached.connect(self.idleReached)
         self._owner: object | None = None
         self._series: dict[str, SampleSeries] = {}
-        self._state = AnalysisWorkspaceState()
+        self._state = AnalysisWorkspaceState(engine_available=fit_operator is not None)
 
     @property
     def state(self) -> AnalysisWorkspaceState:
@@ -144,9 +145,19 @@ class AnalysisWorkspaceController(QObject):
             self.invalidate("Fit engine changed. Run the fit again.")
         self._fit_operator = operator
         if self._series and operator is not None and self._state.status in {"empty", "unavailable"}:
-            self._replace_state(status="ready", message="Choose a model and true-time range.")
+            self._replace_state(
+                engine_available=True,
+                status="ready",
+                message="Choose a model and true-time range.",
+            )
         elif self._series and operator is None:
-            self._replace_state(status="unavailable", message="The kinematics fit engine is unavailable.")
+            self._replace_state(
+                engine_available=False,
+                status="unavailable",
+                message="The kinematics fit engine is unavailable.",
+            )
+        else:
+            self._replace_state(engine_available=operator is not None)
 
     def set_series(self, owner: object, series: tuple[SampleSeries, ...]) -> None:
         items = tuple(series)
@@ -178,6 +189,7 @@ class AnalysisWorkspaceController(QObject):
             series_ids=tuple(self._series),
             selected_series_id=selected_id,
             source_revision=revision,
+            engine_available=self._fit_operator is not None,
             status=status,
             message=message,
         )
@@ -385,6 +397,7 @@ class AnalysisWorkspaceController(QObject):
             "series_ids": self._state.series_ids,
             "selected_series_id": self._state.selected_series_id,
             "source_revision": self._state.source_revision,
+            "engine_available": self._state.engine_available,
             "status": self._state.status,
             "message": self._state.message,
             "active_request": self._state.active_request,

@@ -282,7 +282,7 @@ class FitPanel(QWidget):
         self._update_controls()
 
     def apply_state(self, state: AnalysisWorkspaceState) -> None:
-        self._engine_available = state.status != "unavailable"
+        self._engine_available = state.engine_available
         self.set_busy(state.status == "running")
         self.status_label.setText(state.message)
         if state.fit_result is not None:

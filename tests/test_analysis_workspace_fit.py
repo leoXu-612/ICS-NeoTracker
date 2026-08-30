@@ -426,6 +426,11 @@ class MainWindowFitIntegrationTests(unittest.TestCase):
         self.assertIsNone(window.selection_session.state.selected_fit_id)
         self.assertFalse(window.fit_panel.residual_checkbox.isEnabled())
         self.assertTrue(window.fit_panel.export_button.isEnabled())
+        self.assertTrue(window.fit_panel.model_combo.isEnabled())
+        self.assertTrue(window.fit_panel.run_button.isEnabled())
+
+        window.set_kinematics_fit_operator(None)
+        self.assertFalse(window.fit_panel.run_button.isEnabled())
 
 
 if __name__ == "__main__":
