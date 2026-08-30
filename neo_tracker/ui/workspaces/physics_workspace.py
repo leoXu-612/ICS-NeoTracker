@@ -282,7 +282,6 @@ class PhysicsWorkspace(QFrame):
         self.series_combo.blockSignals(False)
         self._series_changed(self.series_combo.currentIndex())
         self.plot.set_series(items[:8])
-        self.copy_row_button.setEnabled(bool(items))
         self.export_plot_image_button.setEnabled(bool(items))
         if not items:
             self.set_cursor(None, None, "unavailable")
@@ -340,11 +339,13 @@ class PhysicsWorkspace(QFrame):
             )
             selection.blockSignals(False)
             self.plot.set_selected_sample(int(sample_index), source.series_id)
+            self.copy_row_button.setEnabled(True)
         else:
             self.series_table.selectionModel().blockSignals(True)
             self.series_table.clearSelection()
             self.series_table.selectionModel().blockSignals(False)
             self.plot.set_selected_sample(None)
+            self.copy_row_button.setEnabled(False)
         self.set_cursor(frame_index, time_s, match)
 
     def remember_height(self, height: int) -> None:
@@ -413,6 +414,7 @@ class PhysicsWorkspace(QFrame):
         self.tabs.addTab(widget, name)
 
     def _series_changed(self, _index: int) -> None:
+        self.copy_row_button.setEnabled(False)
         series_id = self.series_combo.currentData()
         source = self._series.get(str(series_id)) if series_id is not None else None
         self.series_model.set_series(source)
@@ -429,10 +431,12 @@ class PhysicsWorkspace(QFrame):
         rows = self.series_table.selectionModel().selectedRows()
         source = self.series_model.series
         if source is None or not rows:
+            self.copy_row_button.setEnabled(False)
             return
         row = int(rows[0].row())
         if not 0 <= row < len(source):
             return
+        self.copy_row_button.setEnabled(True)
         frame = int(source.frame_indices[row])
         time_s = float(source.time_s[row])
         self.plot.set_selected_sample(row, source.series_id)
@@ -469,6 +473,7 @@ class PhysicsWorkspace(QFrame):
             QAbstractItemView.ScrollHint.EnsureVisible,
         )
         selection.blockSignals(False)
+        self.copy_row_button.setEnabled(True)
         time_s = float(source.time_s[int(row)])
         self.set_cursor(int(source.frame_indices[int(row)]), time_s, "exact")
         self.plotSampleActivated.emit(series_id, int(row))

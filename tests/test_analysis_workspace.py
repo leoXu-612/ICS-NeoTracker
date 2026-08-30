@@ -100,7 +100,9 @@ class PhysicsWorkspaceTests(unittest.TestCase):
     def test_copy_row_button_uses_the_models_full_precision_text(self) -> None:
         workspace = PhysicsWorkspace()
         workspace.set_series((make_series(),))
-        workspace.series_table.selectRow(2)
+        self.assertFalse(workspace.copy_row_button.isEnabled())
+        workspace.apply_selection("raw:x", 2, 2, 0.09, "exact")
+        self.assertTrue(workspace.copy_row_button.isEnabled())
 
         workspace.copy_row_button.click()
 
@@ -109,6 +111,9 @@ class PhysicsWorkspaceTests(unittest.TestCase):
             workspace.series_model.copy_rows([2]),
         )
         self.assertEqual(workspace.copy_status_label.text(), "Copied 1 physical data row.")
+
+        workspace.apply_selection(None, None, None, None, "unavailable")
+        self.assertFalse(workspace.copy_row_button.isEnabled())
 
 
 class MainWindowPhysicsWorkspaceTests(unittest.TestCase):
