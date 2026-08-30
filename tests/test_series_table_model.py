@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import unittest
 
 import numpy as np
@@ -59,6 +60,18 @@ class SeriesTableModelTests(unittest.TestCase):
         model = SeriesTableModel()
         model.set_series(make_series(unit=""))
         self.assertEqual(model.data(model.index(0, 5)), "unit unavailable")
+
+    def test_invalid_time_tooltip_reports_unavailable_instead_of_a_blank_value(self) -> None:
+        source = make_series()
+        times = source.time_s.copy()
+        times[2] = np.nan
+        model = SeriesTableModel()
+        model.set_series(replace(source, time_s=times))
+
+        tooltip = model.data(model.index(2, 1), Qt.ItemDataRole.ToolTipRole)
+
+        self.assertIn("true time unavailable", tooltip)
+        self.assertNotIn("true time  s", tooltip)
 
     def test_100k_rows_are_virtual_and_display_cache_is_bounded(self) -> None:
         model = SeriesTableModel(cache_limit=64)

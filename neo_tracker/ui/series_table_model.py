@@ -208,9 +208,10 @@ class SeriesTableModel(QAbstractTableModel):
         assert series is not None
         record = self.row_record(row)
         validity = "valid" if record.valid else "invalid or lost"
+        time_value = self._full_float(record.time_s)
+        time_text = f"true time {time_value} s" if time_value else "true time unavailable"
         detail = (
-            f"{series.name} · frame {record.frame_index} · true time "
-            f"{self._full_float(record.time_s)} s · {validity}."
+            f"{series.name} · frame {record.frame_index} · {time_text} · {validity}."
         )
         if column == 4 and series.processing_chain:
             detail += " Processing: " + " → ".join(str(step) for step in series.processing_chain)
