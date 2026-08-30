@@ -497,6 +497,8 @@ class PhysicsWorkspaceMixin:
     ) -> None:
         if job.task.owner is self.current_task:
             self.statusBar().showMessage(f"Physics operation failed: {message}", 8000)
+            if job.task.operation == "build":
+                self.physics_workspace.set_cursor(None, None, "unavailable")
         self._mark_active_physics_replay("failed")
         self._physics_replay_active_id = None
         self._physics_replay_active_operation = None

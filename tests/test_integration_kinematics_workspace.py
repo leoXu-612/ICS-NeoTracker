@@ -199,6 +199,23 @@ class KinematicsWorkspaceIntegrationTests(unittest.TestCase):
         self.assertTrue(window._background_tasks.ready_to_close)
         self.assertEqual(gc.get_threshold(), original_gc_thresholds)
 
+    def test_failed_series_build_clears_checking_cursor_state(self) -> None:
+        window = self.make_window()
+        task = window.current_task
+        task.pipeline.results = [object()]
+        task.mark_results_changed()
+
+        window.refresh_physics_series()
+        pump_until(lambda: "Physics operation failed:" in window.statusBar().currentMessage())
+        task.pipeline.results = []
+
+        self.assertFalse(window._kinematics_workspace_coordinator.busy)
+        self.assertNotIn("checking", window.physics_workspace.cursor_label.text())
+        self.assertEqual(
+            window.physics_workspace.cursor_label.toolTip(),
+            window.physics_workspace.cursor_label.accessibleDescription(),
+        )
+
     def test_cancel_after_worker_completed_still_emits_exactly_one_terminal(self) -> None:
         supervisor = TaskSupervisor()
         coordinator = KinematicsWorkspaceCoordinator(supervisor)
