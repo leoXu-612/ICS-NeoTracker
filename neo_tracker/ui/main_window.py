@@ -2399,8 +2399,11 @@ class NeoTrackerWindow(
             return False
         if not assessment.can_apply:
             return False
+        preserved_drafts = {"Media replacement"}
+        if not assessment.clear_results:
+            preserved_drafts.add("Physics fit")
         replaced_drafts = tuple(
-            name for name in self._unapplied_draft_names() if name != "Media replacement"
+            name for name in self._unapplied_draft_names() if name not in preserved_drafts
         )
         if not self._confirm_draft_replacement("applying media replacement", replaced_drafts):
             return False

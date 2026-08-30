@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 import unittest
 import time
+from unittest.mock import patch
 
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QApplication, QWidget
@@ -240,6 +241,91 @@ class MainWindowFitIntegrationTests(unittest.TestCase):
         window._ask_unapplied_drafts = lambda _action, _names: True  # type: ignore[method-assign]
         window._mark_current_result_lost()
         self.assertEqual(window.current_task.pipeline.results[0].status, "manual_lost")
+        self.assertNotIn("Physics fit", window._unapplied_draft_names())
+
+    def test_non_destructive_media_relink_preserves_fit_draft_without_prompt(self) -> None:
+        window = self.make_window()
+        task = window.current_task
+        task.media_path = "/offline/original.mp4"
+        task.media_info = MediaInfo(
+            fps=30.0,
+            frame_count=120,
+            width=640,
+            height=360,
+            duration_s=4.0,
+            available=True,
+        )
+        window.set_physics_series((make_series(),))
+        window.fit_panel.range_end_spin.setValue(0.8)
+        replacement = "/offline/replacement.mp4"
+        assessment = window._stage_media_relink(replacement, task.media_info)
+        prompts: list[tuple[str, tuple[str, ...]]] = []
+        window._ask_unapplied_drafts = (  # type: ignore[method-assign]
+            lambda action, names: prompts.append((action, names)) or False
+        )
+
+        with patch.object(window, "_queue_preview_decode"):
+            applied = window._apply_media_relink()
+
+        self.assertFalse(assessment.clear_results)
+        self.assertTrue(applied)
+        self.assertEqual(prompts, [])
+        self.assertEqual(task.media_path, replacement)
+        self.assertAlmostEqual(window.fit_panel.range_end_spin.value(), 0.8)
+        self.assertIn("Physics fit", window._unapplied_draft_names())
+
+    def test_destructive_media_relink_protects_fit_draft_until_confirmed(self) -> None:
+        window = self.make_window()
+        task = window.current_task
+        task.media_path = "/offline/original.mp4"
+        task.media_info = MediaInfo(
+            fps=30.0,
+            frame_count=120,
+            width=640,
+            height=360,
+            duration_s=4.0,
+            available=False,
+        )
+        result = TrackerResult(
+            0,
+            0.0,
+            {"x_px": 12.0},
+            {"x_px": 12.0},
+            0.9,
+            "ok",
+        )
+        task.pipeline.results = [result]
+        window.set_physics_series((make_series(),))
+        window.fit_panel.range_end_spin.setValue(0.8)
+        replacement = "/offline/replacement.mp4"
+        assessment = window._stage_media_relink(
+            replacement,
+            MediaInfo(
+                fps=60.0,
+                frame_count=240,
+                width=1280,
+                height=720,
+                duration_s=4.0,
+                available=True,
+            ),
+        )
+        prompts: list[tuple[str, tuple[str, ...]]] = []
+        window._ask_unapplied_drafts = (  # type: ignore[method-assign]
+            lambda action, names: prompts.append((action, names)) or False
+        )
+
+        self.assertFalse(window._apply_media_relink())
+
+        self.assertTrue(assessment.clear_results)
+        self.assertEqual(prompts, [("applying media replacement", ("Physics fit",))])
+        self.assertEqual(task.media_path, "/offline/original.mp4")
+        self.assertIs(task.pipeline.results[0], result)
+        self.assertAlmostEqual(window.fit_panel.range_end_spin.value(), 0.8)
+
+        window._ask_unapplied_drafts = lambda _action, _names: True  # type: ignore[method-assign]
+        with patch.object(window, "_queue_preview_decode"):
+            self.assertTrue(window._apply_media_relink())
+        self.assertEqual(task.pipeline.results, [])
         self.assertNotIn("Physics fit", window._unapplied_draft_names())
 
     def test_close_cancels_active_fit_and_reaches_idle(self) -> None:
