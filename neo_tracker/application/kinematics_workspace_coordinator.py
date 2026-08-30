@@ -139,9 +139,13 @@ class KinematicsWorkspaceTask:
                 raise ValueError("kinematics export requires csv, npz, and markdown paths")
             if len(set(export_paths.values())) != len(_EXPORT_FORMATS):
                 raise ValueError("kinematics export paths must be distinct")
-            fit = self.configuration.get("fit_result") if isinstance(self.configuration, Mapping) else None
-            if not isinstance(fit, FitResult) or fit.status is not FitStatus.OK:
-                raise ValueError("kinematics export requires one successful FitResult")
+            if not isinstance(self.configuration, Mapping) or "fit_result" not in self.configuration:
+                raise TypeError("kinematics export requires a fit_result mapping entry")
+            fit = self.configuration["fit_result"]
+            if fit is not None and (
+                not isinstance(fit, FitResult) or fit.status is not FitStatus.OK
+            ):
+                raise ValueError("kinematics export fit_result must be successful or None")
         elif export_paths:
             raise ValueError("only kinematics export may carry export paths")
         object.__setattr__(self, "task_id", task_id)
@@ -310,7 +314,7 @@ class KinematicsWorkspaceWorker(QObject):
         assert task.operation == "export"
         assert isinstance(task.configuration, Mapping)
         fit = task.configuration["fit_result"]
-        assert isinstance(fit, FitResult)
+        assert fit is None or isinstance(fit, FitResult)
         paths = task.export_paths
         exported = (
             export_csv(paths["csv"], task.source, fit, cancellation=self._cancellation),

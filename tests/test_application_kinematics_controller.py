@@ -14,6 +14,7 @@ from neo_tracker.kinematics import FitRequest, FitResult, FitStatus, SampleSerie
 from neo_tracker.ui.analysis_workspace_controller import (
     AnalysisWorkspaceController,
     FitDraft,
+    KinematicsOperationRequest,
 )
 
 
@@ -166,7 +167,9 @@ class AnalysisWorkspaceControllerTests(unittest.TestCase):
         source = make_series()
         controller.set_series(owner, (source,))
         delivered: list[FitResult] = []
+        exports: list[KinematicsOperationRequest] = []
         controller.fitResultReady.connect(delivered.append)
+        controller.operationRequested.connect(exports.append)
 
         self.assertTrue(controller.run_fit(owner, FitDraft(source.series_id, "linear", 0.0, 1.0)))
         pump_until(lambda: not controller.busy)
@@ -177,7 +180,8 @@ class AnalysisWorkspaceControllerTests(unittest.TestCase):
         self.assertIsNone(controller.state.fit_result)
         controller.set_residual_visible(True)
         self.assertFalse(controller.state.residual_visible)
-        self.assertFalse(controller.request_export())
+        self.assertTrue(controller.request_export())
+        self.assertIsNone(exports[-1].configuration["fit_result"])
 
     def test_source_change_cancels_active_fit_and_rejects_late_result(self) -> None:
         supervisor = TaskSupervisor()

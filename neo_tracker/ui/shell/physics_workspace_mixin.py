@@ -319,7 +319,7 @@ class PhysicsWorkspaceMixin:
     def _export_physics_analysis(self) -> None:
         if not self.analysis_workspace_controller.request_export():
             self.statusBar().showMessage(
-                "Run a successful physics fit before exporting analysis.",
+                "Choose an available physical series before exporting analysis.",
                 5000,
             )
 
@@ -795,8 +795,8 @@ class PhysicsWorkspaceMixin:
         )
         self._update_action(
             "physics.export",
-            enabled=has_fit,
-            tool_tip="Request CSV, safe NPZ, and Markdown physics analysis export.",
+            enabled=mutable,
+            tool_tip="Export the selected series and any current fit as CSV, safe NPZ, and Markdown.",
         )
         self._update_action(
             "physics.residual",

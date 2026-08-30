@@ -307,7 +307,7 @@ class AnalysisWorkspaceController(QObject):
     def request_export(self) -> bool:
         source = self._selected_series()
         result = self._state.fit_result
-        if source is None or result is None or result.status is not FitStatus.OK:
+        if source is None or (result is not None and result.status is not FitStatus.OK):
             return False
         config = MappingProxyType(
             {

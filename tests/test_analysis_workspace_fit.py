@@ -401,7 +401,7 @@ class MainWindowFitIntegrationTests(unittest.TestCase):
         self.assertFalse(window.analysis_workspace_controller.busy)
         self.assertTrue(window._background_tasks.idle)
 
-    def test_unavailable_fit_is_text_only_and_does_not_enable_result_actions(self) -> None:
+    def test_unavailable_fit_keeps_series_export_but_not_residual(self) -> None:
         window = self.make_window()
         window.set_kinematics_fit_operator(UnavailableFitOperator())
         source = make_series()
@@ -417,7 +417,7 @@ class MainWindowFitIntegrationTests(unittest.TestCase):
         self.assertIsNone(window.physics_workspace.plot._fit_series)
         self.assertIsNone(window.selection_session.state.selected_fit_id)
         self.assertFalse(window.fit_panel.residual_checkbox.isEnabled())
-        self.assertFalse(window.fit_panel.export_button.isEnabled())
+        self.assertTrue(window.fit_panel.export_button.isEnabled())
 
 
 if __name__ == "__main__":

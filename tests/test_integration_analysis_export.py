@@ -79,7 +79,7 @@ class AnalysisExportIntegrationTests(unittest.TestCase):
                 set(),
             )
 
-    def test_stale_fit_is_cleared_before_export_request(self) -> None:
+    def test_stale_fit_falls_back_to_current_series_export(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             window = NeoTrackerWindow(
                 physics_export_directory_picker=lambda _parent: directory
@@ -106,7 +106,7 @@ class AnalysisExportIntegrationTests(unittest.TestCase):
                 name=source.name,
                 frame_indices=source.frame_indices,
                 time_s=source.time_s,
-                values=source.values,
+                values=source.values + 10.0,
                 valid_mask=source.valid_mask,
                 unit=source.unit,
                 source_kind=source.source_kind,
@@ -114,8 +114,23 @@ class AnalysisExportIntegrationTests(unittest.TestCase):
             )
             window.set_physics_series((replacement,))
 
-            self.assertFalse(window.analysis_workspace_controller.request_export())
-            self.assertEqual(list(Path(directory).iterdir()), [])
+            self.assertTrue(window.export_physics_analysis_button.isEnabled())
+            window.export_physics_analysis_button.click()
+            pump_until(lambda: not window._kinematics_workspace_coordinator.busy)
+
+            paths = {path.suffix: path for path in Path(directory).iterdir()}
+            self.assertEqual(set(paths), {".csv", ".npz", ".md"})
+            with paths[".csv"].open(encoding="utf-8", newline="") as handle:
+                rows = list(csv.DictReader(handle))
+            self.assertAlmostEqual(float(rows[0]["value"]), 10.0)
+            self.assertEqual(rows[0]["fit_prediction"], "")
+            self.assertEqual(rows[0]["residual"], "")
+            with np.load(paths[".npz"], allow_pickle=False) as archive:
+                self.assertNotIn("fit_predicted", archive.files)
+                np.testing.assert_allclose(archive["values"], replacement.values)
+            markdown = paths[".md"].read_text(encoding="utf-8")
+            self.assertNotIn("## Fit", markdown)
+            self.assertIn(replacement.source_revision, markdown)
 
 
 if __name__ == "__main__":
