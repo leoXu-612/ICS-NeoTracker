@@ -73,7 +73,9 @@ class FitPanel(QWidget):
         range_row = QHBoxLayout()
         self.range_start_spin = self._range_spin("Fit range start in true seconds")
         self.range_end_spin = self._range_spin("Fit range end in true seconds")
+        self.range_start_spin.valueChanged.connect(self._update_controls)
         self.range_start_spin.valueChanged.connect(self._emit_draft_changed)
+        self.range_end_spin.valueChanged.connect(self._update_controls)
         self.range_end_spin.valueChanged.connect(self._emit_draft_changed)
         range_row.addWidget(self.range_start_spin)
         range_row.addWidget(QLabel("to"))
@@ -356,6 +358,9 @@ class FitPanel(QWidget):
             self.range_end_spin.setRange(-1e12, 1e12)
             self.range_start_spin.setValue(minimum)
             self.range_end_spin.setValue(maximum)
+        else:
+            self.range_start_spin.setValue(0.0)
+            self.range_end_spin.setValue(0.0)
         self.clear_result()
 
     def _model_changed(self, model: str) -> None:
@@ -383,8 +388,9 @@ class FitPanel(QWidget):
             self.valid_only_checkbox.isChecked(),
         )
 
-    def _update_controls(self) -> None:
+    def _update_controls(self, *_args: object) -> None:
         available = bool(self._series) and self._engine_available and not self._busy
+        valid_range = self.range_start_spin.value() < self.range_end_spin.value()
         self.series_combo.setEnabled(available)
         self.model_combo.setEnabled(available)
         self.range_start_spin.setEnabled(available)
@@ -392,7 +398,19 @@ class FitPanel(QWidget):
         self.valid_only_checkbox.setEnabled(available)
         self.initial_parameters_edit.setEnabled(available)
         self.bounds_edit.setEnabled(available)
-        self.run_button.setEnabled(available)
+        self.run_button.setEnabled(available and valid_range)
+        if not self._series:
+            detail = "Choose a physical series before running a fit."
+        elif not valid_range:
+            detail = "Choose an increasing true-time range before running a fit."
+        elif not self._engine_available:
+            detail = "The physics fit engine is unavailable."
+        elif self._busy:
+            detail = "A physics fit is already running."
+        else:
+            detail = "Run the selected model fit in the background."
+        self.run_button.setToolTip(detail)
+        self.run_button.setAccessibleDescription(detail)
 
     @staticmethod
     def _range_spin(accessible_name: str) -> QDoubleSpinBox:

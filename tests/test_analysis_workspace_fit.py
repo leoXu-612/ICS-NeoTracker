@@ -90,6 +90,34 @@ class FitPanelTests(unittest.TestCase):
         self.assertFalse(panel.valid_only_checkbox.isEnabled())
         self.assertIn("running", panel.status_label.text().lower())
 
+    def test_series_without_valid_range_does_not_reuse_previous_fit_range(self) -> None:
+        panel = FitPanel()
+        source = make_series()
+        invalid = replace(
+            source,
+            series_id="raw:invalid",
+            name="Invalid series",
+            valid_mask=source.valid_mask & False,
+        )
+        panel.set_series((source, invalid))
+        self.assertTrue(panel.run_button.isEnabled())
+
+        panel.series_combo.setCurrentIndex(
+            panel.series_combo.findData(invalid.series_id)
+        )
+
+        self.assertEqual(panel.range_start_spin.value(), 0.0)
+        self.assertEqual(panel.range_end_spin.value(), 0.0)
+        self.assertFalse(panel.run_button.isEnabled())
+        self.assertIn(
+            "increasing true-time range",
+            panel.run_button.accessibleDescription(),
+        )
+
+        panel.valid_only_checkbox.setChecked(False)
+        panel.range_end_spin.setValue(float(source.time_s[-1]))
+        self.assertTrue(panel.run_button.isEnabled())
+
     def test_restored_draft_roundtrips_controls_without_becoming_dirty(self) -> None:
         panel = FitPanel()
         source = make_series()
