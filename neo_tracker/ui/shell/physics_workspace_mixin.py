@@ -226,7 +226,7 @@ class PhysicsWorkspaceMixin:
 
     def _physics_fit_draft_changed(self) -> None:
         state = self.analysis_workspace_controller.state
-        if state.fit_result is not None or self.analysis_workspace_controller.busy:
+        if state.active_request is not None or self.analysis_workspace_controller.busy:
             self.analysis_workspace_controller.invalidate(
                 "Series, model, or true-time range changed. Run the fit again."
             )

@@ -429,6 +429,10 @@ class MainWindowFitIntegrationTests(unittest.TestCase):
         self.assertTrue(window.fit_panel.model_combo.isEnabled())
         self.assertTrue(window.fit_panel.run_button.isEnabled())
 
+        window.fit_panel.model_combo.setCurrentText("Quadratic")
+        self.assertEqual(window.analysis_workspace_controller.state.status, "dirty")
+        self.assertIsNone(window.analysis_workspace_controller.state.active_request)
+
         window.set_kinematics_fit_operator(None)
         self.assertFalse(window.fit_panel.run_button.isEnabled())
 
