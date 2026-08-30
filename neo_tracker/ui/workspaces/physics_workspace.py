@@ -280,8 +280,8 @@ class PhysicsWorkspace(QFrame):
         index = self.series_combo.findData(previous)
         self.series_combo.setCurrentIndex(index if index >= 0 else (0 if items else -1))
         self.series_combo.blockSignals(False)
-        self._series_changed(self.series_combo.currentIndex())
         self.plot.set_series(items[:8])
+        self._series_changed(self.series_combo.currentIndex())
         self.export_plot_image_button.setEnabled(bool(items))
         if not items:
             self.set_cursor(None, None, "unavailable")
@@ -338,6 +338,14 @@ class PhysicsWorkspace(QFrame):
                 QAbstractItemView.ScrollHint.EnsureVisible,
             )
             selection.blockSignals(False)
+            if source.series_id not in self.plot.series_ids:
+                selected_range = self.plot.selected_range
+                visible = tuple(
+                    item for item in self._series.values() if item.series_id != source.series_id
+                )
+                self.plot.set_series((*visible[:7], source))
+                if selected_range is not None:
+                    self.plot.set_selected_range(*selected_range)
             self.plot.set_selected_sample(int(sample_index), source.series_id)
             self.copy_row_button.setEnabled(True)
         else:

@@ -188,6 +188,10 @@ class PhysicsPlot(QWidget):
         return sum(len(item.sample_indices) for item in self._prepared)
 
     @property
+    def series_ids(self) -> tuple[str, ...]:
+        return tuple(item.series_id for item in self._series)
+
+    @property
     def selected_sample_index(self) -> int | None:
         return self._selected_sample_index
 

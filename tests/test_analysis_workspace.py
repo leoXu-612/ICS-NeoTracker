@@ -115,6 +115,23 @@ class PhysicsWorkspaceTests(unittest.TestCase):
         workspace.apply_selection(None, None, None, None, "unavailable")
         self.assertFalse(workspace.copy_row_button.isEnabled())
 
+    def test_selection_keeps_an_overflow_series_visible_in_the_bounded_plot(self) -> None:
+        workspace = PhysicsWorkspace()
+        source = make_series()
+        series = tuple(
+            replace(source, series_id=f"raw:{index}", name=f"Series {index}")
+            for index in range(9)
+        )
+        workspace.set_series(series)
+        workspace.plot.set_selected_range(0.04, 0.13)
+
+        workspace.apply_selection(series[-1].series_id, 2, 2, 0.09, "exact")
+
+        self.assertEqual(len(workspace.plot.series_ids), 8)
+        self.assertIn(series[-1].series_id, workspace.plot.series_ids)
+        self.assertEqual(workspace.plot.selected_sample_index, 2)
+        self.assertEqual(workspace.plot.selected_range, (0.04, 0.13))
+
 
 class MainWindowPhysicsWorkspaceTests(unittest.TestCase):
     @classmethod
