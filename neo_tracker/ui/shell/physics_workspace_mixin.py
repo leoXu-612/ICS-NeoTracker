@@ -241,6 +241,7 @@ class PhysicsWorkspaceMixin:
             or state.fit_result is None
             or state.fit_result.status is not FitStatus.OK
         ):
+            self.selection_session.select_fit(None, origin=SelectionOrigin.SYSTEM)
             if source is not None:
                 self.physics_workspace.plot.set_fit_result(source, None)
             return

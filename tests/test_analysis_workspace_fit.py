@@ -164,6 +164,7 @@ class MainWindowFitIntegrationTests(unittest.TestCase):
         QCoreApplication.processEvents()
         self.assertEqual(window.analysis_workspace_controller.state.status, "dirty")
         self.assertIsNone(window.physics_workspace.plot._fit_series)
+        self.assertIsNone(window.selection_session.state.selected_fit_id)
         self.assertIn("Physics fit", window._unapplied_draft_names())
 
     def test_equivalent_parameter_order_reuses_persisted_fit_definition(self) -> None:
