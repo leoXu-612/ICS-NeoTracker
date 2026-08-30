@@ -61,6 +61,14 @@ class FitPanelTests(unittest.TestCase):
         panel.run_button.click()
         self.assertIn("valid JSON", panel.status_label.text())
 
+        panel.initial_parameters_edit.setText("{}")
+        panel.set_busy(True)
+        self.assertIn("running", panel.status_label.text().lower())
+        self.assertEqual(
+            panel.status_label.accessibleDescription(),
+            panel.status_label.text(),
+        )
+
     def test_result_summary_shows_parameters_units_metrics_and_samples(self) -> None:
         panel = FitPanel()
         source = make_series()

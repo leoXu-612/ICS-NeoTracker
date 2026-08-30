@@ -136,6 +136,7 @@ class FitPanel(QWidget):
         self.status_label.setObjectName("physicsFitStatus")
         self.status_label.setWordWrap(True)
         self.status_label.setAccessibleName("Physics fit status")
+        self.status_label.setAccessibleDescription(self.status_label.text())
         root.addWidget(self.status_label)
         self.summary_label = QLabel("No fit result")
         self.summary_label.setObjectName("physicsFitSummary")
@@ -184,7 +185,7 @@ class FitPanel(QWidget):
         if not preserve_draft:
             self._series_changed(self.series_combo.currentIndex())
         self.clear_result()
-        self.status_label.setText(
+        self._set_status(
             "Choose a model and true-time range."
             if items
             else "No physical series is available."
@@ -277,16 +278,15 @@ class FitPanel(QWidget):
 
     def set_busy(self, busy: bool) -> None:
         self._busy = bool(busy)
-        self.status_label.setText(
-            "Fit running in the background…" if self._busy else self.status_label.text()
-        )
+        if self._busy:
+            self._set_status("Fit running in the background…")
         self.cancel_button.setEnabled(self._busy)
         self._update_controls()
 
     def apply_state(self, state: AnalysisWorkspaceState) -> None:
         self._engine_available = state.engine_available
         self.set_busy(state.status == "running")
-        self.status_label.setText(state.message)
+        self._set_status(state.message)
         if state.fit_result is not None:
             self.show_result(state.fit_result)
         elif state.status in {"dirty", "failed", "stale", "unavailable", "empty"}:
@@ -299,7 +299,7 @@ class FitPanel(QWidget):
         if result.status is not FitStatus.OK:
             self.clear_result()
             message = result.message or f"Fit ended with status: {result.status.value}."
-            self.status_label.setText(message)
+            self._set_status(message)
             self.summary_label.setText(
                 f"{result.status.value.title()} · no plot or residual layer was created"
             )
@@ -338,14 +338,17 @@ class FitPanel(QWidget):
         self.residual_checkbox.setEnabled(False)
         self.export_button.setEnabled(False)
 
+    def _set_status(self, text: str) -> None:
+        self.status_label.setText(text)
+        self.status_label.setAccessibleDescription(text)
+
     def _emit_run(self) -> None:
         try:
             draft = self.draft()
             # FitRequest performs the authoritative finite/range/model validation.
             draft.to_request(self._series[draft.series_id])
         except Exception as exc:
-            self.status_label.setText(f"Fit settings invalid: {exc}")
-            self.status_label.setAccessibleDescription(self.status_label.text())
+            self._set_status(f"Fit settings invalid: {exc}")
             return
         self.runRequested.emit(draft)
 
