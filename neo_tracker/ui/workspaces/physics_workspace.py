@@ -6,6 +6,7 @@ from collections.abc import Sequence
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QComboBox,
     QFrame,
     QHBoxLayout,
@@ -135,7 +136,15 @@ class PhysicsWorkspace(QFrame):
         data_header.addWidget(self.series_combo, 1)
         self.copy_status_label = QLabel("Select rows to inspect exact values and units.")
         self.copy_status_label.setAccessibleName("Physical data selection status")
+        self.copy_row_button = QPushButton("Copy Row")
+        self.copy_row_button.setAccessibleName("Copy selected physical data row")
+        self.copy_row_button.setAccessibleDescription(
+            "Copy the selected frame, true time, full-precision value, validity, source, and unit."
+        )
+        self.copy_row_button.setEnabled(False)
+        self.copy_row_button.clicked.connect(self._copy_selected_rows)
         data_header.addWidget(self.copy_status_label, 2)
+        data_header.addWidget(self.copy_row_button)
         data_layout.addLayout(data_header)
         data_layout.addWidget(self.series_table, 1)
         self._add_page("Data", data_page)
@@ -272,6 +281,7 @@ class PhysicsWorkspace(QFrame):
         self.series_combo.blockSignals(False)
         self._series_changed(self.series_combo.currentIndex())
         self.plot.set_series(items[:8])
+        self.copy_row_button.setEnabled(bool(items))
         self.export_plot_image_button.setEnabled(bool(items))
         if not items:
             self.set_cursor(None, None, "unavailable")
@@ -431,6 +441,16 @@ class PhysicsWorkspace(QFrame):
             f"{validity} · {source.name} · {format(float(source.values[row]), '.8g') if source.valid_mask[row] else '—'} {unit}"
         )
         self.sampleActivated.emit(source.series_id, row)
+
+    def _copy_selected_rows(self) -> None:
+        rows = self.series_table.selectionModel().selectedRows()
+        if not rows:
+            self.copy_status_label.setText("Select a physical data row to copy.")
+            return
+        QApplication.clipboard().setText(
+            self.series_model.copy_rows((rows[0].row(),))
+        )
+        self.copy_status_label.setText("Copied 1 physical data row.")
 
     def _plot_sample_activated(self, series_id: str, row: int, _time_s: float) -> None:
         source = self._series.get(series_id)

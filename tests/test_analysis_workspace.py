@@ -96,6 +96,19 @@ class PhysicsWorkspaceTests(unittest.TestCase):
         self.assertIsNone(workspace.series_table.indexWidget(workspace.series_model.index(2, 2)))
         self.assertEqual(workspace.cursor_label.text(), "true time 0.090000 s · frame 2 · exact")
 
+    def test_copy_row_button_uses_the_models_full_precision_text(self) -> None:
+        workspace = PhysicsWorkspace()
+        workspace.set_series((make_series(),))
+        workspace.series_table.selectRow(2)
+
+        workspace.copy_row_button.click()
+
+        self.assertEqual(
+            QApplication.clipboard().text(),
+            workspace.series_model.copy_rows([2]),
+        )
+        self.assertEqual(workspace.copy_status_label.text(), "Copied 1 physical data row.")
+
 
 class MainWindowPhysicsWorkspaceTests(unittest.TestCase):
     @classmethod
