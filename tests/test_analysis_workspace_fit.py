@@ -87,6 +87,7 @@ class FitPanelTests(unittest.TestCase):
         self.assertFalse(panel.run_button.isEnabled())
         self.assertTrue(panel.cancel_button.isEnabled())
         self.assertFalse(panel.series_combo.isEnabled())
+        self.assertFalse(panel.valid_only_checkbox.isEnabled())
         self.assertIn("running", panel.status_label.text().lower())
 
     def test_restored_draft_roundtrips_controls_without_becoming_dirty(self) -> None:
@@ -100,6 +101,7 @@ class FitPanelTests(unittest.TestCase):
             0.8,
             initial_parameters={"omega": 3.0},
             bounds={"omega": (0.1, 10.0)},
+            use_valid_only=False,
         )
 
         self.assertTrue(panel.restore_draft(restored))
@@ -193,6 +195,26 @@ class MainWindowFitIntegrationTests(unittest.TestCase):
             if item.fit_config is not None
         ]
         self.assertEqual(len(definitions), 1)
+
+    def test_validity_policy_creates_a_distinct_persisted_fit_definition(self) -> None:
+        window = self.make_window()
+        window.set_kinematics_fit_operator(RecordingFitOperator())
+        source = make_series()
+        window.set_physics_series((source,))
+
+        window.fit_panel.run_button.click()
+        pump_until(lambda: not window.analysis_workspace_controller.busy)
+        window.fit_panel.valid_only_checkbox.setChecked(False)
+        self.assertIn("Physics fit", window._unapplied_draft_names())
+        window.fit_panel.run_button.click()
+        pump_until(lambda: not window.analysis_workspace_controller.busy)
+
+        definitions = [
+            item
+            for item in window.current_task.analysis_workspace.definitions
+            if item.fit_config is not None
+        ]
+        self.assertEqual(len(definitions), 2)
 
     def test_unrun_fit_settings_are_protected_across_task_switch(self) -> None:
         window = self.make_window()

@@ -130,7 +130,13 @@ class KinematicsPersistenceIntegrationTests(unittest.TestCase):
         )
         source_window.analysis_workspace_controller.select_series("filtered_state:x")
         source_window._run_physics_fit(
-            FitDraft("filtered_state:x", "linear", 0.15, 0.75)
+            FitDraft(
+                "filtered_state:x",
+                "linear",
+                0.15,
+                0.75,
+                use_valid_only=False,
+            )
         )
         pump_until(
             lambda: not source_window.analysis_workspace_controller.busy
@@ -165,6 +171,7 @@ class KinematicsPersistenceIntegrationTests(unittest.TestCase):
         self.assertEqual(restored_window.fit_panel.model_combo.currentData(), "linear")
         self.assertAlmostEqual(restored_window.fit_panel.range_start_spin.value(), 0.15)
         self.assertAlmostEqual(restored_window.fit_panel.range_end_spin.value(), 0.75)
+        self.assertFalse(restored_window.fit_panel.valid_only_checkbox.isChecked())
         self.assertNotIn("Physics fit", restored_window._unapplied_draft_names())
         self.assertTrue(restored_window.analysis_workspace_controller.state.residual_visible)
         self.assertEqual(

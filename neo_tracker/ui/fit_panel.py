@@ -79,6 +79,14 @@ class FitPanel(QWidget):
         range_row.addWidget(QLabel("to"))
         range_row.addWidget(self.range_end_spin)
         form.addRow("True-time range", range_row)
+        self.valid_only_checkbox = QCheckBox("Use only samples marked valid")
+        self.valid_only_checkbox.setChecked(True)
+        self.valid_only_checkbox.setAccessibleName("Fit valid samples only")
+        self.valid_only_checkbox.setToolTip(
+            "Exclude finite samples that the tracking or processing pipeline marked invalid."
+        )
+        self.valid_only_checkbox.toggled.connect(self._emit_draft_changed)
+        form.addRow("Samples", self.valid_only_checkbox)
 
         self.initial_parameters_label = QLabel("Initial parameters")
         self.initial_parameters_edit = QLineEdit("{}")
@@ -212,6 +220,7 @@ class FitPanel(QWidget):
             self.model_combo.setCurrentIndex(model_index)
             self.range_start_spin.setValue(float(draft.range_start_s))
             self.range_end_spin.setValue(float(draft.range_end_s))
+            self.valid_only_checkbox.setChecked(draft.use_valid_only)
             self.initial_parameters_edit.setText(
                 json.dumps(dict(draft.initial_parameters), sort_keys=True)
             )
@@ -226,7 +235,7 @@ class FitPanel(QWidget):
         baseline = self._draft_baseline
         if baseline is None:
             return
-        series_id, model, range_start, range_end, initial, bounds = baseline
+        series_id, model, range_start, range_end, initial, bounds, valid_only = baseline
         self._syncing = True
         try:
             series_index = self.series_combo.findData(series_id)
@@ -239,6 +248,7 @@ class FitPanel(QWidget):
             self.range_end_spin.setValue(float(range_end))
             self.initial_parameters_edit.setText(str(initial))
             self.bounds_edit.setText(str(bounds))
+            self.valid_only_checkbox.setChecked(bool(valid_only))
         finally:
             self._syncing = False
 
@@ -260,6 +270,7 @@ class FitPanel(QWidget):
             range_end_s=self.range_end_spin.value(),
             initial_parameters=initial,
             bounds=bounds,
+            use_valid_only=self.valid_only_checkbox.isChecked(),
         )
 
     def set_busy(self, busy: bool) -> None:
@@ -369,6 +380,7 @@ class FitPanel(QWidget):
             self.range_end_spin.value(),
             self.initial_parameters_edit.text(),
             self.bounds_edit.text(),
+            self.valid_only_checkbox.isChecked(),
         )
 
     def _update_controls(self) -> None:
@@ -377,6 +389,7 @@ class FitPanel(QWidget):
         self.model_combo.setEnabled(available)
         self.range_start_spin.setEnabled(available)
         self.range_end_spin.setEnabled(available)
+        self.valid_only_checkbox.setEnabled(available)
         self.initial_parameters_edit.setEnabled(available)
         self.bounds_edit.setEnabled(available)
         self.run_button.setEnabled(available)

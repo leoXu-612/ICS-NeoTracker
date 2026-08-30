@@ -273,18 +273,18 @@ class PhysicsWorkspaceMixin:
         request = state.active_request
         source = self._physics_series_by_id.get(result.series_id)
         if request is not None and source is not None:
-            digest = hashlib.sha256(
-                repr(
-                    (
-                        request.series_id,
-                        request.model.value,
-                        request.range_start_s,
-                        request.range_end_s,
-                        tuple(sorted(request.initial_parameters.items())),
-                        tuple(sorted(request.bounds.items())),
-                    )
-                ).encode("utf-8")
-            ).hexdigest()[:20]
+            identity = (
+                request.series_id,
+                request.model.value,
+                request.range_start_s,
+                request.range_end_s,
+                tuple(sorted(request.initial_parameters.items())),
+                tuple(sorted(request.bounds.items())),
+            )
+            identity_text = repr(identity)
+            if not request.use_valid_only:
+                identity_text += ":all-finite"
+            digest = hashlib.sha256(identity_text.encode("utf-8")).hexdigest()[:20]
             try:
                 definition = AnalysisDefinition(
                     analysis_id=f"fit:{digest}",
