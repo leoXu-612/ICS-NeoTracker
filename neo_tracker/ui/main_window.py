@@ -2687,6 +2687,8 @@ class NeoTrackerWindow(
             names.append("Calibration")
         if self._advanced_config_dirty:
             names.append("Pipeline JSON")
+        if self.fit_panel.is_dirty():
+            names.append("Physics fit")
         if self._media_relink_task is self.current_task and self._media_relink_candidate_path is not None:
             names.append("Media replacement")
 
@@ -2740,6 +2742,7 @@ class NeoTrackerWindow(
         self._render_calibration(self.current_task)
         self.preview_label.set_calibration_line(self._calibration_line_for_task(self.current_task))
         self._sync_advanced_config_view()
+        self.fit_panel.revert_draft()
         self._render_media_relink(self.current_task)
         self._sync_roi_node_editing()
         self._refresh_draft_state()
@@ -3555,7 +3558,9 @@ class NeoTrackerWindow(
             self._sync_advanced_config_view()
             self.statusBar().showMessage("Pipeline JSON is unchanged.", 4000)
             return True
-        if not self._confirm_draft_replacement("applying Pipeline JSON", ("ROI geometry", "Calibration")):
+        if not self._confirm_draft_replacement(
+            "applying Pipeline JSON", ("ROI geometry", "Calibration", "Physics fit")
+        ):
             return False
         if not self._confirm_config_result_replacement(task):
             return False

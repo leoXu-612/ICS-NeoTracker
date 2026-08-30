@@ -63,6 +63,7 @@ class PhysicsWorkspaceMixin:
         if task.pipeline.results and schedule_build and not self._background_tasks.closing:
             self._physics_pending_build = (task, task.results_generation)
             QTimer.singleShot(0, self._start_pending_physics_build)
+        self._refresh_draft_state()
 
     def refresh_physics_series(self) -> None:
         """Rebuild current physical series from detached Results in the background."""
@@ -150,6 +151,7 @@ class PhysicsWorkspaceMixin:
             origin=SelectionOrigin.VIDEO,
             expected_source_revision=source_revision,
         )
+        self._refresh_draft_state()
         return True
 
     def _attach_physics_series(self, additions: Sequence[SampleSeries]) -> bool:
@@ -212,6 +214,9 @@ class PhysicsWorkspaceMixin:
             draft_object,
         ):
             self.fit_panel.apply_state(self.analysis_workspace_controller.state)
+            return
+        self.fit_panel.mark_draft_applied()
+        self._refresh_draft_state()
 
     def _cancel_physics_fit(self) -> None:
         self.analysis_workspace_controller.cancel("Fit canceled by user.")
@@ -222,6 +227,7 @@ class PhysicsWorkspaceMixin:
             self.analysis_workspace_controller.invalidate(
                 "Series, model, or true-time range changed. Run the fit again."
             )
+        self._refresh_draft_state()
 
     def _physics_fit_state_changed(self, state: AnalysisWorkspaceState) -> None:
         self.fit_panel.apply_state(state)

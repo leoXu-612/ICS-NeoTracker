@@ -47,6 +47,7 @@ class FitPanel(QWidget):
         self._busy = False
         self._engine_available = True
         self._syncing = False
+        self._draft_baseline: tuple[object, ...] | None = None
         self.setAccessibleName("Physics model fit")
         self.setAccessibleDescription(
             "Choose a physical series, model, and true-time range. Fits run in the background."
@@ -150,17 +151,28 @@ class FitPanel(QWidget):
         if len(set(series_ids)) != len(series_ids):
             self._syncing = False
             raise ValueError("fit panel series_id values must be unique")
+        previous_id = str(self.series_combo.currentData() or "")
+        previous_source = self._series.get(previous_id)
+        preserve_draft = bool(
+            self._draft_baseline is not None
+            and previous_source is not None
+            and any(
+                item.series_id == previous_id
+                and item.source_revision == previous_source.source_revision
+                for item in items
+            )
+        )
         self._series = {item.series_id: item for item in items}
-        previous = self.series_combo.currentData()
         self.series_combo.blockSignals(True)
         self.series_combo.clear()
         for item in items:
             unit = item.unit or "unit unavailable"
             self.series_combo.addItem(f"{item.name} · {unit}", item.series_id)
-        selected = self.series_combo.findData(previous)
+        selected = self.series_combo.findData(previous_id)
         self.series_combo.setCurrentIndex(selected if selected >= 0 else (0 if items else -1))
         self.series_combo.blockSignals(False)
-        self._series_changed(self.series_combo.currentIndex())
+        if not preserve_draft:
+            self._series_changed(self.series_combo.currentIndex())
         self.clear_result()
         self.status_label.setText(
             "Choose a model and true-time range."
@@ -168,7 +180,39 @@ class FitPanel(QWidget):
             else "No physical series is available."
         )
         self._update_controls()
+        if not preserve_draft:
+            self._draft_baseline = self._draft_state() if items else None
         self._syncing = False
+
+    def is_dirty(self) -> bool:
+        return bool(
+            self._series
+            and self._draft_baseline is not None
+            and self._draft_state() != self._draft_baseline
+        )
+
+    def mark_draft_applied(self) -> None:
+        self._draft_baseline = self._draft_state() if self._series else None
+
+    def revert_draft(self) -> None:
+        baseline = self._draft_baseline
+        if baseline is None:
+            return
+        series_id, model, range_start, range_end, initial, bounds = baseline
+        self._syncing = True
+        try:
+            series_index = self.series_combo.findData(series_id)
+            if series_index >= 0:
+                self.series_combo.setCurrentIndex(series_index)
+            model_index = self.model_combo.findData(model)
+            if model_index >= 0:
+                self.model_combo.setCurrentIndex(model_index)
+            self.range_start_spin.setValue(float(range_start))
+            self.range_end_spin.setValue(float(range_end))
+            self.initial_parameters_edit.setText(str(initial))
+            self.bounds_edit.setText(str(bounds))
+        finally:
+            self._syncing = False
 
     def draft(self) -> FitDraft:
         series_id = self.series_combo.currentData()
@@ -288,6 +332,16 @@ class FitPanel(QWidget):
     def _emit_draft_changed(self, *_args: object) -> None:
         if not self._syncing:
             self.draftChanged.emit()
+
+    def _draft_state(self) -> tuple[object, ...]:
+        return (
+            self.series_combo.currentData(),
+            self.model_combo.currentData(),
+            self.range_start_spin.value(),
+            self.range_end_spin.value(),
+            self.initial_parameters_edit.text(),
+            self.bounds_edit.text(),
+        )
 
     def _update_controls(self) -> None:
         available = bool(self._series) and self._engine_available and not self._busy

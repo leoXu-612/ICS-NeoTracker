@@ -46,5 +46,5 @@ class ConfigurationProtectionMixin:
         replaced_drafts: tuple[str, ...] = ("Pipeline JSON",),
     ) -> bool:
         return self._confirm_draft_replacement(
-            action, replaced_drafts
+            action, (*replaced_drafts, "Physics fit")
         ) and self._confirm_config_result_replacement(task)

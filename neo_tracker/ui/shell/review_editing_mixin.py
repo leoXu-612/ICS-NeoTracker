@@ -64,6 +64,10 @@ class ReviewEditingMixin:
                 self, "Correct point", "No tracking result matches the current frame."
             )
             return
+        if not self._confirm_draft_replacement(
+            "applying a manual correction", ("Physics fit",)
+        ):
+            return
         task = self.current_task
         previous_result = task.pipeline.results[index]
         try:
@@ -87,6 +91,10 @@ class ReviewEditingMixin:
             QMessageBox.information(
                 self, "Mark lost", "Select a result row or move to a tracked frame first."
             )
+            return
+        if not self._confirm_draft_replacement(
+            "marking a result lost", ("Physics fit",)
+        ):
             return
         task = self.current_task
         previous_result = task.pipeline.results[index]
@@ -166,6 +174,10 @@ class ReviewEditingMixin:
         if not self._review_undo_is_current():
             self._review_undo = None
             self._sync_review_undo_action()
+            return False
+        if not self._confirm_draft_replacement(
+            "undoing the Review edit", ("Physics fit",)
+        ):
             return False
         undo = self._review_undo
         assert undo is not None

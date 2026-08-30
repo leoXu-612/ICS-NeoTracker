@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import unittest
 import time
 
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QApplication, QWidget
 
+from neo_tracker.core import TrackerResult
 from neo_tracker.media import MediaInfo
+from neo_tracker.project import NeoTrackerProject, ProjectTaskSnapshot
 from neo_tracker.ui.analysis_workspace_controller import FitDraft
 from neo_tracker.ui.fit_panel import FitPanel
 from neo_tracker.ui.main_window import NeoTrackerWindow
@@ -130,11 +133,92 @@ class MainWindowFitIntegrationTests(unittest.TestCase):
         self.assertIsNotNone(window.physics_workspace.plot._fit_series)
         self.assertIsNotNone(window.selection_session.state.selected_fit_id)
         self.assertEqual(window.analysis_workspace_controller.state.status, "complete")
+        self.assertNotIn("Physics fit", window._unapplied_draft_names())
 
         window.fit_panel.range_end_spin.setValue(0.8)
         QCoreApplication.processEvents()
         self.assertEqual(window.analysis_workspace_controller.state.status, "dirty")
         self.assertIsNone(window.physics_workspace.plot._fit_series)
+        self.assertIn("Physics fit", window._unapplied_draft_names())
+
+    def test_unrun_fit_settings_are_protected_across_task_switch(self) -> None:
+        window = self.make_window()
+        window._apply_project(
+            NeoTrackerProject(
+                name="two tasks",
+                tasks=[
+                    ProjectTaskSnapshot(
+                        media_path="/offline/take-a.mp4",
+                        pipeline_key=window.default_pipeline_key,
+                    ),
+                    ProjectTaskSnapshot(
+                        media_path="/offline/take-b.mp4",
+                        pipeline_key=window.default_pipeline_key,
+                    ),
+                ],
+            )
+        )
+        original_task = window.current_task
+        source = make_series()
+        window.set_physics_series((source,))
+        window.fit_panel.range_end_spin.setValue(0.8)
+        QCoreApplication.processEvents()
+        window.set_physics_series(
+            (source, replace(source, series_id="derived:v", name="Velocity"))
+        )
+
+        self.assertIn("Physics fit", window._unapplied_draft_names())
+        prompts: list[tuple[str, tuple[str, ...]]] = []
+        window._ask_unapplied_drafts = (  # type: ignore[method-assign]
+            lambda action, names: prompts.append((action, names)) or False
+        )
+        window.task_list.setCurrentRow(1)
+
+        self.assertIs(window.current_task, original_task)
+        self.assertEqual(window.task_list.currentRow(), 0)
+        self.assertAlmostEqual(window.fit_panel.range_end_spin.value(), 0.8)
+        self.assertEqual(prompts, [("switching to take-b.mp4", ("Physics fit",))])
+
+        prompts.clear()
+        self.assertFalse(
+            window._confirm_configuration_change(original_task, "changing calibration")
+        )
+        self.assertEqual(prompts, [("changing calibration", ("Physics fit",))])
+
+        window._ask_unapplied_drafts = lambda _action, _names: True  # type: ignore[method-assign]
+        window.task_list.setCurrentRow(1)
+        self.assertIs(window.current_task, window.tasks[1])
+        self.assertNotIn("Physics fit", window._unapplied_draft_names())
+
+    def test_review_edit_does_not_silently_discard_unrun_fit_settings(self) -> None:
+        window = self.make_window()
+        result = TrackerResult(
+            0,
+            0.0,
+            {"x_px": 12.0, "y_px": 20.0},
+            {"x_px": 12.0, "y_px": 20.0},
+            0.9,
+            "ok",
+        )
+        window.current_task.pipeline.results = [result]
+        window.set_physics_series((make_series(),))
+        window.fit_panel.range_end_spin.setValue(0.8)
+        QCoreApplication.processEvents()
+        prompts: list[tuple[str, tuple[str, ...]]] = []
+        window._ask_unapplied_drafts = (  # type: ignore[method-assign]
+            lambda action, names: prompts.append((action, names)) or False
+        )
+
+        window._mark_current_result_lost()
+
+        self.assertIs(window.current_task.pipeline.results[0], result)
+        self.assertAlmostEqual(window.fit_panel.range_end_spin.value(), 0.8)
+        self.assertEqual(prompts, [("marking a result lost", ("Physics fit",))])
+
+        window._ask_unapplied_drafts = lambda _action, _names: True  # type: ignore[method-assign]
+        window._mark_current_result_lost()
+        self.assertEqual(window.current_task.pipeline.results[0].status, "manual_lost")
+        self.assertNotIn("Physics fit", window._unapplied_draft_names())
 
     def test_close_cancels_active_fit_and_reaches_idle(self) -> None:
         window = self.make_window()
