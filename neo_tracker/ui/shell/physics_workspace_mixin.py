@@ -727,7 +727,11 @@ class PhysicsWorkspaceMixin:
         self._physics_definition_states[definition.analysis_id] = "current"
         self._mark_project_changed()
 
-    def _persist_active_physics_view(self) -> None:
+    def _persist_active_physics_view(
+        self,
+        *,
+        selected_range_s: tuple[float, float] | None = None,
+    ) -> None:
         analysis_id = getattr(self, "_physics_active_definition_id", None)
         state = self.analysis_workspace_controller.state
         if analysis_id is None or state.fit_result is None:
@@ -740,8 +744,22 @@ class PhysicsWorkspaceMixin:
             page=self.physics_workspace.current_page,
             residual_visible=state.residual_visible,
         )
-        if view_state != dict(definition.view_state):
-            self._store_physics_definition(replace(definition, view_state=view_state))
+        range_changed = (
+            selected_range_s is not None
+            and selected_range_s != definition.selected_range_s
+        )
+        if view_state != dict(definition.view_state) or range_changed:
+            self._store_physics_definition(
+                replace(
+                    definition,
+                    selected_range_s=(
+                        definition.selected_range_s
+                        if selected_range_s is None
+                        else selected_range_s
+                    ),
+                    view_state=view_state,
+                )
+            )
 
     def _update_physics_actions(self, state: AnalysisWorkspaceState) -> None:
         has_series = bool(
@@ -801,6 +819,14 @@ class PhysicsWorkspaceMixin:
         else:
             self.physics_inspector.clear()
         self._persist_active_physics_view()
+
+    def _physics_range_selected(self, start_s: float, end_s: float) -> None:
+        selected_range_s = tuple(sorted((float(start_s), float(end_s))))
+        self.physics_inspector.show_plot(
+            len(self._physics_series_by_id),
+            range_s=selected_range_s,
+        )
+        self._persist_active_physics_view(selected_range_s=selected_range_s)
 
     def _selection_session_changed(self, event: SelectionEvent) -> None:
         state = event.current

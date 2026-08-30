@@ -156,6 +156,17 @@ class KinematicsPersistenceIntegrationTests(unittest.TestCase):
             {"page": "Plot", "residual_visible": True},
         )
         self.assertTrue(source_window._project_dirty)
+        source_window._set_project_clean()
+        source_window.physics_workspace.plot.set_selected_range(0.25, 0.65)
+        source_window.physics_workspace.plot.rangeSelected.emit(0.25, 0.65)
+        fit_definition = next(
+            item for item in task.analysis_workspace.definitions if item.fit_config is not None
+        )
+        self.assertEqual(fit_definition.selected_range_s, (0.25, 0.65))
+        self.assertTrue(source_window._project_dirty)
+        source_window._set_project_clean()
+        source_window.physics_workspace.plot.rangeSelected.emit(0.25, 0.65)
+        self.assertFalse(source_window._project_dirty)
 
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "fit-replay.ntproj"
@@ -172,7 +183,7 @@ class KinematicsPersistenceIntegrationTests(unittest.TestCase):
         assert fit_result is not None
         self.assertAlmostEqual(float(fit_result.parameters[0]), 2.0, places=10)
         self.assertEqual(restored_window.physics_workspace.current_page, "Plot")
-        self.assertEqual(restored_window.physics_workspace.plot.selected_range, (0.15, 0.75))
+        self.assertEqual(restored_window.physics_workspace.plot.selected_range, (0.25, 0.65))
         self.assertEqual(restored_window.fit_panel.series_combo.currentData(), "filtered_state:x")
         self.assertEqual(restored_window.fit_panel.model_combo.currentData(), "linear")
         self.assertAlmostEqual(restored_window.fit_panel.range_start_spin.value(), 0.15)
