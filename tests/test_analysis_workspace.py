@@ -115,6 +115,32 @@ class PhysicsWorkspaceTests(unittest.TestCase):
         workspace.apply_selection(None, None, None, None, "unavailable")
         self.assertFalse(workspace.copy_row_button.isEnabled())
 
+    def test_shared_selection_refreshes_and_clears_the_data_status(self) -> None:
+        workspace = PhysicsWorkspace()
+        source = make_series()
+        velocity = replace(
+            source,
+            series_id="derived:v",
+            name="Velocity",
+            unit="m/s",
+            source_kind="derived",
+        )
+        workspace.set_series((source, velocity))
+
+        workspace.apply_selection(velocity.series_id, 2, 2, 0.09, "exact")
+
+        self.assertEqual(
+            workspace.copy_status_label.text(),
+            "Valid · Velocity · 2 m/s",
+        )
+
+        workspace.apply_selection(None, None, None, None, "unavailable")
+
+        self.assertEqual(
+            workspace.copy_status_label.text(),
+            "4 aligned samples · derived · m/s",
+        )
+
     def test_selection_keeps_an_overflow_series_visible_in_the_bounded_plot(self) -> None:
         workspace = PhysicsWorkspace()
         source = make_series()

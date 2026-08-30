@@ -342,12 +342,14 @@ class PhysicsWorkspace(QFrame):
             self._ensure_plot_series_visible(source)
             self.plot.set_selected_sample(int(sample_index), source.series_id)
             self.copy_row_button.setEnabled(True)
+            self._set_data_status(source, int(sample_index))
         else:
             self.series_table.selectionModel().blockSignals(True)
             self.series_table.clearSelection()
             self.series_table.selectionModel().blockSignals(False)
             self.plot.set_selected_sample(None)
             self.copy_row_button.setEnabled(False)
+            self._set_data_status(self.series_model.series)
         self.set_cursor(frame_index, time_s, match)
 
     def remember_height(self, height: int) -> None:
@@ -420,14 +422,9 @@ class PhysicsWorkspace(QFrame):
         series_id = self.series_combo.currentData()
         source = self._series.get(str(series_id)) if series_id is not None else None
         self.series_model.set_series(source)
-        if source is None:
-            self.copy_status_label.setText("No physical series is available.")
-        else:
+        self._set_data_status(source)
+        if source is not None:
             self._ensure_plot_series_visible(source)
-            unit = source.unit or "unit unavailable"
-            self.copy_status_label.setText(
-                f"{len(source):,} aligned samples · {source.source_kind} · {unit}"
-            )
             self.seriesActivated.emit(source.series_id)
 
     def _ensure_plot_series_visible(self, source: SampleSeries) -> None:
@@ -462,11 +459,7 @@ class PhysicsWorkspace(QFrame):
         time_s = float(source.time_s[row])
         self.plot.set_selected_sample(row, source.series_id)
         self.set_cursor(frame, time_s if math.isfinite(time_s) else None, "exact")
-        validity = "Valid" if bool(source.valid_mask[row]) else "Invalid"
-        unit = source.unit or "unit unavailable"
-        self.copy_status_label.setText(
-            f"{validity} · {source.name} · {format(float(source.values[row]), '.8g') if source.valid_mask[row] else '—'} {unit}"
-        )
+        self._set_data_status(source, row)
         self.sampleActivated.emit(source.series_id, row)
 
     def _copy_selected_rows(self) -> None:
@@ -495,9 +488,34 @@ class PhysicsWorkspace(QFrame):
         )
         selection.blockSignals(False)
         self.copy_row_button.setEnabled(True)
+        self._set_data_status(source, int(row))
         time_s = float(source.time_s[int(row)])
         self.set_cursor(int(source.frame_indices[int(row)]), time_s, "exact")
         self.plotSampleActivated.emit(series_id, int(row))
+
+    def _set_data_status(
+        self,
+        source: SampleSeries | None,
+        sample_index: int | None = None,
+    ) -> None:
+        if source is None:
+            text = "No physical series is available."
+        elif sample_index is None:
+            text = (
+                f"{len(source):,} aligned samples · {source.source_kind} · "
+                f"{source.unit or 'unit unavailable'}"
+            )
+        else:
+            row = int(sample_index)
+            validity = "Valid" if bool(source.valid_mask[row]) else "Invalid"
+            value = (
+                format(float(source.values[row]), ".8g")
+                if source.valid_mask[row]
+                else "—"
+            )
+            unit = source.unit or "unit unavailable"
+            text = f"{validity} · {source.name} · {value} {unit}"
+        self.copy_status_label.setText(text)
 
     def _page_changed(self, _index: int) -> None:
         self.pageChanged.emit(self.current_page)
