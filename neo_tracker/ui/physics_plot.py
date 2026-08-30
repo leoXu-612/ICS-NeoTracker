@@ -199,6 +199,11 @@ class PhysicsPlot(QWidget):
     def selected_range(self) -> tuple[float, float] | None:
         return self._range_s
 
+    @property
+    def time_range(self) -> tuple[float, float] | None:
+        bounds = self._data_bounds()
+        return None if bounds is None else bounds[:2]
+
     def set_series(self, series: Sequence[SampleSeries]) -> None:
         items = tuple(series)
         if len(items) > 8:

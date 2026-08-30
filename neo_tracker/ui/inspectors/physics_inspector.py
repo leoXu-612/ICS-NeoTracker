@@ -194,7 +194,9 @@ class PhysicsInspector(QWidget):
         self.validity_label.setText("Invalid/lost samples render as explicit gaps")
         self.processing_label.setText("Width-bounded min/max envelope")
         self.range_label.setText(
-            f"{range_s[0]:.6g}–{range_s[1]:.6g} s" if range_s is not None else "Full true-time range"
+            f"{range_s[0]:.6g}–{range_s[1]:.6g} s"
+            if range_s is not None
+            else "No valid true-time range"
         )
         self.quality_label.setText("Cursor and range are preserved during decimation")
         self._describe_current()

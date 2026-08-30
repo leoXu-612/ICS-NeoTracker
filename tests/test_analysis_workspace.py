@@ -281,6 +281,7 @@ class MainWindowPhysicsWorkspaceTests(unittest.TestCase):
         self.assertIn("1 visible", window.physics_inspector.source_label.text())
         self.assertIn(source.name, window.physics_inspector.source_label.text())
         self.assertEqual(window.physics_inspector.unit_label.text(), source.unit)
+        self.assertEqual(window.physics_inspector.range_label.text(), "0.071–0.341 s")
 
     def test_one_plot_keyboard_action_commits_one_canonical_revision(self) -> None:
         window = self.make_window()

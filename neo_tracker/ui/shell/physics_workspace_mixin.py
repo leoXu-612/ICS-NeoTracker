@@ -856,7 +856,10 @@ class PhysicsWorkspaceMixin:
         if page == "Plot":
             self.physics_inspector.show_plot(
                 self._visible_physics_plot_series(),
-                range_s=self.physics_workspace.plot.selected_range,
+                range_s=(
+                    self.physics_workspace.plot.selected_range
+                    or self.physics_workspace.plot.time_range
+                ),
             )
         elif page == "Fit" and state.fit_result is not None:
             self.physics_inspector.show_fit(state.fit_result)
