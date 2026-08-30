@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 from PySide6.QtCore import Qt
@@ -210,6 +213,21 @@ class MainWindowPhysicsWorkspaceTests(unittest.TestCase):
 
         self.assertEqual(window.selection_session.state.selection_revision, before + 1)
         self.assertEqual(window.selection_session.state.selected_sample_index, 1)
+
+    def test_plot_image_export_is_reachable_from_workspace(self) -> None:
+        window = self.make_window()
+        window.set_physics_series((self.sparse_series(),))
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "physics-plot.png"
+            with patch(
+                "neo_tracker.ui.shell.physics_workspace_mixin.QFileDialog.getSaveFileName",
+                return_value=(str(path), "PNG images (*.png)"),
+            ):
+                window.physics_workspace.export_plot_image_button.click()
+
+            self.assertGreater(path.stat().st_size, 0)
+        self.assertIn("Exported physics plot", window.statusBar().currentMessage())
 
     def test_final_window_close_unsubscribes_selection_session(self) -> None:
         window = self.make_window()

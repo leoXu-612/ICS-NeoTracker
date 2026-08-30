@@ -33,6 +33,7 @@ class PhysicsWorkspace(QFrame):
     sampleActivated = Signal(str, int)
     plotSampleActivated = Signal(str, int)
     rangeSelected = Signal(float, float)
+    plotImageExportRequested = Signal()
     pageRouteRequested = Signal(str)
     pageChanged = Signal(str)
     layoutStateChanged = Signal(object)
@@ -142,9 +143,20 @@ class PhysicsWorkspace(QFrame):
         self.plot = PhysicsPlot()
         self.plot.sampleActivated.connect(self._plot_sample_activated)
         self.plot.rangeSelected.connect(self.rangeSelected)
+        self.export_plot_image_button = QPushButton("Export PNG")
+        self.export_plot_image_button.setAccessibleName("Export physics plot image")
+        self.export_plot_image_button.setAccessibleDescription(
+            "Save the current true-time plot, including fit and residual layers, as a PNG image."
+        )
+        self.export_plot_image_button.setEnabled(False)
+        self.export_plot_image_button.clicked.connect(self.plotImageExportRequested)
         plot_page = QWidget()
         plot_layout = QVBoxLayout(plot_page)
         plot_layout.setContentsMargins(8, 7, 8, 8)
+        plot_actions = QHBoxLayout()
+        plot_actions.addStretch(1)
+        plot_actions.addWidget(self.export_plot_image_button)
+        plot_layout.addLayout(plot_actions)
         plot_layout.addWidget(self.plot, 1)
         self._add_page("Plot", plot_page)
 
@@ -260,6 +272,7 @@ class PhysicsWorkspace(QFrame):
         self.series_combo.blockSignals(False)
         self._series_changed(self.series_combo.currentIndex())
         self.plot.set_series(items[:8])
+        self.export_plot_image_button.setEnabled(bool(items))
         if not items:
             self.set_cursor(None, None, "unavailable")
 

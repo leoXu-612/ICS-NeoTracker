@@ -7,6 +7,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from PySide6.QtCore import QTimer, Qt
+from PySide6.QtWidgets import QFileDialog
 
 from neo_tracker.application.kinematics_workspace_coordinator import (
     KinematicsWorkspaceJob,
@@ -827,6 +828,28 @@ class PhysicsWorkspaceMixin:
             range_s=selected_range_s,
         )
         self._persist_active_physics_view(selected_range_s=selected_range_s)
+
+    def _export_physics_plot_image(self) -> None:
+        path, _selected_filter = QFileDialog.getSaveFileName(
+            self,
+            "Export physics plot image",
+            "physics-plot.png",
+            "PNG images (*.png);;All files (*)",
+        )
+        if not path:
+            return
+        try:
+            saved = self.physics_workspace.plot.export_image(path)
+        except Exception as exc:
+            self.statusBar().showMessage(f"Could not export physics plot: {exc}", 8000)
+            return
+        if saved:
+            self.statusBar().showMessage(
+                f"Exported physics plot: {Path(path).name}",
+                6000,
+            )
+        else:
+            self.statusBar().showMessage("Could not export physics plot image.", 8000)
 
     def _selection_session_changed(self, event: SelectionEvent) -> None:
         state = event.current

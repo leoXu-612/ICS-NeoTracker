@@ -489,6 +489,9 @@ class NeoTrackerWindow(
         self.physics_workspace.pageRouteRequested.connect(self._physics_route_requested)
         self.physics_workspace.pageChanged.connect(self._physics_workspace_page_changed)
         self.physics_workspace.rangeSelected.connect(self._physics_range_selected)
+        self.physics_workspace.plotImageExportRequested.connect(
+            self._export_physics_plot_image
+        )
         self.physics_workspace.layoutStateChanged.connect(
             self._physics_workspace_layout_changed
         )
