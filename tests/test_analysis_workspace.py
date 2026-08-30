@@ -269,6 +269,19 @@ class MainWindowPhysicsWorkspaceTests(unittest.TestCase):
             other.series_id,
         )
 
+    def test_plot_inspector_reports_only_visible_compatible_series(self) -> None:
+        window = self.make_window()
+        source = self.sparse_series()
+        velocity = replace(source, series_id="derived:v", name="Velocity", unit="m/s")
+        self.assertTrue(window.set_physics_series((source, velocity)))
+
+        window.physics_workspace.show_page("Plot")
+        QApplication.processEvents()
+
+        self.assertIn("1 visible", window.physics_inspector.source_label.text())
+        self.assertIn(source.name, window.physics_inspector.source_label.text())
+        self.assertEqual(window.physics_inspector.unit_label.text(), source.unit)
+
     def test_one_plot_keyboard_action_commits_one_canonical_revision(self) -> None:
         window = self.make_window()
         window.current_task.media_info = MediaInfo(

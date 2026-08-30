@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 import math
 
 from PySide6.QtWidgets import (
@@ -175,13 +176,21 @@ class PhysicsInspector(QWidget):
 
     def show_plot(
         self,
-        series_count: int,
+        series: Sequence[SampleSeries],
         *,
         range_s: tuple[float, float] | None,
     ) -> None:
+        items = tuple(series)
         self.object_label.setText("Plot")
-        self.source_label.setText(f"{int(series_count)} visible physical series")
-        self.unit_label.setText("Per-series units")
+        names = " · ".join(
+            f"{index} {item.name}" for index, item in enumerate(items, 1)
+        )
+        self.source_label.setText(
+            f"{len(items)} visible physical series" + (f" · {names}" if names else "")
+        )
+        self.unit_label.setText(
+            (items[0].unit or "unit unavailable") if items else "unit unavailable"
+        )
         self.validity_label.setText("Invalid/lost samples render as explicit gaps")
         self.processing_label.setText("Width-bounded min/max envelope")
         self.range_label.setText(

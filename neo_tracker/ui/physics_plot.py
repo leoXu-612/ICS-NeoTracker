@@ -228,15 +228,6 @@ class PhysicsPlot(QWidget):
         self._range_s = None
         self._envelope_cache.clear()
         self._prepare_envelopes()
-        if items:
-            unit = items[0].unit or "unit unavailable"
-            self.setAccessibleDescription(
-                f"{len(items)} physical series against stored true time with vertical unit {unit}. "
-                "Invalid samples are visible as line gaps. Use Left and Right Arrow to move the "
-                "selected sample."
-            )
-        else:
-            self.setAccessibleDescription("No physical series is available to plot.")
         self.update()
 
     def set_fit_result(
@@ -324,7 +315,8 @@ class PhysicsPlot(QWidget):
         # sparse traces retain antialiasing for presentation quality.
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, not dense_trace)
         painter.fillRect(self.rect(), QColor("#FBFCFC"))
-        plot_rect = QRectF(58.0, 18.0, max(1.0, self.width() - 78.0), max(1.0, self.height() - 52.0))
+        plot_rect = self._plot_rect()
+        self._paint_legend(painter)
         painter.setPen(QPen(QColor("#D8DEE2"), 1.0))
         painter.drawRect(plot_rect)
 
@@ -354,6 +346,7 @@ class PhysicsPlot(QWidget):
             painter.drawLine(QPointF(left, plot_rect.top()), QPointF(left, plot_rect.bottom()))
             painter.drawLine(QPointF(right, plot_rect.top()), QPointF(right, plot_rect.bottom()))
 
+        endpoints: list[tuple[int, QPointF, QColor]] = []
         for layer_index, prepared in enumerate(self._prepared):
             color = self._COLORS[layer_index % len(self._COLORS)]
             if prepared.series_id.startswith("fit:"):
@@ -362,6 +355,7 @@ class PhysicsPlot(QWidget):
                 pen = QPen(color, 1.6)
             painter.setPen(pen)
             segment: list[QPointF] = []
+            last_point: QPointF | None = None
             for time_s, value in zip(prepared.time_s, prepared.values):
                 if not math.isfinite(float(time_s)) or not math.isfinite(float(value)):
                     if len(segment) > 1:
@@ -373,9 +367,13 @@ class PhysicsPlot(QWidget):
                     self._y_for_value(float(value), plot_rect, value_min, value_max),
                 )
                 segment.append(point)
+                last_point = point
             if len(segment) > 1:
                 painter.drawPolyline(QPolygonF(segment))
+            if last_point is not None:
+                endpoints.append((layer_index, last_point, color))
 
+        self._paint_layer_labels(painter, plot_rect, endpoints)
         self._paint_cursor(painter, plot_rect, bounds)
         painter.setPen(QColor("#626A70"))
         painter.drawText(
@@ -428,7 +426,7 @@ class PhysicsPlot(QWidget):
             if abs(end_x - self._drag_start_x) >= 5.0:
                 bounds = self._data_bounds()
                 if bounds is not None:
-                    plot_rect = QRectF(58.0, 18.0, max(1.0, self.width() - 78.0), max(1.0, self.height() - 52.0))
+                    plot_rect = self._plot_rect()
                     start_s = self._time_for_x(self._drag_start_x, plot_rect, bounds[0], bounds[1])
                     end_s = self._time_for_x(end_x, plot_rect, bounds[0], bounds[1])
                     self.set_selected_range(start_s, end_s)
@@ -444,7 +442,7 @@ class PhysicsPlot(QWidget):
         bounds = self._data_bounds()
         if source is None or bounds is None:
             return
-        plot_rect = QRectF(58.0, 18.0, max(1.0, self.width() - 78.0), max(1.0, self.height() - 52.0))
+        plot_rect = self._plot_rect()
         target = self._time_for_x(x, plot_rect, bounds[0], bounds[1])
         valid = self._valid_indices.get(source.series_id)
         if valid is None or valid.size == 0:
@@ -481,6 +479,78 @@ class PhysicsPlot(QWidget):
                 self._envelope_cache.move_to_end(key)
             prepared.append(envelope)
         self._prepared = tuple(prepared)
+        self._update_accessible_description()
+
+    def _plot_rect(self) -> QRectF:
+        legend_rows = (len(self._prepared) + 3) // 4
+        top = 18.0 + max(0, legend_rows - 1) * 16.0
+        return QRectF(
+            58.0,
+            top,
+            max(1.0, self.width() - 78.0),
+            max(1.0, self.height() - top - 34.0),
+        )
+
+    def _paint_legend(self, painter: QPainter) -> None:
+        count = len(self._prepared)
+        if not count:
+            return
+        columns = min(4, count)
+        cell_width = max(1.0, (self.width() - 16.0) / columns)
+        metrics = painter.fontMetrics()
+        painter.setPen(QColor("#20272C"))
+        for index, prepared in enumerate(self._prepared):
+            row, column = divmod(index, 4)
+            rect = QRectF(
+                8.0 + column * cell_width,
+                1.0 + row * 16.0,
+                max(1.0, cell_width - 4.0),
+                15.0,
+            )
+            text = metrics.elidedText(
+                f"{index + 1} {prepared.name}",
+                Qt.TextElideMode.ElideRight,
+                max(1, int(rect.width())),
+            )
+            painter.drawText(
+                rect,
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                text,
+            )
+
+    @staticmethod
+    def _paint_layer_labels(
+        painter: QPainter,
+        plot_rect: QRectF,
+        endpoints: Sequence[tuple[int, QPointF, QColor]],
+    ) -> None:
+        count = len(endpoints)
+        if not count:
+            return
+        for order, (layer_index, endpoint, color) in enumerate(endpoints):
+            center_y = plot_rect.top() + (order + 0.5) * plot_rect.height() / count
+            label = QRectF(plot_rect.right() + 2.0, center_y - 7.0, 16.0, 14.0)
+            painter.setPen(QPen(color, 0.8))
+            painter.drawLine(endpoint, QPointF(label.left(), label.center().y()))
+            painter.fillRect(label, QColor("#FBFCFC"))
+            painter.setPen(QColor("#20272C"))
+            painter.drawText(label, Qt.AlignmentFlag.AlignCenter, str(layer_index + 1))
+
+    def _update_accessible_description(self) -> None:
+        if not self._prepared:
+            self.setAccessibleDescription("No physical series is available to plot.")
+            return
+        unit = self._prepared[0].unit or "unit unavailable"
+        labels = "; ".join(
+            f"{index} {prepared.name}"
+            for index, prepared in enumerate(self._prepared, 1)
+        )
+        self.setAccessibleDescription(
+            f"{len(self._prepared)} visible plot layers against stored true time with "
+            f"vertical unit {unit}: {labels}. "
+            "Invalid samples are visible as line gaps. Use Left and Right Arrow to move the "
+            "selected sample."
+        )
 
     def _data_bounds(self) -> tuple[float, float, float, float] | None:
         finite_times: list[np.ndarray] = []

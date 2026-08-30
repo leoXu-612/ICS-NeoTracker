@@ -855,7 +855,7 @@ class PhysicsWorkspaceMixin:
         source = self._physics_series_by_id.get(state.selected_series_id or "")
         if page == "Plot":
             self.physics_inspector.show_plot(
-                len(self._physics_series_by_id),
+                self._visible_physics_plot_series(),
                 range_s=self.physics_workspace.plot.selected_range,
             )
         elif page == "Fit" and state.fit_result is not None:
@@ -869,10 +869,17 @@ class PhysicsWorkspaceMixin:
     def _physics_range_selected(self, start_s: float, end_s: float) -> None:
         selected_range_s = tuple(sorted((float(start_s), float(end_s))))
         self.physics_inspector.show_plot(
-            len(self._physics_series_by_id),
+            self._visible_physics_plot_series(),
             range_s=selected_range_s,
         )
         self._persist_active_physics_view(selected_range_s=selected_range_s)
+
+    def _visible_physics_plot_series(self) -> tuple[SampleSeries, ...]:
+        return tuple(
+            self._physics_series_by_id[series_id]
+            for series_id in self.physics_workspace.plot.series_ids
+            if series_id in self._physics_series_by_id
+        )
 
     def _export_physics_plot_image(self) -> None:
         path, _selected_filter = QFileDialog.getSaveFileName(

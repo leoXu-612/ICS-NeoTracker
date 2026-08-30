@@ -126,6 +126,28 @@ class PhysicsPlotWidgetTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "one known unit"):
             plot.set_series((unknown, other_unknown))
 
+    def test_overlay_legend_names_layers_without_relying_on_color(self) -> None:
+        plot = PhysicsPlot()
+        plot.resize(640, 280)
+        source = make_series(20)
+        filtered = replace(source, series_id="filtered:x", name="Filtered x")
+        plot.set_series((source, filtered))
+
+        self.assertIn("1 Raw x", plot.accessibleDescription())
+        self.assertIn("2 Filtered x", plot.accessibleDescription())
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "legend.png"
+            self.assertTrue(plot.export_image(path))
+            image = QImage(str(path))
+        background = image.pixelColor(0, 0).rgba()
+        self.assertTrue(
+            any(
+                image.pixelColor(x, y).rgba() != background
+                for x in range(8, image.width() - 8)
+                for y in range(2, 16)
+            )
+        )
+
     def test_retina_batched_polyline_keeps_invalid_gap_visually_open(self) -> None:
         class RetinaGapPlot(PhysicsPlot):
             def devicePixelRatioF(self) -> float:  # noqa: N802
