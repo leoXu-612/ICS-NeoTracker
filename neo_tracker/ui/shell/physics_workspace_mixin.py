@@ -544,6 +544,7 @@ class PhysicsWorkspaceMixin:
             or self.analysis_workspace_controller.busy
         ):
             return False
+        deferred_fit_count = 0
         for index, entry in enumerate(tuple(queue)):
             operation, definition = entry
             source_id = definition.source_series.series_id
@@ -577,6 +578,12 @@ class PhysicsWorkspaceMixin:
                     bounds=fit_request.bounds,
                     use_valid_only=fit_request.use_valid_only,
                 )
+                if self.fit_panel.is_dirty():
+                    self._physics_definition_states[definition.analysis_id] = "deferred"
+                    deferred_fit_count += 1
+                    continue
+                if not self.fit_panel.restore_draft(draft):
+                    continue
                 if not self.analysis_workspace_controller.run_fit(self.current_task, draft):
                     continue
                 del queue[index]
@@ -608,9 +615,15 @@ class PhysicsWorkspaceMixin:
             return True
         unresolved = len(queue)
         queue.clear()
-        if unresolved:
+        unavailable = unresolved - deferred_fit_count
+        if deferred_fit_count:
             self.statusBar().showMessage(
-                f"{unresolved} saved physics definition(s) could not be rebuilt because a source series is unavailable.",
+                f"Deferred {deferred_fit_count} saved fit definition(s) because the Fit panel has unapplied settings.",
+                8000,
+            )
+        elif unavailable:
+            self.statusBar().showMessage(
+                f"{unavailable} saved physics definition(s) could not be rebuilt because a source series is unavailable.",
                 8000,
             )
         return False

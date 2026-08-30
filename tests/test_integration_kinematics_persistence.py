@@ -161,6 +161,11 @@ class KinematicsPersistenceIntegrationTests(unittest.TestCase):
         self.assertAlmostEqual(float(fit_result.parameters[0]), 2.0, places=10)
         self.assertEqual(restored_window.physics_workspace.current_page, "Plot")
         self.assertEqual(restored_window.physics_workspace.plot.selected_range, (0.15, 0.75))
+        self.assertEqual(restored_window.fit_panel.series_combo.currentData(), "filtered_state:x")
+        self.assertEqual(restored_window.fit_panel.model_combo.currentData(), "linear")
+        self.assertAlmostEqual(restored_window.fit_panel.range_start_spin.value(), 0.15)
+        self.assertAlmostEqual(restored_window.fit_panel.range_end_spin.value(), 0.75)
+        self.assertNotIn("Physics fit", restored_window._unapplied_draft_names())
         self.assertTrue(restored_window.analysis_workspace_controller.state.residual_visible)
         self.assertEqual(
             restored_window._physics_definition_states[restored_view.analysis_id],

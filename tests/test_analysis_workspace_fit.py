@@ -88,6 +88,28 @@ class FitPanelTests(unittest.TestCase):
         self.assertFalse(panel.series_combo.isEnabled())
         self.assertIn("running", panel.status_label.text().lower())
 
+    def test_restored_draft_roundtrips_controls_without_becoming_dirty(self) -> None:
+        panel = FitPanel()
+        source = make_series()
+        panel.set_series((source,))
+        restored = FitDraft(
+            source.series_id,
+            "sinusoidal",
+            0.2,
+            0.8,
+            initial_parameters={"omega": 3.0},
+            bounds={"omega": (0.1, 10.0)},
+        )
+
+        self.assertTrue(panel.restore_draft(restored))
+
+        self.assertEqual(panel.draft(), restored)
+        self.assertFalse(panel.is_dirty())
+
+        panel.range_end_spin.setValue(0.7)
+        self.assertFalse(panel.restore_draft(restored))
+        self.assertAlmostEqual(panel.range_end_spin.value(), 0.7)
+
 
 class MainWindowFitIntegrationTests(unittest.TestCase):
     @classmethod

@@ -194,6 +194,34 @@ class FitPanel(QWidget):
     def mark_draft_applied(self) -> None:
         self._draft_baseline = self._draft_state() if self._series else None
 
+    def restore_draft(self, draft: FitDraft) -> bool:
+        if self.is_dirty():
+            return False
+        source = self._series.get(draft.series_id)
+        series_index = self.series_combo.findData(draft.series_id)
+        model_index = self.model_combo.findData(draft.model)
+        if source is None or series_index < 0 or model_index < 0:
+            return False
+        try:
+            draft.to_request(source)
+        except (TypeError, ValueError):
+            return False
+        self._syncing = True
+        try:
+            self.series_combo.setCurrentIndex(series_index)
+            self.model_combo.setCurrentIndex(model_index)
+            self.range_start_spin.setValue(float(draft.range_start_s))
+            self.range_end_spin.setValue(float(draft.range_end_s))
+            self.initial_parameters_edit.setText(
+                json.dumps(dict(draft.initial_parameters), sort_keys=True)
+            )
+            self.bounds_edit.setText(json.dumps(dict(draft.bounds), sort_keys=True))
+            self.clear_result()
+            self._draft_baseline = self._draft_state()
+        finally:
+            self._syncing = False
+        return True
+
     def revert_draft(self) -> None:
         baseline = self._draft_baseline
         if baseline is None:
