@@ -280,7 +280,8 @@ class PhysicsWorkspace(QFrame):
         index = self.series_combo.findData(previous)
         self.series_combo.setCurrentIndex(index if index >= 0 else (0 if items else -1))
         self.series_combo.blockSignals(False)
-        self.plot.set_series(items[:8])
+        selected = self._series.get(str(self.series_combo.currentData()))
+        self.plot.set_series(self._plot_series_for(selected) if selected is not None else ())
         self._series_changed(self.series_combo.currentIndex())
         self.export_plot_image_button.setEnabled(bool(items))
         if not items:
@@ -430,15 +431,22 @@ class PhysicsWorkspace(QFrame):
             self.seriesActivated.emit(source.series_id)
 
     def _ensure_plot_series_visible(self, source: SampleSeries) -> None:
-        if source.series_id in self.plot.series_ids:
+        if self.plot.series_ids[:1] == (source.series_id,):
             return
         selected_range = self.plot.selected_range
-        visible = tuple(
-            item for item in self._series.values() if item.series_id != source.series_id
-        )
-        self.plot.set_series((*visible[:7], source))
+        self.plot.set_series(self._plot_series_for(source))
         if selected_range is not None:
             self.plot.set_selected_range(*selected_range)
+
+    def _plot_series_for(self, source: SampleSeries) -> tuple[SampleSeries, ...]:
+        compatible = tuple(
+            item
+            for item in self._series.values()
+            if source.unit
+            and item.series_id != source.series_id
+            and item.unit == source.unit
+        )
+        return (source, *compatible[:7])
 
     def _table_selection_changed(self) -> None:
         rows = self.series_table.selectionModel().selectedRows()

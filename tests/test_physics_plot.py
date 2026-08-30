@@ -114,6 +114,18 @@ class PhysicsPlotWidgetTests(unittest.TestCase):
 
         self.assertIsNone(plot._fit_series)
 
+    def test_single_axis_rejects_mixed_or_unknown_unit_overlays(self) -> None:
+        plot = PhysicsPlot()
+        source = make_series(20)
+        velocity = replace(source, series_id="derived:v", unit="m/s")
+        with self.assertRaisesRegex(ValueError, "one known unit"):
+            plot.set_series((source, velocity))
+
+        unknown = replace(source, series_id="raw:unknown", unit="")
+        other_unknown = replace(unknown, series_id="raw:other")
+        with self.assertRaisesRegex(ValueError, "one known unit"):
+            plot.set_series((unknown, other_unknown))
+
     def test_retina_batched_polyline_keeps_invalid_gap_visually_open(self) -> None:
         class RetinaGapPlot(PhysicsPlot):
             def devicePixelRatioF(self) -> float:  # noqa: N802

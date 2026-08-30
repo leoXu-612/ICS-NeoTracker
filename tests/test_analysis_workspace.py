@@ -132,11 +132,16 @@ class PhysicsWorkspaceTests(unittest.TestCase):
         self.assertEqual(workspace.plot.selected_sample_index, 2)
         self.assertEqual(workspace.plot.selected_range, (0.04, 0.13))
 
-    def test_quantity_change_keeps_an_overflow_series_selectable_in_the_plot(self) -> None:
+    def test_quantity_change_keeps_only_compatible_overflow_series_in_the_plot(self) -> None:
         workspace = PhysicsWorkspace()
         source = make_series()
         series = tuple(
-            replace(source, series_id=f"raw:{index}", name=f"Series {index}")
+            replace(
+                source,
+                series_id=f"raw:{index}",
+                name=f"Series {index}",
+                unit="m/s" if index == 8 else source.unit,
+            )
             for index in range(9)
         )
         workspace.set_series(series)
@@ -145,10 +150,10 @@ class PhysicsWorkspaceTests(unittest.TestCase):
         workspace.series_combo.setCurrentIndex(8)
         workspace.series_table.selectRow(2)
 
-        self.assertEqual(len(workspace.plot.series_ids), 8)
-        self.assertIn(series[-1].series_id, workspace.plot.series_ids)
+        self.assertEqual(workspace.plot.series_ids, (series[-1].series_id,))
         self.assertEqual(workspace.plot.selected_sample_index, 2)
         self.assertEqual(workspace.plot.selected_range, (0.04, 0.13))
+        self.assertIn("m/s", workspace.plot.accessibleDescription())
 
 
 class MainWindowPhysicsWorkspaceTests(unittest.TestCase):

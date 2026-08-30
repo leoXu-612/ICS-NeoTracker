@@ -209,6 +209,10 @@ class PhysicsPlot(QWidget):
         revisions = {item.source_revision for item in items}
         if len(revisions) > 1:
             raise ValueError("visible plot series must share one source revision")
+        if len(items) > 1 and (
+            not items[0].unit or any(item.unit != items[0].unit for item in items[1:])
+        ):
+            raise ValueError("visible plot series must share one known unit")
         self._series = items
         self._valid_indices = {
             item.series_id: np.flatnonzero(
@@ -224,6 +228,15 @@ class PhysicsPlot(QWidget):
         self._range_s = None
         self._envelope_cache.clear()
         self._prepare_envelopes()
+        if items:
+            unit = items[0].unit or "unit unavailable"
+            self.setAccessibleDescription(
+                f"{len(items)} physical series against stored true time with vertical unit {unit}. "
+                "Invalid samples are visible as line gaps. Use Left and Right Arrow to move the "
+                "selected sample."
+            )
+        else:
+            self.setAccessibleDescription("No physical series is available to plot.")
         self.update()
 
     def set_fit_result(
