@@ -829,6 +829,12 @@ class PhysicsWorkspaceMixin:
         )
 
     def _physics_workspace_page_changed(self, page: str) -> None:
+        fit_series_id = str(self.fit_panel.series_combo.currentData() or "")
+        if (
+            page == "Fit"
+            and self.selection_session.state.selected_series_id != fit_series_id
+        ):
+            self._physics_series_activated(fit_series_id, SelectionOrigin.FIT)
         state = self.analysis_workspace_controller.state
         source = self._physics_series_by_id.get(state.selected_series_id or "")
         if page == "Plot":

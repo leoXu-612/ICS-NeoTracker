@@ -218,6 +218,30 @@ class MainWindowFitIntegrationTests(unittest.TestCase):
             other.series_id,
         )
 
+    def test_entering_fit_page_uses_its_visible_series_as_the_action_source(self) -> None:
+        window = self.make_window()
+        source = make_series()
+        other = replace(source, series_id="derived:v", name="Velocity")
+        window.set_physics_series((source, other))
+        window.physics_workspace.series_combo.setCurrentIndex(
+            window.physics_workspace.series_combo.findData(other.series_id)
+        )
+        QCoreApplication.processEvents()
+        self.assertEqual(window.fit_panel.series_combo.currentData(), source.series_id)
+
+        window.physics_workspace.show_page("Fit")
+        QCoreApplication.processEvents()
+
+        self.assertEqual(window.selection_session.state.selected_series_id, source.series_id)
+        self.assertEqual(
+            window.analysis_workspace_controller.state.selected_series_id,
+            source.series_id,
+        )
+        self.assertEqual(
+            window.physics_workspace.series_combo.currentData(),
+            source.series_id,
+        )
+
     def test_validity_policy_creates_a_distinct_persisted_fit_definition(self) -> None:
         window = self.make_window()
         window.set_kinematics_fit_operator(RecordingFitOperator())
