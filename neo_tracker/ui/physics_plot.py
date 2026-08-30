@@ -360,6 +360,8 @@ class PhysicsPlot(QWidget):
                 if not math.isfinite(float(time_s)) or not math.isfinite(float(value)):
                     if len(segment) > 1:
                         painter.drawPolyline(QPolygonF(segment))
+                    elif segment:
+                        painter.drawEllipse(segment[0], 2.0, 2.0)
                     segment.clear()
                     continue
                 point = QPointF(
@@ -370,6 +372,8 @@ class PhysicsPlot(QWidget):
                 last_point = point
             if len(segment) > 1:
                 painter.drawPolyline(QPolygonF(segment))
+            elif segment:
+                painter.drawEllipse(segment[0], 2.0, 2.0)
             if last_point is not None:
                 endpoints.append((layer_index, last_point, color))
 

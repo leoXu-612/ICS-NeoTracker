@@ -148,6 +148,47 @@ class PhysicsPlotWidgetTests(unittest.TestCase):
             )
         )
 
+    def test_isolated_valid_samples_between_gaps_render_as_points(self) -> None:
+        source = SampleSeries(
+            series_id="raw:isolated",
+            name="Isolated samples",
+            frame_indices=np.arange(5, dtype=np.int64),
+            time_s=np.arange(5, dtype=np.float64),
+            values=np.array([0.0, np.nan, 5.0, np.nan, 10.0]),
+            valid_mask=np.array([True, False, True, False, True]),
+            unit="m",
+            source_kind="state",
+            source_revision="results:isolated",
+        )
+        plot = PhysicsPlot()
+        plot.resize(400, 200)
+        plot.set_series((source,))
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "isolated.png"
+            self.assertTrue(plot.export_image(path))
+            image = QImage(str(path))
+
+        plot_rect = plot._plot_rect()
+        bounds = plot._data_bounds()
+        assert bounds is not None
+        expected = (
+            plot._x_for_time(2.0, plot_rect, bounds[0], bounds[1]),
+            plot._y_for_value(5.0, plot_rect, bounds[2], bounds[3]),
+        )
+
+        def is_trace(x: int, y: int) -> bool:
+            color = image.pixelColor(x, y)
+            return color.red() < 90 and 80 < color.green() < 145 and 130 < color.blue() < 190
+
+        self.assertTrue(
+            any(
+                is_trace(x, y)
+                for x in range(round(expected[0]) - 3, round(expected[0]) + 4)
+                for y in range(round(expected[1]) - 3, round(expected[1]) + 4)
+            )
+        )
+
     def test_retina_batched_polyline_keeps_invalid_gap_visually_open(self) -> None:
         class RetinaGapPlot(PhysicsPlot):
             def devicePixelRatioF(self) -> float:  # noqa: N802
