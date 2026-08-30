@@ -99,6 +99,11 @@ class PhysicsInspectorTests(unittest.TestCase):
         self.assertIn("slope=", inspector.processing_label.text())
         self.assertIn("status ok", inspector.validity_label.text())
 
+        inspector.clear()
+        self.assertIn("No analysis selection", inspector.accessibleDescription())
+        self.assertNotIn("slope=", inspector.accessibleDescription())
+        self.assertIn("No analysis selection", inspector.object_label.toolTip())
+
 
 if __name__ == "__main__":
     unittest.main()

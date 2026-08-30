@@ -96,6 +96,7 @@ class PhysicsInspector(QWidget):
         self.processing_label.setText("None")
         self.range_label.setText("No range")
         self.quality_label.setText("No fit result")
+        self._describe_current()
 
     def show_series(self, series: SampleSeries) -> None:
         derived = bool(series.processing_chain or series.source_kind in {"derived", "fit", "residual"})
