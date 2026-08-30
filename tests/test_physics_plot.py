@@ -178,6 +178,19 @@ class PhysicsPlotWidgetTests(unittest.TestCase):
         painter.drawLine.assert_called_once()
         painter.drawEllipse.assert_not_called()
 
+    def test_all_invalid_series_is_not_reported_as_an_unselected_plot(self) -> None:
+        plot = PhysicsPlot()
+        source = replace(
+            make_series(3),
+            name="Lost marker",
+            valid_mask=np.zeros(3, dtype=bool),
+        )
+
+        plot.set_series((source,))
+
+        self.assertIn("no valid samples", plot.accessibleDescription().lower())
+        self.assertIn(source.name, plot.accessibleDescription())
+
     def test_duplicate_ids_and_non_ok_fit_never_create_ambiguous_layers(self) -> None:
         plot = PhysicsPlot()
         source = make_series(20)

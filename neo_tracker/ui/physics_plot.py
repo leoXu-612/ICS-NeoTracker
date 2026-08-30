@@ -328,7 +328,12 @@ class PhysicsPlot(QWidget):
         bounds = self._data_bounds()
         if bounds is None:
             painter.setPen(QColor("#626A70"))
-            painter.drawText(plot_rect, Qt.AlignmentFlag.AlignCenter, "Choose a physical series to plot")
+            message = (
+                "No valid samples to plot"
+                if self._prepared
+                else "Choose a physical series to plot"
+            )
+            painter.drawText(plot_rect, Qt.AlignmentFlag.AlignCenter, message)
             self._paint_focus_ring(painter)
             return
         time_min, time_max, value_min, value_max = bounds
@@ -585,16 +590,13 @@ class PhysicsPlot(QWidget):
             for index, prepared in enumerate(self._prepared, 1)
         )
         bounds = self._data_bounds()
-        extent = (
-            f" from {bounds[0]:.6g} to {bounds[1]:.6g} seconds"
-            if bounds is not None
-            else ""
-        )
-        vertical = (
-            f" and vertical values from {bounds[2]:.4g} to {bounds[3]:.4g} {unit}"
-            if bounds is not None
-            else f" with vertical unit {unit}"
-        )
+        if bounds is None:
+            self.setAccessibleDescription(
+                f"No valid samples are available in the selected plot layers: {labels}."
+            )
+            return
+        extent = f" from {bounds[0]:.6g} to {bounds[1]:.6g} seconds"
+        vertical = f" and vertical values from {bounds[2]:.4g} to {bounds[3]:.4g} {unit}"
         self.setAccessibleDescription(
             f"{len(self._prepared)} visible plot layers against stored true time{extent}{vertical}: "
             f"{labels}. "
