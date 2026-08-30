@@ -86,6 +86,8 @@ class PhysicsActionRegistryTests(unittest.TestCase):
         window.action_registry.action("physics.residual").trigger()
         self.assertTrue(window.analysis_workspace_controller.state.residual_visible)
         self.assertEqual(window.action_registry.action("physics.residual").text(), "Hide Residual")
+        self.assertIn("Hide", window.show_residual_button.accessibleName())
+        self.assertIn("Hide", window.fit_panel.residual_checkbox.accessibleName())
 
 
 if __name__ == "__main__":

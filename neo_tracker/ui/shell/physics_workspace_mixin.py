@@ -812,6 +812,7 @@ class PhysicsWorkspaceMixin:
             state.fit_result is not None
             and state.fit_result.status is FitStatus.OK
         )
+        residual_text = "Hide Residual" if state.residual_visible else "Show Residual"
         self._update_action(
             "physics.velocity",
             enabled=mutable,
@@ -840,9 +841,11 @@ class PhysicsWorkspaceMixin:
         self._update_action(
             "physics.residual",
             enabled=has_fit,
-            text="Hide Residual" if state.residual_visible else "Show Residual",
+            text=residual_text,
             tool_tip="Show or hide the current fit residual layer.",
         )
+        self.show_residual_button.setAccessibleName(residual_text)
+        self.fit_panel.residual_checkbox.setAccessibleName(residual_text)
 
     def _physics_workspace_page_changed(self, page: str) -> None:
         fit_series_id = str(self.fit_panel.series_combo.currentData() or "")
