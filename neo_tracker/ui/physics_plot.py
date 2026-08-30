@@ -422,7 +422,10 @@ class PhysicsPlot(QWidget):
         event.accept()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:  # noqa: N802
-        if event.button() == Qt.MouseButton.LeftButton:
+        if (
+            event.button() == Qt.MouseButton.LeftButton
+            and self._plot_rect().contains(event.position())
+        ):
             self._drag_start_x = float(event.position().x())
             self._activate_x(self._drag_start_x)
             event.accept()

@@ -6,7 +6,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QPoint, Qt
 from PySide6.QtGui import QImage
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QWidget
@@ -95,6 +95,28 @@ class PhysicsPlotWidgetTests(unittest.TestCase):
             path = Path(tmpdir) / "plot.png"
             self.assertTrue(plot.export_image(path))
             self.assertGreater(path.stat().st_size, 0)
+        plot.close()
+
+    def test_mouse_selection_is_limited_to_the_data_rectangle(self) -> None:
+        plot = PhysicsPlot()
+        plot.resize(640, 280)
+        plot.set_series((make_series(20),))
+        activated: list[int] = []
+        plot.sampleActivated.connect(lambda _series_id, index, _time_s: activated.append(index))
+        plot.show()
+
+        QTest.mouseClick(plot, Qt.MouseButton.LeftButton, pos=QPoint(20, 8))
+
+        self.assertIsNone(plot.selected_sample_index)
+        self.assertEqual(activated, [])
+
+        QTest.mouseClick(
+            plot,
+            Qt.MouseButton.LeftButton,
+            pos=plot._plot_rect().center().toPoint(),
+        )
+        self.assertIsNotNone(plot.selected_sample_index)
+        self.assertEqual(len(activated), 1)
         plot.close()
 
     def test_duplicate_ids_and_non_ok_fit_never_create_ambiguous_layers(self) -> None:
