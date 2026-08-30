@@ -205,6 +205,8 @@ class MainWindowFitIntegrationTests(unittest.TestCase):
 
         window.fit_panel.run_button.click()
         pump_until(lambda: not window.analysis_workspace_controller.busy)
+        first_fit_id = window.selection_session.state.selected_fit_id
+        self.assertIsNotNone(first_fit_id)
         window.fit_panel.valid_only_checkbox.setChecked(False)
         self.assertIn("Physics fit", window._unapplied_draft_names())
         window.fit_panel.run_button.click()
@@ -216,6 +218,11 @@ class MainWindowFitIntegrationTests(unittest.TestCase):
             if item.fit_config is not None
         ]
         self.assertEqual(len(definitions), 2)
+        self.assertNotEqual(window.selection_session.state.selected_fit_id, first_fit_id)
+        self.assertIn(
+            window.selection_session.state.selected_fit_id,
+            {item.analysis_id for item in definitions},
+        )
 
     def test_unrun_fit_settings_are_protected_across_task_switch(self) -> None:
         window = self.make_window()

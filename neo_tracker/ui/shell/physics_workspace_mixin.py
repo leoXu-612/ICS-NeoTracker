@@ -255,15 +255,6 @@ class PhysicsWorkspaceMixin:
         if not isinstance(result, FitResult) or result.status is not FitStatus.OK:
             return
         state = self.analysis_workspace_controller.state
-        fit_id = (
-            f"fit:{state.source_revision}:{result.model.value}:"
-            f"{result.range_start_s:.12g}:{result.range_end_s:.12g}"
-        )
-        self.selection_session.select_fit(
-            fit_id,
-            origin=SelectionOrigin.FIT,
-            expected_source_revision=result.source_revision,
-        )
         self.physics_inspector.show_fit(result)
         replay_id = getattr(self, "_physics_replay_active_id", None)
         replay_operation = getattr(self, "_physics_replay_active_operation", None)
@@ -273,6 +264,11 @@ class PhysicsWorkspaceMixin:
             self._physics_replay_active_operation = None
             if definition is not None:
                 self._physics_active_definition_id = definition.analysis_id
+                self.selection_session.select_fit(
+                    definition.analysis_id,
+                    origin=SelectionOrigin.FIT,
+                    expected_source_revision=result.source_revision,
+                )
                 self._apply_replayed_definition_view(definition, fit_result=result)
             return
         request = state.active_request
@@ -316,6 +312,11 @@ class PhysicsWorkspaceMixin:
                 return
             self._store_physics_definition(definition)
             self._physics_active_definition_id = definition.analysis_id
+            self.selection_session.select_fit(
+                definition.analysis_id,
+                origin=SelectionOrigin.FIT,
+                expected_source_revision=result.source_revision,
+            )
 
     def _export_physics_analysis(self) -> None:
         if not self.analysis_workspace_controller.request_export():
