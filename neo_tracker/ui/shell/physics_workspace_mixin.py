@@ -280,8 +280,8 @@ class PhysicsWorkspaceMixin:
                         request.model.value,
                         request.range_start_s,
                         request.range_end_s,
-                        tuple(request.initial_parameters.items()),
-                        tuple(request.bounds.items()),
+                        tuple(sorted(request.initial_parameters.items())),
+                        tuple(sorted(request.bounds.items())),
                     )
                 ).encode("utf-8")
             ).hexdigest()[:20]

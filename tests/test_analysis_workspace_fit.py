@@ -164,6 +164,36 @@ class MainWindowFitIntegrationTests(unittest.TestCase):
         self.assertIsNone(window.physics_workspace.plot._fit_series)
         self.assertIn("Physics fit", window._unapplied_draft_names())
 
+    def test_equivalent_parameter_order_reuses_persisted_fit_definition(self) -> None:
+        window = self.make_window()
+        window.set_kinematics_fit_operator(RecordingFitOperator())
+        window.set_physics_series((make_series(),))
+        window.fit_panel.model_combo.setCurrentText("Sinusoidal")
+        window.fit_panel.initial_parameters_edit.setText(
+            '{"omega": 3.0, "amplitude": 1.0}'
+        )
+        window.fit_panel.bounds_edit.setText(
+            '{"omega": [0.1, 10.0], "amplitude": [0.1, 2.0]}'
+        )
+        window.fit_panel.run_button.click()
+        pump_until(lambda: not window.analysis_workspace_controller.busy)
+
+        window.fit_panel.initial_parameters_edit.setText(
+            '{"amplitude": 1.0, "omega": 3.0}'
+        )
+        window.fit_panel.bounds_edit.setText(
+            '{"amplitude": [0.1, 2.0], "omega": [0.1, 10.0]}'
+        )
+        window.fit_panel.run_button.click()
+        pump_until(lambda: not window.analysis_workspace_controller.busy)
+
+        definitions = [
+            item
+            for item in window.current_task.analysis_workspace.definitions
+            if item.fit_config is not None
+        ]
+        self.assertEqual(len(definitions), 1)
+
     def test_unrun_fit_settings_are_protected_across_task_switch(self) -> None:
         window = self.make_window()
         window._apply_project(
