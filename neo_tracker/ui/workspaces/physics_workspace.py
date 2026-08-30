@@ -338,14 +338,7 @@ class PhysicsWorkspace(QFrame):
                 QAbstractItemView.ScrollHint.EnsureVisible,
             )
             selection.blockSignals(False)
-            if source.series_id not in self.plot.series_ids:
-                selected_range = self.plot.selected_range
-                visible = tuple(
-                    item for item in self._series.values() if item.series_id != source.series_id
-                )
-                self.plot.set_series((*visible[:7], source))
-                if selected_range is not None:
-                    self.plot.set_selected_range(*selected_range)
+            self._ensure_plot_series_visible(source)
             self.plot.set_selected_sample(int(sample_index), source.series_id)
             self.copy_row_button.setEnabled(True)
         else:
@@ -429,11 +422,23 @@ class PhysicsWorkspace(QFrame):
         if source is None:
             self.copy_status_label.setText("No physical series is available.")
         else:
+            self._ensure_plot_series_visible(source)
             unit = source.unit or "unit unavailable"
             self.copy_status_label.setText(
                 f"{len(source):,} aligned samples · {source.source_kind} · {unit}"
             )
             self.seriesActivated.emit(source.series_id)
+
+    def _ensure_plot_series_visible(self, source: SampleSeries) -> None:
+        if source.series_id in self.plot.series_ids:
+            return
+        selected_range = self.plot.selected_range
+        visible = tuple(
+            item for item in self._series.values() if item.series_id != source.series_id
+        )
+        self.plot.set_series((*visible[:7], source))
+        if selected_range is not None:
+            self.plot.set_selected_range(*selected_range)
 
     def _table_selection_changed(self) -> None:
         rows = self.series_table.selectionModel().selectedRows()
