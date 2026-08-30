@@ -188,12 +188,16 @@ class PhysicsWorkspaceMixin:
             expected_source_revision=state.source_revision,
         )
 
-    def _physics_series_activated(self, series_id: str) -> None:
+    def _physics_series_activated(
+        self,
+        series_id: str,
+        origin: SelectionOrigin = SelectionOrigin.TABLE,
+    ) -> None:
         source = self._physics_series_by_id.get(series_id)
         if source is not None:
             self.selection_session.select_series(
                 source.series_id,
-                origin=SelectionOrigin.TABLE,
+                origin=origin,
                 expected_source_revision=source.source_revision,
             )
 
@@ -234,6 +238,14 @@ class PhysicsWorkspaceMixin:
         self.analysis_workspace_controller.cancel("Fit canceled by user.")
 
     def _physics_fit_draft_changed(self) -> None:
+        source = self._physics_series_by_id.get(
+            str(self.fit_panel.series_combo.currentData() or "")
+        )
+        if (
+            source is not None
+            and self.selection_session.state.selected_series_id != source.series_id
+        ):
+            self._physics_series_activated(source.series_id, SelectionOrigin.FIT)
         state = self.analysis_workspace_controller.state
         if state.active_request is not None or self.analysis_workspace_controller.busy:
             self.analysis_workspace_controller.invalidate(
