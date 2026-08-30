@@ -645,7 +645,7 @@ class PhysicsPlot(QWidget):
         painter.setPen(QPen(QColor("#C55232"), 1.5))
         painter.drawLine(QPointF(x, plot_rect.top()), QPointF(x, plot_rect.bottom()))
         value = float(source.values[index])
-        if math.isfinite(value):
+        if source.valid_mask[index] and math.isfinite(value):
             y = self._y_for_value(value, plot_rect, bounds[2], bounds[3])
             painter.setBrush(QColor("#C55232"))
             painter.drawEllipse(QPointF(x, y), 3.5, 3.5)

@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from unittest.mock import Mock
 
 import numpy as np
 from PySide6.QtCore import QPoint, Qt
@@ -146,6 +147,36 @@ class PhysicsPlotWidgetTests(unittest.TestCase):
         self.assertIsNotNone(plot.selected_sample_index)
         self.assertEqual(len(activated), 1)
         plot.close()
+
+    def test_invalid_selected_sample_keeps_cursor_without_drawing_a_data_point(self) -> None:
+        source = SampleSeries(
+            series_id="raw:cursor-validity",
+            name="Cursor validity",
+            frame_indices=np.arange(3, dtype=np.int64),
+            time_s=np.array([0.0, 1.0, 2.0]),
+            values=np.array([0.0, 5.0, 10.0]),
+            valid_mask=np.array([True, False, True]),
+            unit="m",
+            source_kind="state",
+            source_revision="results:cursor-validity",
+        )
+        plot = PhysicsPlot()
+        plot.resize(400, 220)
+        plot.set_series((source,))
+        bounds = plot._data_bounds()
+        assert bounds is not None
+        painter = Mock()
+
+        plot.set_selected_sample(0)
+        plot._paint_cursor(painter, plot._plot_rect(), bounds)
+        painter.drawLine.assert_called_once()
+        painter.drawEllipse.assert_called_once()
+
+        painter.reset_mock()
+        plot.set_selected_sample(1)
+        plot._paint_cursor(painter, plot._plot_rect(), bounds)
+        painter.drawLine.assert_called_once()
+        painter.drawEllipse.assert_not_called()
 
     def test_duplicate_ids_and_non_ok_fit_never_create_ambiguous_layers(self) -> None:
         plot = PhysicsPlot()
