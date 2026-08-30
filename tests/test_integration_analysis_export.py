@@ -4,14 +4,16 @@ import csv
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
 
 from neo_tracker.kinematics import SampleSeries
 from neo_tracker.ui.analysis_workspace_controller import FitDraft
 from neo_tracker.ui.main_window import NeoTrackerWindow
 from tests.integration_kinematics_support import close_window, pump_until
+from tests.test_application_kinematics_controller import make_series
 
 
 class AnalysisExportIntegrationTests(unittest.TestCase):
@@ -131,6 +133,47 @@ class AnalysisExportIntegrationTests(unittest.TestCase):
             markdown = paths[".md"].read_text(encoding="utf-8")
             self.assertNotIn("## Fit", markdown)
             self.assertIn(replacement.source_revision, markdown)
+
+    def test_existing_export_files_require_explicit_replace(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            source = make_series()
+            targets = tuple(
+                Path(directory) / f"Filtered-x.{suffix}"
+                for suffix in ("csv", "npz", "md")
+            )
+            for target in targets:
+                target.write_bytes(b"existing-evidence")
+            window = NeoTrackerWindow(
+                physics_export_directory_picker=lambda _parent: directory
+            )
+            self.addCleanup(close_window, window)
+            window.set_physics_series((source,))
+
+            with patch(
+                "PySide6.QtWidgets.QMessageBox.question",
+                return_value=QMessageBox.StandardButton.No,
+            ) as confirm:
+                window._export_physics_analysis()
+                pump_until(lambda: not window._kinematics_workspace_coordinator.busy)
+
+            confirm.assert_called_once()
+            self.assertEqual(
+                [target.read_bytes() for target in targets],
+                [b"existing-evidence"] * 3,
+            )
+            self.assertIn("kept", window.statusBar().currentMessage().lower())
+
+            with patch(
+                "PySide6.QtWidgets.QMessageBox.question",
+                return_value=QMessageBox.StandardButton.Yes,
+            ) as confirm_replace:
+                window._export_physics_analysis()
+                pump_until(lambda: not window._kinematics_workspace_coordinator.busy)
+
+            confirm_replace.assert_called_once()
+            self.assertTrue(
+                all(target.read_bytes() != b"existing-evidence" for target in targets)
+            )
 
 
 if __name__ == "__main__":

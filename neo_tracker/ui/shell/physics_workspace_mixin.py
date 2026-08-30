@@ -7,7 +7,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from PySide6.QtCore import QTimer, Qt
-from PySide6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 from neo_tracker.application.kinematics_workspace_coordinator import (
     KinematicsWorkspaceJob,
@@ -398,6 +398,22 @@ class PhysicsWorkspaceMixin:
                 "npz": directory / f"{stem}.npz",
                 "markdown": directory / f"{stem}.md",
             }
+            existing = tuple(path for path in export_paths.values() if path.exists())
+            if existing:
+                names = ", ".join(path.name for path in existing)
+                decision = QMessageBox.question(
+                    self,
+                    "Replace physics export files?",
+                    f"{names} already exist. Replace the existing export files?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if decision != QMessageBox.StandardButton.Yes:
+                    self.statusBar().showMessage(
+                        "Physics export canceled; existing files were kept.",
+                        5000,
+                    )
+                    return
         task = KinematicsWorkspaceTask(
             owner=self.current_task,
             task_id=self.current_task.task_id,
