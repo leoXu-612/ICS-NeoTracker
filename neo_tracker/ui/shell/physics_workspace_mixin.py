@@ -822,21 +822,15 @@ class PhysicsWorkspaceMixin:
             )
 
     def _update_physics_actions(self, state: AnalysisWorkspaceState) -> None:
-        project_open_busy = "project-open" in self._background_tasks.active_kinds
         has_series = bool(
             state.selected_series_id
             and state.selected_series_id in self._physics_series_by_id
         )
         mutable = has_series and state.status != "running" and not self._background_tasks.closing
-        mutable = (
-            mutable
-            and not self._kinematics_workspace_coordinator.busy
-            and not project_open_busy
-        )
+        mutable = mutable and not self._kinematics_workspace_coordinator.busy
         has_fit = bool(
             state.fit_result is not None
             and state.fit_result.status is FitStatus.OK
-            and not project_open_busy
         )
         residual_text = "Hide Residual" if state.residual_visible else "Show Residual"
         self._update_action(

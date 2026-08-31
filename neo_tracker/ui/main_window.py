@@ -187,6 +187,27 @@ from neo_tracker.ui.workspaces import PhysicsWorkspace
 
 
 _PROJECT_OPEN_DEFERRED_RESULTS_THRESHOLD = 10_000
+_PROJECT_OPEN_BLOCKED_ACTIONS = (
+    "media.add",
+    "project.save",
+    "tracking.export_csv",
+    "tracking.export_report",
+    "analysis.export_csv",
+    "analysis.export_npz",
+    "physics.export",
+    "tracking.run",
+    "analysis.run",
+    "physics.velocity",
+    "physics.acceleration",
+    "physics.smooth",
+    "physics.fit",
+    "review.correct",
+    "review.mark_lost",
+    "review.undo",
+    "review.rerun",
+    "review.jump",
+    "physics.residual",
+)
 
 
 @dataclass(frozen=True)
@@ -2165,13 +2186,12 @@ class NeoTrackerWindow(
         self.task_actions_panel.setEnabled(not project_open_busy)
         self.media_relink_panel.setEnabled(not project_open_busy)
         self.physics_workspace.setEnabled(not project_open_busy)
-        self._update_physics_actions(self.analysis_workspace_controller.state)
+        self.action_registry.set_actions_blocked(
+            _PROJECT_OPEN_BLOCKED_ACTIONS,
+            project_open_busy,
+        )
         for tab_index in range(1, self.sidebar_tabs.count()):
             self.sidebar_tabs.setTabEnabled(tab_index, not project_open_busy)
-        if project_open_busy:
-            self._set_action_enabled("tracking.run", False)
-            self._set_action_enabled("tracking.export_csv", False)
-            self._set_action_enabled("tracking.export_report", False)
         if busy:
             if operation == "open":
                 detail = "Opening project · reading project file…"

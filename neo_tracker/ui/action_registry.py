@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from typing import Any
 
 from PySide6.QtCore import QObject
@@ -22,6 +22,8 @@ class ActionRegistry(QObject):
         self._handlers: dict[str, Callable[[bool], None]] = {}
         self._buttons: dict[str, list[QAbstractButton]] = {}
         self._button_slots: list[Callable[..., None]] = []
+        self._blocked_actions: set[str] = set()
+        self._view_state: ViewState | None = None
 
     @property
     def keys(self) -> tuple[str, ...]:
@@ -79,7 +81,9 @@ class ActionRegistry(QObject):
         sync_button()
 
     def snapshot_view_state(self) -> ViewState:
-        return ViewState.from_mapping(
+        if self._view_state is not None:
+            return self._view_state
+        self._view_state = ViewState.from_mapping(
             {
                 key: ActionViewState(
                     enabled=action.isEnabled(),
@@ -89,14 +93,29 @@ class ActionRegistry(QObject):
                 for key, action in self._actions.items()
             }
         )
+        return self._view_state
 
     def apply_view_state(self, state: ViewState) -> None:
+        self._view_state = state
         for key in self.keys:
             presentation = state.action(key)
             action = self._actions[key]
-            action.setEnabled(presentation.enabled)
+            action.setEnabled(
+                presentation.enabled and key not in self._blocked_actions
+            )
             action.setText(presentation.text)
             action.setToolTip(presentation.tool_tip)
+
+    def set_actions_blocked(self, keys: Iterable[str], blocked: bool) -> None:
+        normalized = {str(key) for key in keys}
+        unknown = normalized.difference(self._actions)
+        if unknown:
+            raise KeyError(f"unknown action keys: {', '.join(sorted(unknown))}")
+        if blocked:
+            self._blocked_actions.update(normalized)
+        else:
+            self._blocked_actions.difference_update(normalized)
+        self.apply_view_state(self.snapshot_view_state())
 
     def set_icon(self, key: str, icon: QIcon) -> None:
         self.action(key).setIcon(icon)

@@ -89,7 +89,7 @@ class PhysicsActionRegistryTests(unittest.TestCase):
         self.assertIn("Hide", window.show_residual_button.accessibleName())
         self.assertIn("Hide", window.fit_panel.residual_checkbox.accessibleName())
 
-    def test_project_open_gate_disables_and_restores_physics_actions(self) -> None:
+    def test_project_open_gate_blocks_and_restores_workspace_actions(self) -> None:
         window = self.make_window()
         window.set_kinematics_fit_operator(RecordingFitOperator())
         source = make_series()
@@ -103,7 +103,12 @@ class PhysicsActionRegistryTests(unittest.TestCase):
             "physics.fit",
             "physics.export",
             "physics.residual",
+            "tracking.run",
+            "analysis.run",
+            "review.mark_lost",
         )
+        for key in action_keys:
+            window._set_action_enabled(key, True)
         self.assertTrue(all(window.action_registry.action(key).isEnabled() for key in action_keys))
 
         token = window._background_tasks.start("project-open")
@@ -114,7 +119,8 @@ class PhysicsActionRegistryTests(unittest.TestCase):
             self.assertFalse(
                 any(window.action_registry.action(key).isEnabled() for key in action_keys)
             )
-            window._update_physics_actions(window.analysis_workspace_controller.state)
+            for key in action_keys:
+                window._set_action_enabled(key, True)
             self.assertFalse(
                 any(window.action_registry.action(key).isEnabled() for key in action_keys)
             )

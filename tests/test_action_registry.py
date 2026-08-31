@@ -52,6 +52,33 @@ class ActionRegistryTests(unittest.TestCase):
         with self.assertRaises(KeyError):
             registry.action("missing")
 
+    def test_blocked_action_keeps_latest_view_state_for_restore(self) -> None:
+        parent = QWidget()
+        button = QPushButton("Run", parent)
+        registry = ActionRegistry(parent)
+        action = registry.register("tracking.run", "Run", lambda: None)
+        registry.bind_button("tracking.run", button)
+        disabled = registry.snapshot_view_state().with_action(
+            "tracking.run",
+            enabled=False,
+        )
+        registry.apply_view_state(disabled)
+
+        registry.set_actions_blocked(("tracking.run",), True)
+        updated = disabled.with_action(
+            "tracking.run",
+            enabled=True,
+            text="Run updated",
+        )
+        registry.apply_view_state(updated)
+
+        self.assertFalse(action.isEnabled())
+        self.assertFalse(button.isEnabled())
+        self.assertEqual(action.text(), "Run updated")
+        registry.set_actions_blocked(("tracking.run",), False)
+        self.assertTrue(action.isEnabled())
+        self.assertTrue(button.isEnabled())
+
 
 if __name__ == "__main__":
     unittest.main()
