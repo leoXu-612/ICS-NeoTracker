@@ -110,6 +110,26 @@ class FitPanelTests(unittest.TestCase):
             self.assertEqual(drafts, [])
             self.assertIn("Bounds.omega must contain numeric values", panel.status_label.text())
 
+    def test_fit_json_rejects_duplicate_keys_and_nonfinite_constants(self) -> None:
+        panel = FitPanel()
+        panel.set_series((make_series(),))
+        panel.model_combo.setCurrentText("Sinusoidal")
+        drafts: list[FitDraft] = []
+        panel.runRequested.connect(drafts.append)
+
+        with self.subTest("duplicate key"):
+            panel.initial_parameters_edit.setText('{"omega": 1.0, "omega": 2.0}')
+            panel.run_button.click()
+            self.assertEqual(drafts, [])
+            self.assertIn("duplicate key 'omega'", panel.status_label.text())
+
+        drafts.clear()
+        with self.subTest("non-finite constant"):
+            panel.initial_parameters_edit.setText('{"omega": NaN}')
+            panel.run_button.click()
+            self.assertEqual(drafts, [])
+            self.assertIn("non-finite constant NaN", panel.status_label.text())
+
     def test_result_summary_shows_parameters_units_metrics_and_samples(self) -> None:
         panel = FitPanel()
         source = make_series()

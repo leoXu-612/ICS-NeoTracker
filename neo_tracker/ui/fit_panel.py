@@ -434,8 +434,22 @@ class FitPanel(QWidget):
 
     @staticmethod
     def _json_mapping(text: str, label: str) -> dict[str, object]:
+        def unique_mapping(pairs: list[tuple[str, object]]) -> dict[str, object]:
+            result: dict[str, object] = {}
+            for key, item in pairs:
+                if key in result:
+                    raise ValueError(f"{label} contains duplicate key {key!r}.")
+                result[key] = item
+            return result
+
         try:
-            value = json.loads(text or "{}")
+            value = json.loads(
+                text or "{}",
+                parse_constant=lambda token: (_ for _ in ()).throw(
+                    ValueError(f"{label} contains non-finite constant {token}.")
+                ),
+                object_pairs_hook=unique_mapping,
+            )
         except json.JSONDecodeError as exc:
             raise ValueError(f"{label} must be valid JSON.") from exc
         if not isinstance(value, dict):
