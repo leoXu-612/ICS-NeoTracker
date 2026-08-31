@@ -8,6 +8,7 @@ import json
 import math
 from dataclasses import dataclass, field
 from enum import Enum
+from numbers import Real
 from types import MappingProxyType
 from typing import Any, Mapping, TypeVar
 
@@ -281,7 +282,7 @@ def _float_equal(left: float, right: float) -> bool:
 
 
 def _numeric_float(value: object, name: str) -> float:
-    if isinstance(value, (bool, np.bool_)):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise TypeError(f"{name} must be numeric")
     try:
         return float(value)  # type: ignore[arg-type]
