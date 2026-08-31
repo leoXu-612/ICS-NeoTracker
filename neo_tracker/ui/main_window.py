@@ -187,6 +187,8 @@ from neo_tracker.ui.workspaces import PhysicsWorkspace
 
 
 _PROJECT_OPEN_DEFERRED_RESULTS_THRESHOLD = 10_000
+_TASK_SWITCH_BLOCKING_KINDS = frozenset({"tracking", "analysis", "kinematics-fit", "kinematics-analysis"})
+_PROJECT_OPEN_BLOCKING_KINDS = _TASK_SWITCH_BLOCKING_KINDS | frozenset({"media-probe", "project-open", "project-save"})
 _PROJECT_OPEN_BLOCKED_ACTIONS = (
     "media.add",
     "project.save",
@@ -2510,17 +2512,7 @@ class NeoTrackerWindow(
             self._cancel_project_open()
             return
         active_kinds = set(self._background_tasks.active_kinds)
-        if active_kinds.intersection(
-            {
-                "tracking",
-                "analysis",
-                "kinematics-fit",
-                "kinematics-analysis",
-                "media-probe",
-                "project-open",
-                "project-save",
-            }
-        ):
+        if active_kinds.intersection(_PROJECT_OPEN_BLOCKING_KINDS):
             self.statusBar().showMessage(
                 "Wait for background processing or project saving to finish before opening another project.",
                 6000,
@@ -3363,6 +3355,13 @@ class NeoTrackerWindow(
 
     def _task_changed(self, current: QListWidgetItem | None, previous: QListWidgetItem | None) -> None:
         if current is previous:
+            return
+        if _TASK_SWITCH_BLOCKING_KINDS.intersection(self._background_tasks.active_kinds):
+            self._set_current_task_item_silently(previous)
+            self.statusBar().showMessage(
+                "Wait for current task processing to finish before switching tasks.",
+                6000,
+            )
             return
         previous_title = self.current_task.title()
         draft_names = self._refresh_draft_state()

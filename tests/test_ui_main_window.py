@@ -3554,6 +3554,49 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertEqual(captured, [("switching to take-b.mp4", ("Calibration",))])
         self.assertIn("Task switch canceled", window.statusBar().currentMessage())
 
+    def test_task_switch_waits_for_current_task_processing(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        window._apply_project(
+            NeoTrackerProject(
+                name="two tasks",
+                tasks=[
+                    ProjectTaskSnapshot(
+                        media_path="/offline/take-a.mp4",
+                        pipeline_key=window.default_pipeline_key,
+                    ),
+                    ProjectTaskSnapshot(
+                        media_path="/offline/take-b.mp4",
+                        pipeline_key=window.default_pipeline_key,
+                    ),
+                ],
+            )
+        )
+        original_task = window.current_task
+
+        for kind in (
+            "tracking",
+            "analysis",
+            "kinematics-fit",
+            "kinematics-analysis",
+        ):
+            with self.subTest(kind=kind):
+                token = window._background_tasks.start(kind)
+                self.assertIsNotNone(token)
+                assert token is not None
+                try:
+                    window.task_list.setCurrentRow(1)
+
+                    self.assertIs(window.current_task, original_task)
+                    self.assertEqual(window.task_list.currentRow(), 0)
+                    self.assertIn(
+                        "Wait for current task processing",
+                        window.statusBar().currentMessage(),
+                    )
+                finally:
+                    window._background_tasks.finish(token)
+                    window.task_list.setCurrentRow(0)
+
     def test_task_switch_discard_changes_task_and_clears_previous_draft(self) -> None:
         window = NeoTrackerWindow()
         self.addCleanup(close_window_safely, window)
