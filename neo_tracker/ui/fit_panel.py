@@ -316,13 +316,34 @@ class FitPanel(QWidget):
             )
             self.summary_label.setAccessibleDescription(message)
             return
-        self.parameter_table.setRowCount(len(result.parameter_names))
-        for row, name in enumerate(result.parameter_names):
-            error = float(result.standard_errors[row])
+        display_rows = [
+            (
+                name,
+                float(result.parameters[index]),
+                result.parameter_units[index],
+                float(result.standard_errors[index]),
+            )
+            for index, name in enumerate(result.parameter_names)
+        ]
+        if result.model.value == "quadratic" and "a" in result.parameter_names:
+            index = result.parameter_names.index("a")
+            unit = result.parameter_units[index]
+            display_rows.append(
+                (
+                    "acceleration (2a)"
+                    if unit.endswith("/s²")
+                    else "second derivative (2a)",
+                    2.0 * float(result.parameters[index]),
+                    unit,
+                    2.0 * float(result.standard_errors[index]),
+                )
+            )
+        self.parameter_table.setRowCount(len(display_rows))
+        for row, (name, number, unit, error) in enumerate(display_rows):
             values = (
                 name,
-                format(float(result.parameters[row]), ".10g"),
-                result.parameter_units[row] or "unit unavailable",
+                format(number, ".10g"),
+                unit or "unit unavailable",
                 format(error, ".6g") if math.isfinite(error) else "unavailable",
             )
             for column, value in enumerate(values):

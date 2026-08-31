@@ -8,7 +8,9 @@ from unittest.mock import patch
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QApplication, QWidget
 
+from benchmarks.kinematics_fixtures import uniform_quadratic
 from neo_tracker.core import TrackerResult
+from neo_tracker.kinematics.fitting import fit_series
 from neo_tracker.media import MediaInfo
 from neo_tracker.project import NeoTrackerProject, ProjectTaskSnapshot
 from neo_tracker.ui.analysis_workspace_controller import AnalysisWorkspaceState, FitDraft
@@ -185,6 +187,37 @@ class FitPanelTests(unittest.TestCase):
             "No fit result is available.",
         )
         self.assertEqual(panel.summary_label.toolTip(), "No fit result is available.")
+
+    def test_quadratic_result_shows_physical_acceleration_and_uncertainty(self) -> None:
+        panel = FitPanel()
+        source = uniform_quadratic(31).sample_series()
+        request = FitDraft(
+            source.series_id,
+            "quadratic",
+            float(source.time_s[0]),
+            float(source.time_s[-1]),
+        ).to_request(source)
+        result = fit_series(source, request)
+        errors = result.standard_errors.copy()
+        errors[0] = 0.125
+
+        panel.show_result(replace(result, standard_errors=errors))
+
+        self.assertEqual(panel.parameter_table.rowCount(), 4)
+        self.assertEqual(panel.parameter_table.item(3, 0).text(), "acceleration (2a)")
+        self.assertEqual(panel.parameter_table.item(3, 1).text(), "2.4")
+        self.assertEqual(panel.parameter_table.item(3, 2).text(), "m/s²")
+        self.assertEqual(panel.parameter_table.item(3, 3).text(), "0.25")
+
+        panel.show_result(
+            replace(
+                result,
+                parameter_units=("m/s³", "m/s²", "m/s"),
+            )
+        )
+
+        self.assertEqual(panel.parameter_table.item(3, 0).text(), "second derivative (2a)")
+        self.assertEqual(panel.parameter_table.item(3, 2).text(), "m/s³")
 
     def test_busy_state_exposes_cancel_and_disables_mutating_inputs(self) -> None:
         panel = FitPanel()
