@@ -155,10 +155,19 @@ def _thaw_json(value: object) -> object:
     return value
 
 
+def _require_real_numeric_array(value: np.ndarray, name: str) -> None:
+    if value.dtype == np.dtype(bool) or not (
+        np.issubdtype(value.dtype, np.integer)
+        or np.issubdtype(value.dtype, np.floating)
+    ):
+        raise TypeError(f"{name} must contain real numbers")
+
+
 def _readonly_vector(value: object, dtype: np.dtype[Any], name: str) -> np.ndarray:
     source = np.asarray(value)
     if source.ndim != 1:
         raise ValueError(f"{name} must be one-dimensional")
+    _require_real_numeric_array(source, name)
     result = np.array(source, dtype=dtype, copy=True, order="C")
     result.setflags(write=False)
     return result
@@ -190,6 +199,7 @@ def _readonly_matrix(value: object, name: str) -> np.ndarray:
     source = np.asarray(value)
     if source.ndim != 2:
         raise ValueError(f"{name} must be two-dimensional")
+    _require_real_numeric_array(source, name)
     result = np.array(source, dtype=np.float64, copy=True, order="C")
     result.setflags(write=False)
     return result

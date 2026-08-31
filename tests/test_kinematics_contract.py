@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import unittest
+from dataclasses import replace
 
 import numpy as np
 
@@ -116,6 +117,14 @@ class SampleSeriesContractTests(unittest.TestCase):
     def test_rejects_non_strict_valid_time(self) -> None:
         with self.assertRaisesRegex(ValueError, "time_s values must be strictly increasing"):
             sample_series(time_s=np.array([0.0, 0.1, 0.1, 0.3]))
+
+    def test_rejects_boolean_numeric_arrays(self) -> None:
+        with self.assertRaisesRegex(TypeError, "values must contain real numbers"):
+            sample_series(values=np.array([True, False, True, False]))
+
+        result = fit_result(sample_series())
+        with self.assertRaisesRegex(TypeError, "covariance must contain real numbers"):
+            replace(result, covariance=np.ones((2, 2), dtype=bool))
 
     def test_invalid_samples_preserve_frame_alignment(self) -> None:
         series = sample_series(
