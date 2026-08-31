@@ -89,6 +89,41 @@ class PhysicsActionRegistryTests(unittest.TestCase):
         self.assertIn("Hide", window.show_residual_button.accessibleName())
         self.assertIn("Hide", window.fit_panel.residual_checkbox.accessibleName())
 
+    def test_project_open_gate_disables_and_restores_physics_actions(self) -> None:
+        window = self.make_window()
+        window.set_kinematics_fit_operator(RecordingFitOperator())
+        source = make_series()
+        window.set_physics_series((source,))
+        window.fit_panel.run_button.click()
+        pump_until(lambda: not window.analysis_workspace_controller.busy)
+        action_keys = (
+            "physics.velocity",
+            "physics.acceleration",
+            "physics.smooth",
+            "physics.fit",
+            "physics.export",
+            "physics.residual",
+        )
+        self.assertTrue(all(window.action_registry.action(key).isEnabled() for key in action_keys))
+
+        token = window._background_tasks.start("project-open")
+        self.assertIsNotNone(token)
+        assert token is not None
+        try:
+            window._set_media_probe_busy(True, operation="open")
+            self.assertFalse(
+                any(window.action_registry.action(key).isEnabled() for key in action_keys)
+            )
+            window._update_physics_actions(window.analysis_workspace_controller.state)
+            self.assertFalse(
+                any(window.action_registry.action(key).isEnabled() for key in action_keys)
+            )
+        finally:
+            window._background_tasks.finish(token)
+            window._set_media_probe_busy(False)
+
+        self.assertTrue(all(window.action_registry.action(key).isEnabled() for key in action_keys))
+
 
 if __name__ == "__main__":
     unittest.main()

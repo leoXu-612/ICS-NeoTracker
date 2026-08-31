@@ -2165,6 +2165,7 @@ class NeoTrackerWindow(
         self.task_actions_panel.setEnabled(not project_open_busy)
         self.media_relink_panel.setEnabled(not project_open_busy)
         self.physics_workspace.setEnabled(not project_open_busy)
+        self._update_physics_actions(self.analysis_workspace_controller.state)
         for tab_index in range(1, self.sidebar_tabs.count()):
             self.sidebar_tabs.setTabEnabled(tab_index, not project_open_busy)
         if project_open_busy:
