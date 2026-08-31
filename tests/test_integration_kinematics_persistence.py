@@ -148,6 +148,17 @@ class KinematicsPersistenceIntegrationTests(unittest.TestCase):
         fit_definition = next(
             item for item in task.analysis_workspace.definitions if item.fit_config is not None
         )
+        fit_result = source_window.analysis_workspace_controller.state.fit_result
+        assert fit_result is not None
+        source_window._apply_replayed_definition_view(
+            replace(
+                fit_definition,
+                view_state={"page": "Plot", "residual_visible": "false"},
+            ),
+            fit_result=fit_result,
+        )
+        self.assertFalse(source_window.analysis_workspace_controller.state.residual_visible)
+
         source_window._set_project_clean()
         source_window.physics_workspace.show_page("Plot")
         source_window._toggle_physics_residual()

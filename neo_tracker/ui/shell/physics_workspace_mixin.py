@@ -720,7 +720,7 @@ class PhysicsWorkspaceMixin:
         if fit_result is not None:
             residual_visible = definition.view_state.get("residual_visible", False)
             self.analysis_workspace_controller.set_residual_visible(
-                bool(residual_visible)
+                residual_visible is True
             )
         page = definition.view_state.get("page")
         if isinstance(page, str):
