@@ -6,7 +6,7 @@ import math
 
 import numpy as np
 
-from .types import FitModel, FitRequest, SampleSeries
+from .types import FitModel, FitRequest, SampleSeries, _numeric_float
 
 
 class StaleSourceRevisionError(ValueError):
@@ -121,7 +121,7 @@ def require_uniform_cadence(
     *,
     tolerance: float,
 ) -> float:
-    tolerance_value = float(tolerance)
+    tolerance_value = _numeric_float(tolerance, "tolerance")
     if not math.isfinite(tolerance_value) or tolerance_value < 0.0 or tolerance_value >= 1.0:
         raise ValueError("tolerance must be finite and in [0, 1)")
     deviation = cadence_relative_deviation(series.time_s, series.valid_mask)

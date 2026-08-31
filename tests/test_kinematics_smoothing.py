@@ -9,6 +9,7 @@ from neo_tracker.kinematics.derivatives import derive_series
 from neo_tracker.kinematics.runtime import CancellationToken, KinematicsCancelled
 from neo_tracker.kinematics.smoothing import smooth_series
 from neo_tracker.kinematics.types import DerivativeConfig
+from neo_tracker.kinematics.validation import require_uniform_cadence
 
 
 class SavitzkyGolayTests(unittest.TestCase):
@@ -90,6 +91,15 @@ class SavitzkyGolayTests(unittest.TestCase):
             smooth_series(source, window_length=8, polyorder=3)
         with self.assertRaisesRegex(ValueError, "polyorder"):
             smooth_series(source, window_length=7, polyorder=7)
+
+    def test_boolean_uniformity_tolerance_is_rejected(self) -> None:
+        source = uniform_quadratic().sample_series()
+        with self.subTest("smoothing"):
+            with self.assertRaisesRegex(TypeError, "uniformity_tolerance must be numeric"):
+                smooth_series(source, uniformity_tolerance=False)
+        with self.subTest("cadence validation"):
+            with self.assertRaisesRegex(TypeError, "tolerance must be numeric"):
+                require_uniform_cadence(source, tolerance=np.bool_(False))
 
     def test_cancelled_smoothing_has_no_partial_public_result(self) -> None:
         token = CancellationToken()

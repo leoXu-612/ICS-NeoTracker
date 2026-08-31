@@ -11,7 +11,14 @@ from numpy.lib.stride_tricks import sliding_window_view
 
 from .protocols import CancellationProbe
 from .runtime import check_cancelled
-from .types import DerivativeConfig, DerivativeMethod, EdgePolicy, ProcessingStep, SampleSeries
+from .types import (
+    DerivativeConfig,
+    DerivativeMethod,
+    EdgePolicy,
+    ProcessingStep,
+    SampleSeries,
+    _numeric_float,
+)
 from .validation import contiguous_valid_segments, derivative_unit, require_uniform_cadence
 
 
@@ -32,7 +39,7 @@ def _validate_options(
         raise ValueError("polyorder must cover derivative order and be smaller than window_length")
     if derivative_order not in (0, 1, 2):
         raise ValueError("derivative_order must be 0, 1, or 2")
-    tolerance = float(uniformity_tolerance)
+    tolerance = _numeric_float(uniformity_tolerance, "uniformity_tolerance")
     if not math.isfinite(tolerance) or tolerance < 0.0 or tolerance >= 1.0:
         raise ValueError("uniformity_tolerance must be finite and in [0, 1)")
     try:
