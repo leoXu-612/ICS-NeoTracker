@@ -324,7 +324,7 @@ class FitPanel(QWidget):
             f"{result.range_start_s:.6g}–{result.range_end_s:.6g} s"
         )
         detail = (
-            f"{result.model.value} fit using {result.sample_count:,} valid samples. "
+            f"{result.model.value} fit using {result.sample_count:,} samples. "
             f"R squared {result.r_squared:.6g}; RMSE {result.rmse:.6g}."
         )
         self.summary_label.setToolTip(detail)

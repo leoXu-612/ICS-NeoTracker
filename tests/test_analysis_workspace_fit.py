@@ -93,7 +93,13 @@ class FitPanelTests(unittest.TestCase):
         panel = FitPanel()
         source = make_series()
         panel.set_series((source,))
-        request = FitDraft(source.series_id, "linear", 0.0, 1.0).to_request(source)
+        request = FitDraft(
+            source.series_id,
+            "linear",
+            0.0,
+            1.0,
+            use_valid_only=False,
+        ).to_request(source)
         result = fit_result(source, request)
 
         panel.show_result(result)
@@ -106,6 +112,8 @@ class FitPanelTests(unittest.TestCase):
         self.assertEqual(panel.parameter_table.item(0, 2).text(), "m/s")
         self.assertTrue(panel.residual_checkbox.isEnabled())
         self.assertTrue(panel.export_button.isEnabled())
+        self.assertIn("using 11 samples", panel.summary_label.accessibleDescription())
+        self.assertNotIn("valid samples", panel.summary_label.accessibleDescription())
 
         panel.apply_state(
             AnalysisWorkspaceState(
