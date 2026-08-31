@@ -214,6 +214,27 @@ class ConfigurationContractTests(unittest.TestCase):
                 initial_parameters={"slope": float("nan")},
             )
 
+    def test_rejects_boolean_numeric_scalars(self) -> None:
+        with self.subTest("derivative tolerance"):
+            with self.assertRaisesRegex(TypeError, "uniformity_tolerance must be numeric"):
+                DerivativeConfig("nonuniform_finite_difference", 1, uniformity_tolerance=False)
+        with self.subTest("fit range"):
+            with self.assertRaisesRegex(TypeError, "range_start_s must be numeric"):
+                FitRequest("x", "linear", False, True, REVISION)
+        with self.subTest("fit parameter"):
+            with self.assertRaisesRegex(TypeError, "initial_parameters.slope must be numeric"):
+                FitRequest(
+                    "x",
+                    "linear",
+                    0.0,
+                    1.0,
+                    REVISION,
+                    initial_parameters={"slope": np.bool_(True)},
+                )
+        with self.subTest("fit metric"):
+            with self.assertRaisesRegex(TypeError, "rmse must be numeric"):
+                replace(fit_result(sample_series()), rmse=False)
+
     def test_configs_round_trip(self) -> None:
         derivative = DerivativeConfig(
             method="savgol_uniform",

@@ -280,6 +280,15 @@ def _float_equal(left: float, right: float) -> bool:
     return left == right or (math.isnan(left) and math.isnan(right))
 
 
+def _numeric_float(value: object, name: str) -> float:
+    if isinstance(value, (bool, np.bool_)):
+        raise TypeError(f"{name} must be numeric")
+    try:
+        return float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise TypeError(f"{name} must be numeric") from exc
+
+
 def _metric_to_wire(value: float) -> float | None:
     return value if math.isfinite(value) else None
 
@@ -287,11 +296,9 @@ def _metric_to_wire(value: float) -> float | None:
 def _metric_from_wire(value: object, name: str) -> float:
     if value is None:
         return math.nan
-    if isinstance(value, bool):
-        raise TypeError(f"{name} must be numeric or null")
     try:
-        result = float(value)  # type: ignore[arg-type]
-    except (TypeError, ValueError) as exc:
+        result = _numeric_float(value, name)
+    except TypeError as exc:
         raise TypeError(f"{name} must be numeric or null") from exc
     if not math.isfinite(result):
         raise ValueError(f"{name} wire value must be finite or null")
@@ -358,7 +365,7 @@ class DerivativeConfig:
             raise TypeError("polyorder must be an integer")
         if self.polyorder < self.order or self.polyorder >= self.window_length:
             raise ValueError("polyorder must cover derivative order and be smaller than window_length")
-        tolerance = float(self.uniformity_tolerance)
+        tolerance = _numeric_float(self.uniformity_tolerance, "uniformity_tolerance")
         if not math.isfinite(tolerance) or tolerance < 0.0 or tolerance >= 1.0:
             raise ValueError("uniformity_tolerance must be finite and in [0, 1)")
         object.__setattr__(self, "uniformity_tolerance", tolerance)
@@ -403,12 +410,7 @@ def _finite_parameter_mapping(value: object, name: str) -> Mapping[str, float]:
     result: dict[str, float] = {}
     for key, item in source.items():
         parameter = _require_text(key, f"{name} key", max_length=128)
-        if isinstance(item, bool):
-            raise TypeError(f"{name}.{parameter} must be numeric")
-        try:
-            number = float(item)  # type: ignore[arg-type]
-        except (TypeError, ValueError) as exc:
-            raise TypeError(f"{name}.{parameter} must be numeric") from exc
+        number = _numeric_float(item, f"{name}.{parameter}")
         if not math.isfinite(number):
             raise ValueError(f"{name}.{parameter} must be finite")
         result[parameter] = number
@@ -422,11 +424,10 @@ def _bounds_mapping(value: object) -> Mapping[str, tuple[float, float]]:
         parameter = _require_text(key, "bounds key", max_length=128)
         if not isinstance(item, (list, tuple)) or len(item) != 2:
             raise TypeError(f"bounds.{parameter} must be a two-item sequence")
-        if any(isinstance(bound, bool) for bound in item):
-            raise TypeError(f"bounds.{parameter} must contain numeric values")
         try:
-            lower, upper = float(item[0]), float(item[1])
-        except (TypeError, ValueError) as exc:
+            lower = _numeric_float(item[0], f"bounds.{parameter}")
+            upper = _numeric_float(item[1], f"bounds.{parameter}")
+        except TypeError as exc:
             raise TypeError(f"bounds.{parameter} must contain numeric values") from exc
         if not math.isfinite(lower) or not math.isfinite(upper) or lower >= upper:
             raise ValueError(f"bounds.{parameter} must be finite and strictly increasing")
@@ -448,7 +449,8 @@ class FitRequest:
     def __post_init__(self) -> None:
         object.__setattr__(self, "series_id", _require_text(self.series_id, "series_id", max_length=256))
         object.__setattr__(self, "model", _coerce_enum(self.model, FitModel, "fit model"))
-        start, end = float(self.range_start_s), float(self.range_end_s)
+        start = _numeric_float(self.range_start_s, "range_start_s")
+        end = _numeric_float(self.range_end_s, "range_end_s")
         if not math.isfinite(start) or not math.isfinite(end) or start >= end:
             raise ValueError("fit range must be finite and range_start_s < range_end_s")
         object.__setattr__(self, "range_start_s", start)
@@ -731,10 +733,12 @@ class FitResult:
             raise TypeError("sample_count must be an integer")
         if self.sample_count < 0 or self.sample_count != int(np.count_nonzero(mask)):
             raise ValueError("sample_count must equal the number of true fit-mask entries")
-        start, end = float(self.range_start_s), float(self.range_end_s)
+        start = _numeric_float(self.range_start_s, "range_start_s")
+        end = _numeric_float(self.range_end_s, "range_end_s")
         if not math.isfinite(start) or not math.isfinite(end) or start >= end:
             raise ValueError("fit result range must be finite and strictly increasing")
-        rmse, r_squared = float(self.rmse), float(self.r_squared)
+        rmse = _numeric_float(self.rmse, "rmse")
+        r_squared = _numeric_float(self.r_squared, "r_squared")
         if self.status is FitStatus.OK:
             if parameter_count == 0 or self.sample_count == 0:
                 raise ValueError("successful fits require parameters and samples")
