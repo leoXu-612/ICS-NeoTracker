@@ -115,7 +115,7 @@ def decimate_series(
         if special is None:
             continue
         index = int(special)
-        if 0 <= index < count:
+        if 0 <= index < count and finite_valid[index]:
             if time_range is None or (
                 math.isfinite(float(series.time_s[index]))
                 and float(time_range[0]) <= float(series.time_s[index]) <= float(time_range[1])

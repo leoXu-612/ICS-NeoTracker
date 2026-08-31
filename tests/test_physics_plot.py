@@ -71,6 +71,24 @@ class PlotDecimationTests(unittest.TestCase):
             source.time_s[prepared.sample_indices[valid_indices]],
         )
 
+    def test_invalid_selected_sample_remains_a_gap_in_the_envelope(self) -> None:
+        source = SampleSeries(
+            series_id="raw:invalid-selection",
+            name="Invalid selection",
+            frame_indices=np.arange(3, dtype=np.int64),
+            time_s=np.array([0.0, 1.0, 2.0]),
+            values=np.array([0.0, 5.0, 10.0]),
+            valid_mask=np.array([True, False, True]),
+            unit="m",
+            source_kind="state",
+            source_revision="results:invalid-selection",
+        )
+
+        prepared = decimate_series(source, width_px=200, selected_sample_index=1)
+
+        self.assertNotIn(1, prepared.sample_indices)
+        self.assertIn(-1, prepared.sample_indices)
+
 
 class PhysicsPlotWidgetTests(unittest.TestCase):
     @classmethod
