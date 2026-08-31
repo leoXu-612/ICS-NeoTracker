@@ -300,11 +300,17 @@ class PhysicsWorkspace(QFrame):
         time_s: float | None,
         match: str,
     ) -> None:
-        if frame_index is None or time_s is None or not math.isfinite(float(time_s)):
+        normalized_match = str(match) if str(match) in {"exact", "nearest"} else "unavailable"
+        if frame_index is None:
             text = "true time — · no sample selected"
             detail = "No physical sample is selected."
+        elif time_s is None or not math.isfinite(float(time_s)):
+            text = f"true time unavailable · frame {int(frame_index)} · {normalized_match}"
+            detail = (
+                f"The shared cursor is at source frame {int(frame_index)}; true time is unavailable "
+                f"and the sample match is {normalized_match}."
+            )
         else:
-            normalized_match = "nearest" if str(match) == "nearest" else "exact"
             text = f"true time {float(time_s):.6f} s · frame {int(frame_index)} · {normalized_match}"
             detail = (
                 f"The shared cursor is at true time {float(time_s):.6f} seconds and source frame "

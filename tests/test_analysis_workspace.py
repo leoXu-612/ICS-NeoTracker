@@ -97,6 +97,22 @@ class PhysicsWorkspaceTests(unittest.TestCase):
         self.assertIsNone(workspace.series_table.indexWidget(workspace.series_model.index(2, 2)))
         self.assertEqual(workspace.cursor_label.text(), "true time 0.090000 s · frame 2 · exact")
 
+    def test_selected_frame_remains_visible_when_true_time_is_unavailable(self) -> None:
+        workspace = PhysicsWorkspace()
+        source = make_series()
+        times = source.time_s.copy()
+        valid = source.valid_mask.copy()
+        times[1] = np.nan
+        valid[1] = False
+        source = replace(source, time_s=times, valid_mask=valid)
+        workspace.set_series((source,))
+
+        workspace.apply_selection(source.series_id, 1, 1, None, "exact")
+
+        self.assertIn("true time unavailable", workspace.cursor_label.text())
+        self.assertIn("frame 1", workspace.cursor_label.text())
+        self.assertNotIn("no sample selected", workspace.cursor_label.text())
+
     def test_copy_row_button_uses_the_models_full_precision_text(self) -> None:
         workspace = PhysicsWorkspace()
         workspace.set_series((make_series(),))
