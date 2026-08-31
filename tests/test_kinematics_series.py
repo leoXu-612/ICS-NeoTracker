@@ -7,7 +7,11 @@ import numpy as np
 from benchmarks.kinematics_fixtures import FIXTURE_REVISION, missing_segments, vfr_linear
 from neo_tracker.core import TrackerResult
 from neo_tracker.kinematics.runtime import CancellationToken, KinematicsCancelled
-from neo_tracker.kinematics.series import TrackingSeriesBuilder, snapshot_tracker_results
+from neo_tracker.kinematics.series import (
+    TrackingResultSnapshot,
+    TrackingSeriesBuilder,
+    snapshot_tracker_results,
+)
 
 
 class TrackingSeriesBuilderTests(unittest.TestCase):
@@ -80,6 +84,17 @@ class TrackingSeriesBuilderTests(unittest.TestCase):
         with self.subTest("state"):
             snapshot = snapshot_tracker_results([result])
             self.assertEqual(dict(snapshot[0].state), {"x_world": 1.5})
+
+    def test_direct_snapshot_is_detached_and_validated(self) -> None:
+        state = {"x_world": 1.5}
+        snapshot = TrackingResultSnapshot(0, 0.0, state, {}, {}, "ok")
+        state["x_world"] = 9.0
+        self.assertEqual(snapshot.state["x_world"], 1.5)
+        with self.assertRaises(TypeError):
+            snapshot.state["x_world"] = 2.0
+
+        with self.assertRaisesRegex(TypeError, "time_s must be numeric"):
+            TrackingResultSnapshot(0, np.bool_(False), {}, {}, {}, "ok")
 
     def test_duplicate_or_non_finite_timestamps_are_rejected(self) -> None:
         duplicate = [

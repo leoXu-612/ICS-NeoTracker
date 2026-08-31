@@ -38,6 +38,36 @@ class TrackingResultSnapshot:
     filter_velocity: Mapping[str, float]
     status: str
 
+    def __post_init__(self) -> None:
+        if isinstance(self.frame_index, (bool, np.bool_)) or not isinstance(
+            self.frame_index, (int, np.integer)
+        ):
+            raise TypeError("tracker result frame_index must be an integer")
+        frame_index = int(self.frame_index)
+        if frame_index < 0:
+            raise ValueError("tracker result frame_index must be non-negative")
+        if isinstance(self.time_s, (bool, np.bool_)):
+            raise TypeError("tracker result time_s must be numeric")
+        try:
+            time_s = float(self.time_s)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise TypeError("tracker result time_s must be numeric") from exc
+        if not isinstance(self.status, str):
+            raise TypeError("tracker result status must be a string")
+        object.__setattr__(self, "frame_index", frame_index)
+        object.__setattr__(self, "time_s", time_s)
+        object.__setattr__(self, "state", _numeric_mapping(self.state, "tracker result state"))
+        object.__setattr__(
+            self,
+            "filtered_state",
+            _numeric_mapping(self.filtered_state, "tracker result filtered_state"),
+        )
+        object.__setattr__(
+            self,
+            "filter_velocity",
+            _numeric_mapping(self.filter_velocity, "tracker result filter velocity"),
+        )
+
 
 def _field(item: object, name: str, default: object = None) -> object:
     if isinstance(item, Mapping):
@@ -66,22 +96,6 @@ def _numeric_mapping(value: object, name: str) -> Mapping[str, float]:
 def _snapshot_one(item: object) -> TrackingResultSnapshot:
     if isinstance(item, TrackingResultSnapshot):
         return item
-    frame = _field(item, "frame_index")
-    if isinstance(frame, bool) or not isinstance(frame, (int, np.integer)):
-        raise TypeError("tracker result frame_index must be an integer")
-    frame_index = int(frame)
-    if frame_index < 0:
-        raise ValueError("tracker result frame_index must be non-negative")
-    time_value = _field(item, "time_s")
-    if isinstance(time_value, (bool, np.bool_)):
-        raise TypeError("tracker result time_s must be numeric")
-    try:
-        time_s = float(time_value)  # type: ignore[arg-type]
-    except (TypeError, ValueError, OverflowError) as exc:
-        raise TypeError("tracker result time_s must be numeric") from exc
-    status_value = _field(item, "status", "unknown")
-    if not isinstance(status_value, str):
-        raise TypeError("tracker result status must be a string")
     debug = _field(item, "debug", {})
     filter_velocity: object = {}
     if isinstance(debug, Mapping):
@@ -89,14 +103,12 @@ def _snapshot_one(item: object) -> TrackingResultSnapshot:
         if isinstance(filter_debug, Mapping):
             filter_velocity = filter_debug.get("velocity", {})
     return TrackingResultSnapshot(
-        frame_index=frame_index,
-        time_s=time_s,
-        state=_numeric_mapping(_field(item, "state", {}), "tracker result state"),
-        filtered_state=_numeric_mapping(
-            _field(item, "filtered_state", {}), "tracker result filtered_state"
-        ),
-        filter_velocity=_numeric_mapping(filter_velocity, "tracker result filter velocity"),
-        status=status_value,
+        frame_index=_field(item, "frame_index"),  # type: ignore[arg-type]
+        time_s=_field(item, "time_s"),  # type: ignore[arg-type]
+        state=_field(item, "state", {}),  # type: ignore[arg-type]
+        filtered_state=_field(item, "filtered_state", {}),  # type: ignore[arg-type]
+        filter_velocity=filter_velocity,  # type: ignore[arg-type]
+        status=_field(item, "status", "unknown"),  # type: ignore[arg-type]
     )
 
 
