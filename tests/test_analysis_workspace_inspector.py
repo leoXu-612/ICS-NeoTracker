@@ -60,6 +60,28 @@ class AnalysisOperationRequestTests(unittest.TestCase):
 
         self.assertEqual(requests, [])
 
+    def test_operation_requests_do_not_coerce_ambiguous_numeric_inputs(self) -> None:
+        controller = AnalysisWorkspaceController(TaskSupervisor())
+        self.addCleanup(controller.close)
+        controller.set_series(object(), (make_series(),))
+        requests: list[KinematicsOperationRequest] = []
+        controller.operationRequested.connect(requests.append)
+
+        for order in (True, 1.5, "1"):
+            with self.subTest(derivative_order=order), self.assertRaises(TypeError):
+                controller.request_derivative(order)  # type: ignore[arg-type]
+        for options in (
+            {"window_length": True},
+            {"window_length": 9.5},
+            {"polyorder": "2"},
+            {"uniformity_tolerance": True},
+            {"uniformity_tolerance": "0.001"},
+        ):
+            with self.subTest(smoothing=options), self.assertRaises(TypeError):
+                controller.request_smoothing(**options)  # type: ignore[arg-type]
+
+        self.assertEqual(requests, [])
+
 
 class PhysicsInspectorTests(unittest.TestCase):
     @classmethod

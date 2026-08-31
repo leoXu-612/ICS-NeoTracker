@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
+from numbers import Integral, Real
 from types import MappingProxyType
 from typing import Mapping
 
@@ -263,7 +264,7 @@ class AnalysisWorkspaceController(QObject):
             return False
         config = DerivativeConfig(
             method="nonuniform_finite_difference",
-            order=int(order),
+            order=order,
             edge_policy="invalid",
             gap_policy="split",
         )
@@ -287,6 +288,14 @@ class AnalysisWorkspaceController(QObject):
         source = self._selected_series()
         if source is None:
             return False
+        if isinstance(window_length, bool) or not isinstance(window_length, Integral):
+            raise TypeError("smoothing window_length must be an integer")
+        if isinstance(polyorder, bool) or not isinstance(polyorder, Integral):
+            raise TypeError("smoothing polyorder must be an integer")
+        if isinstance(uniformity_tolerance, bool) or not isinstance(
+            uniformity_tolerance, Real
+        ):
+            raise TypeError("uniformity_tolerance must be numeric")
         window = int(window_length)
         degree = int(polyorder)
         tolerance = float(uniformity_tolerance)
