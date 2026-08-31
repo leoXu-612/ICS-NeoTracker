@@ -176,6 +176,35 @@ class KinematicsWorkspaceIntegrationTests(unittest.TestCase):
         self.assertEqual(window.selection_session.state, before)
         self.assertEqual(window._physics_series_by_id, {})
 
+    def test_export_rejects_duplicate_normalized_format_keys(self) -> None:
+        source = SampleSeries(
+            series_id="state:x",
+            name="State X",
+            frame_indices=np.array([0], dtype=np.int64),
+            time_s=np.array([0.0]),
+            values=np.array([1.0]),
+            valid_mask=np.array([True]),
+            unit="m",
+            source_kind="state",
+            source_revision="sha256:duplicate-export-key",
+        )
+
+        with self.assertRaisesRegex(ValueError, "duplicate export format"):
+            KinematicsWorkspaceTask(
+                owner=source,
+                task_id="00000000-0000-4000-8000-000000000655",
+                results_generation=0,
+                operation="export",
+                source=source,
+                configuration={"fit_result": None},
+                export_paths={
+                    "csv": "first.csv",
+                    " CSV ": "second.csv",
+                    "npz": "analysis.npz",
+                    "markdown": "analysis.md",
+                },
+            )
+
     def test_close_active_series_build_reaches_supervisor_idle(self) -> None:
         original_gc_thresholds = gc.get_threshold()
         window = self.make_window()

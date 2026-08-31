@@ -119,9 +119,13 @@ class KinematicsWorkspaceTask:
                 raise TypeError(f"kinematics unit for {key!r} must be a string")
             normalized_units[key] = value
         units = MappingProxyType(normalized_units)
-        export_paths = MappingProxyType(
-            {str(key).strip().lower(): Path(value) for key, value in self.export_paths.items()}
-        )
+        normalized_export_paths: dict[str, Path] = {}
+        for key, value in self.export_paths.items():
+            normalized_key = str(key).strip().lower()
+            if normalized_key in normalized_export_paths:
+                raise ValueError("kinematics export paths contain a duplicate export format")
+            normalized_export_paths[normalized_key] = Path(value)
+        export_paths = MappingProxyType(normalized_export_paths)
         if operation == "build":
             if not isinstance(self.results, Sequence):
                 raise TypeError("kinematics build results must be a sequence")
