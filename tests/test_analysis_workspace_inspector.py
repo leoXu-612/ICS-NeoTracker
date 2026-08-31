@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import unittest
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 
 from PySide6.QtWidgets import QApplication, QWidget
 
@@ -13,6 +13,7 @@ from neo_tracker.ui.analysis_workspace_controller import (
     KinematicsOperationRequest,
 )
 from neo_tracker.ui.inspectors import PhysicsInspector
+from neo_tracker.ui.series_table_model import SeriesTableModel
 from tests.test_application_kinematics_controller import fit_result, make_series
 
 
@@ -103,6 +104,21 @@ class PhysicsInspectorTests(unittest.TestCase):
         self.assertIn("No analysis selection", inspector.accessibleDescription())
         self.assertNotIn("slope=", inspector.accessibleDescription())
         self.assertIn("No analysis selection", inspector.object_label.toolTip())
+
+    def test_base_series_provenance_is_not_misclassified_as_derived(self) -> None:
+        source = replace(
+            make_series(),
+            source_kind="state",
+            processing_chain=(ProcessingStep("state", {"key": "x"}),),
+        )
+        inspector = PhysicsInspector()
+        model = SeriesTableModel()
+
+        inspector.show_series(source)
+        model.set_series(source)
+
+        self.assertIn("Base Series", inspector.object_label.text())
+        self.assertTrue(str(model.data(model.index(0, 4))).startswith("RAW"))
 
 
 if __name__ == "__main__":

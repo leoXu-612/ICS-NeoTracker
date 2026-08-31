@@ -533,6 +533,15 @@ class SampleSeries:
 
     __hash__ = None
 
+    @property
+    def is_derived(self) -> bool:
+        return self.source_kind.strip().lower() in {
+            "derived",
+            "fit",
+            "fit_residual",
+            "residual",
+        }
+
     def __post_init__(self) -> None:
         object.__setattr__(self, "series_id", _require_text(self.series_id, "series_id", max_length=256))
         object.__setattr__(self, "name", _require_text(self.name, "name", max_length=512))

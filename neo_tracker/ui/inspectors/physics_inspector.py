@@ -99,8 +99,7 @@ class PhysicsInspector(QWidget):
         self._describe_current()
 
     def show_series(self, series: SampleSeries) -> None:
-        derived = bool(series.processing_chain or series.source_kind in {"derived", "fit", "residual"})
-        kind = "Derived Series" if derived else "Base Series"
+        kind = "Derived Series" if series.is_derived else "Base Series"
         self.object_label.setText(f"{kind} · {series.name}")
         self.source_label.setText(series.source_kind)
         self.unit_label.setText(series.unit or "unit unavailable")

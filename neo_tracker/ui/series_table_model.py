@@ -225,7 +225,7 @@ class SeriesTableModel(QAbstractTableModel):
         lowered = kind.lower()
         if "filter" in lowered:
             prefix = "FILTERED"
-        elif series.processing_chain or lowered in {"derived", "fit", "residual"}:
+        elif series.is_derived:
             prefix = "DERIVED"
         else:
             prefix = "RAW"
