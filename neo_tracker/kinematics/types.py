@@ -355,7 +355,12 @@ class DerivativeConfig:
         object.__setattr__(self, "method", _coerce_enum(self.method, DerivativeMethod, "derivative method"))
         object.__setattr__(self, "edge_policy", _coerce_enum(self.edge_policy, EdgePolicy, "edge policy"))
         object.__setattr__(self, "gap_policy", _coerce_enum(self.gap_policy, GapPolicy, "gap policy"))
-        if isinstance(self.order, bool) or self.order not in (1, 2):
+        if isinstance(self.order, (bool, np.bool_)) or not isinstance(
+            self.order, (int, np.integer)
+        ):
+            raise TypeError("derivative order must be an integer")
+        order = int(self.order)
+        if order not in (1, 2):
             raise ValueError("derivative order must be 1 or 2")
         if isinstance(self.window_length, bool) or not isinstance(self.window_length, int):
             raise TypeError("window_length must be an integer")
@@ -363,11 +368,12 @@ class DerivativeConfig:
             raise ValueError("window_length must be an odd integer of at least 3")
         if isinstance(self.polyorder, bool) or not isinstance(self.polyorder, int):
             raise TypeError("polyorder must be an integer")
-        if self.polyorder < self.order or self.polyorder >= self.window_length:
+        if self.polyorder < order or self.polyorder >= self.window_length:
             raise ValueError("polyorder must cover derivative order and be smaller than window_length")
         tolerance = _numeric_float(self.uniformity_tolerance, "uniformity_tolerance")
         if not math.isfinite(tolerance) or tolerance < 0.0 or tolerance >= 1.0:
             raise ValueError("uniformity_tolerance must be finite and in [0, 1)")
+        object.__setattr__(self, "order", order)
         object.__setattr__(self, "uniformity_tolerance", tolerance)
 
     def to_dict(self) -> dict[str, object]:

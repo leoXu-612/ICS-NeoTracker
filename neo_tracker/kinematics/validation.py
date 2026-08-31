@@ -31,7 +31,10 @@ def derivative_unit(unit: str, order: int) -> str:
 
     if not isinstance(unit, str):
         raise TypeError("unit must be a string")
-    if isinstance(order, bool) or order not in (1, 2):
+    if isinstance(order, (bool, np.bool_)) or not isinstance(order, (int, np.integer)):
+        raise TypeError("derivative order must be an integer")
+    order_value = int(order)
+    if order_value not in (1, 2):
         raise ValueError("derivative order must be 1 or 2")
     if not unit:
         return ""
@@ -42,7 +45,7 @@ def derivative_unit(unit: str, order: int) -> str:
             base = unit[: -len(suffix)]
             existing_order = suffix_order
             break
-    total_order = existing_order + order
+    total_order = existing_order + order_value
     if total_order == 1:
         return f"{base}/s"
     return f"{base}/s{str(total_order).translate(str.maketrans('23456789', '²³⁴⁵⁶⁷⁸⁹'))}"

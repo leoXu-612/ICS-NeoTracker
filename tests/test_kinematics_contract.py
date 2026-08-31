@@ -201,6 +201,18 @@ class ConfigurationContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "polyorder"):
             DerivativeConfig(method="savgol_uniform", order=2, window_length=5, polyorder=1)
 
+    def test_derivative_order_has_strict_integer_semantics(self) -> None:
+        for invalid in (1.0, np.bool_(True)):
+            with self.subTest(invalid=invalid):
+                with self.assertRaisesRegex(TypeError, "order must be an integer"):
+                    DerivativeConfig("nonuniform_finite_difference", invalid)
+        with self.assertRaisesRegex(TypeError, "order must be an integer"):
+            derivative_unit("m", 1.0)
+
+        config = DerivativeConfig("nonuniform_finite_difference", np.int64(2))
+        self.assertIs(type(config.order), int)
+        self.assertEqual(config.order, 2)
+
     def test_fit_request_rejects_invalid_range_and_parameters(self) -> None:
         with self.assertRaisesRegex(ValueError, "fit range"):
             FitRequest("x", "linear", 1.0, 1.0, REVISION)
