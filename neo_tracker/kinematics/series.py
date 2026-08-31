@@ -54,7 +54,7 @@ def _numeric_mapping(value: object, name: str) -> Mapping[str, float]:
     for key, item in value.items():
         if not isinstance(key, str) or not key:
             raise TypeError(f"{name} keys must be non-empty strings")
-        if isinstance(item, bool):
+        if isinstance(item, (bool, np.bool_)):
             continue
         try:
             copied[key] = float(item)
@@ -73,7 +73,7 @@ def _snapshot_one(item: object) -> TrackingResultSnapshot:
     if frame_index < 0:
         raise ValueError("tracker result frame_index must be non-negative")
     time_value = _field(item, "time_s")
-    if isinstance(time_value, bool):
+    if isinstance(time_value, (bool, np.bool_)):
         raise TypeError("tracker result time_s must be numeric")
     try:
         time_s = float(time_value)  # type: ignore[arg-type]

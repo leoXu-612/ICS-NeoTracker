@@ -63,6 +63,24 @@ class TrackingSeriesBuilderTests(unittest.TestCase):
         self.assertEqual(by_id["filtered_state:theta"].values[0], 0.5)
         self.assertEqual(by_id["filtered_state:theta"].unit, "rad")
 
+    def test_snapshot_does_not_treat_numpy_booleans_as_physical_values(self) -> None:
+        result = {
+            "frame_index": 0,
+            "time_s": np.bool_(False),
+            "state": {},
+            "filtered_state": {},
+            "status": "ok",
+        }
+        with self.subTest("time"):
+            with self.assertRaisesRegex(TypeError, "time_s must be numeric"):
+                snapshot_tracker_results([result])
+
+        result["time_s"] = 0.0
+        result["state"] = {"x_world": 1.5, "visible": np.bool_(True)}
+        with self.subTest("state"):
+            snapshot = snapshot_tracker_results([result])
+            self.assertEqual(dict(snapshot[0].state), {"x_world": 1.5})
+
     def test_duplicate_or_non_finite_timestamps_are_rejected(self) -> None:
         duplicate = [
             TrackerResult(0, 0.0, {"x_px": 0.0}, {"x_px": 0.0}, 1.0, "ok"),
