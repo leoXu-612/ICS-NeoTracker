@@ -100,7 +100,10 @@ class KinematicsPersistenceIntegrationTests(unittest.TestCase):
 
         self.assertNotIn(derived_id, restored_window._physics_series_by_id)
         self.assertEqual(restored_window._physics_definition_states[derived_id], "stale")
-        self.assertIn("stale definition", restored_window.physics_workspace.cursor_label.toolTip())
+        cursor = restored_window.physics_workspace.cursor_label
+        self.assertIn("source frame 0", cursor.toolTip())
+        self.assertIn("stale definition", cursor.toolTip())
+        self.assertEqual(cursor.toolTip(), cursor.accessibleDescription())
 
     def test_v2_project_opens_with_empty_analysis_workspace_and_saves_as_v3(self) -> None:
         payload = {

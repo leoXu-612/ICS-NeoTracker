@@ -583,6 +583,8 @@ class PhysicsWorkspaceMixin:
             + (f"; {stale} stale definition(s) remain disabled" if stale else "")
         )
         if definitions:
+            cursor_detail = self.physics_workspace.cursor_label.toolTip()
+            detail = f"{cursor_detail} {detail}" if cursor_detail else detail
             self.physics_workspace.cursor_label.setToolTip(detail)
             self.physics_workspace.cursor_label.setAccessibleDescription(detail)
 
