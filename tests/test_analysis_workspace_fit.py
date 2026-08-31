@@ -89,6 +89,27 @@ class FitPanelTests(unittest.TestCase):
         self.assertEqual(drafts, [])
         self.assertIn("Bounds.omega must contain numeric values", panel.status_label.text())
 
+    def test_numeric_json_strings_are_not_coerced_to_fit_numbers(self) -> None:
+        panel = FitPanel()
+        panel.set_series((make_series(),))
+        panel.model_combo.setCurrentText("Sinusoidal")
+        drafts: list[FitDraft] = []
+        panel.runRequested.connect(drafts.append)
+
+        with self.subTest("initial parameter"):
+            panel.initial_parameters_edit.setText('{"omega": "3.0"}')
+            panel.run_button.click()
+            self.assertEqual(drafts, [])
+            self.assertIn("Initial parameters.omega must be numeric", panel.status_label.text())
+
+        drafts.clear()
+        panel.initial_parameters_edit.setText("{}")
+        with self.subTest("bounds"):
+            panel.bounds_edit.setText('{"omega": ["0.1", 10.0]}')
+            panel.run_button.click()
+            self.assertEqual(drafts, [])
+            self.assertIn("Bounds.omega must contain numeric values", panel.status_label.text())
+
     def test_result_summary_shows_parameters_units_metrics_and_samples(self) -> None:
         panel = FitPanel()
         source = make_series()

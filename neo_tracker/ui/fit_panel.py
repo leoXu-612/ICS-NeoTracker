@@ -265,7 +265,10 @@ class FitPanel(QWidget):
         for key, value in bounds_data.items():
             if not isinstance(value, list) or len(value) != 2:
                 raise ValueError(f"Bounds.{key} must be a two-value JSON array.")
-            if any(isinstance(bound, bool) for bound in value):
+            if any(
+                isinstance(bound, bool) or not isinstance(bound, (int, float))
+                for bound in value
+            ):
                 raise ValueError(f"Bounds.{key} must contain numeric values.")
             bounds[key] = (float(value[0]), float(value[1]))
         return FitDraft(
@@ -444,7 +447,7 @@ class FitPanel(QWidget):
         value = cls._json_mapping(text, label)
         result: dict[str, float] = {}
         for key, item in value.items():
-            if isinstance(item, bool):
+            if isinstance(item, bool) or not isinstance(item, (int, float)):
                 raise ValueError(f"{label}.{key} must be numeric.")
             try:
                 result[key] = float(item)
