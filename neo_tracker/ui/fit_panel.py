@@ -330,9 +330,7 @@ class FitPanel(QWidget):
             unit = result.parameter_units[index]
             display_rows.append(
                 (
-                    "acceleration (2a)"
-                    if unit.endswith("/s²")
-                    else "second derivative (2a)",
+                    "2a (acceleration for position)",
                     2.0 * float(result.parameters[index]),
                     unit,
                     2.0 * float(result.standard_errors[index]),

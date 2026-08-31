@@ -204,20 +204,22 @@ class FitPanelTests(unittest.TestCase):
         panel.show_result(replace(result, standard_errors=errors))
 
         self.assertEqual(panel.parameter_table.rowCount(), 4)
-        self.assertEqual(panel.parameter_table.item(3, 0).text(), "acceleration (2a)")
+        self.assertEqual(
+            panel.parameter_table.item(3, 0).text(),
+            "2a (acceleration for position)",
+        )
         self.assertEqual(panel.parameter_table.item(3, 1).text(), "2.4")
         self.assertEqual(panel.parameter_table.item(3, 2).text(), "m/s²")
         self.assertEqual(panel.parameter_table.item(3, 3).text(), "0.25")
 
-        panel.show_result(
-            replace(
-                result,
-                parameter_units=("m/s³", "m/s²", "m/s"),
-            )
-        )
-
-        self.assertEqual(panel.parameter_table.item(3, 0).text(), "second derivative (2a)")
-        self.assertEqual(panel.parameter_table.item(3, 2).text(), "m/s³")
+        for units in (("m/s³", "m/s²", "m/s"), ("V/s²", "V/s", "V")):
+            with self.subTest(source_unit=units[-1]):
+                panel.show_result(replace(result, parameter_units=units))
+                self.assertEqual(
+                    panel.parameter_table.item(3, 0).text(),
+                    "2a (acceleration for position)",
+                )
+                self.assertEqual(panel.parameter_table.item(3, 2).text(), units[0])
 
     def test_busy_state_exposes_cancel_and_disables_mutating_inputs(self) -> None:
         panel = FitPanel()
