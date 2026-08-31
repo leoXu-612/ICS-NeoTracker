@@ -7,6 +7,7 @@ import numpy as np
 from PySide6.QtWidgets import QApplication, QWidget
 
 import neo_tracker
+from benchmarks.kinematics_fixtures import uniform_linear
 from neo_tracker.application.kinematics_workspace_coordinator import (
     KinematicsWorkspaceCoordinator,
     KinematicsWorkspaceOutput,
@@ -113,6 +114,36 @@ class VFRAnalysisIntegrationTests(unittest.TestCase):
         self.assertEqual(outputs, [])
         self.assertEqual(len(failed), 1)
         self.assertIn("strictly increasing", failed[0])
+
+    def test_smoothing_worker_does_not_parse_numeric_strings(self) -> None:
+        coordinator = self.make_coordinator()
+        source = uniform_linear(21).sample_series()
+        failed: list[str] = []
+        outputs: list[KinematicsWorkspaceOutput] = []
+        coordinator.failed.connect(lambda _job, message: failed.append(message))
+        coordinator.output_ready.connect(lambda _job, output: outputs.append(output))
+
+        self.assertTrue(
+            coordinator.start(
+                KinematicsWorkspaceTask(
+                    owner=source,
+                    task_id=TASK_ID,
+                    results_generation=0,
+                    operation="smooth",
+                    source=source,
+                    configuration={
+                        "window_length": "9",
+                        "polyorder": 2,
+                        "uniformity_tolerance": 1e-3,
+                    },
+                )
+            )
+        )
+        pump_until(lambda: not coordinator.busy)
+
+        self.assertEqual(outputs, [])
+        self.assertEqual(len(failed), 1)
+        self.assertIn("window_length must be an integer", failed[0])
 
     def test_source_revision_hashes_only_engine_consumed_fields(self) -> None:
         first = tracker_results([0.0, 0.1, 0.2])

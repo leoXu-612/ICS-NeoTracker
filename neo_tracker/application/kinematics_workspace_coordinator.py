@@ -298,9 +298,9 @@ class KinematicsWorkspaceWorker(QObject):
             assert isinstance(task.configuration, Mapping)
             output = smooth_series(
                 task.source,
-                window_length=int(task.configuration["window_length"]),
-                polyorder=int(task.configuration["polyorder"]),
-                uniformity_tolerance=float(task.configuration["uniformity_tolerance"]),
+                window_length=task.configuration["window_length"],
+                polyorder=task.configuration["polyorder"],
+                uniformity_tolerance=task.configuration["uniformity_tolerance"],
                 cancellation=self._cancellation,
             )
             return KinematicsWorkspaceOutput(
