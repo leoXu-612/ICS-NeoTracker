@@ -3881,6 +3881,32 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertFalse(window._project_dirty)
         self.assertEqual(window.project_state_label.text(), "Saved")
 
+    def test_open_project_waits_for_active_kinematics_jobs(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+
+        for kind in ("kinematics-fit", "kinematics-analysis"):
+            with self.subTest(kind=kind):
+                token = window._background_tasks.start(kind)
+                self.assertIsNotNone(token)
+                assert token is not None
+                try:
+                    with patch.object(
+                        QFileDialog,
+                        "getOpenFileName",
+                        return_value=("", ""),
+                    ) as picker:
+                        window._open_project()
+
+                    picker.assert_not_called()
+                    self.assertIn(
+                        "Wait for background processing",
+                        window.statusBar().currentMessage(),
+                    )
+                    self.assertIsNone(window._project_open_thread)
+                finally:
+                    window._background_tasks.finish(token)
+
     def test_open_project_probes_media_in_background_and_keeps_ui_responsive(self) -> None:
         window = NeoTrackerWindow()
         self.addCleanup(close_window_safely, window)

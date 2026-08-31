@@ -2511,7 +2511,15 @@ class NeoTrackerWindow(
             return
         active_kinds = set(self._background_tasks.active_kinds)
         if active_kinds.intersection(
-            {"tracking", "analysis", "media-probe", "project-open", "project-save"}
+            {
+                "tracking",
+                "analysis",
+                "kinematics-fit",
+                "kinematics-analysis",
+                "media-probe",
+                "project-open",
+                "project-save",
+            }
         ):
             self.statusBar().showMessage(
                 "Wait for background processing or project saving to finish before opening another project.",
