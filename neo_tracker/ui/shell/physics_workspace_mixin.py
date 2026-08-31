@@ -141,19 +141,35 @@ class PhysicsWorkspaceMixin:
             result_identity or self._physics_result_identity(task),
             source_revision,
         )
-        for item in items:
-            outcome = self.selection_session.attach_series(item)
-            if not outcome.accepted:
-                return False
+        if not self.selection_session.replace_series(items).accepted:
+            return False
         self.physics_workspace.set_series(items)
         self.fit_panel.set_series(items)
         self.analysis_workspace_controller.set_series(task, items)
         self.physics_inspector.show_series(items[0])
-        self.selection_session.select_frame(
+        selection = self.selection_session.select_frame(
             int(task.preview_frame_index),
             origin=SelectionOrigin.VIDEO,
             expected_source_revision=source_revision,
         )
+        if not selection.changed:
+            state = selection.state
+            self.physics_workspace.apply_selection(
+                state.selected_series_id,
+                state.selected_sample_index,
+                state.selected_frame_index,
+                state.selected_time_s,
+                state.match.value,
+            )
+            selected = self._physics_series_by_id.get(state.selected_series_id or "")
+            if selected is not None and state.selected_sample_index is not None:
+                self.physics_inspector.show_sample(
+                    selected,
+                    state.selected_sample_index,
+                    match=state.match.value,
+                )
+            elif selected is not None:
+                self.physics_inspector.show_series(selected)
         self._refresh_draft_state()
         return True
 

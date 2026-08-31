@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from enum import Enum
 import math
@@ -150,6 +150,45 @@ class SelectionSession:
             replace(self._state, selected_series_id=series.series_id),
             SelectionOrigin.SYSTEM,
         )
+
+    def replace_series(self, series: Sequence[SampleSeries]) -> SelectionOutcome:
+        """Replace the complete attached set without publishing partial states."""
+
+        items = tuple(series)
+        if any(not isinstance(item, SampleSeries) for item in items):
+            raise TypeError("selection series must contain SampleSeries values")
+        series_ids = tuple(item.series_id for item in items)
+        if len(set(series_ids)) != len(series_ids):
+            raise ValueError("selection series_id values must be unique")
+        guard = self._guard()
+        if guard is not None:
+            return guard
+        if any(item.source_revision != self._state.source_revision for item in items):
+            return self._rejected("stale-source-revision")
+
+        indexed = {item.series_id: _SeriesIndex.build(item) for item in items}
+        selected_id = self._state.selected_series_id
+        if selected_id not in indexed:
+            selected_id = next(iter(indexed), None)
+        state = self._state
+        if selected_id != state.selected_series_id or selected_id is None:
+            state = replace(
+                state,
+                selected_series_id=selected_id,
+                selected_sample_index=None,
+                selected_sample_valid=None,
+                selected_time_s=None,
+                selected_fit_id=None,
+                match=SelectionMatch.UNAVAILABLE,
+            )
+        if selected_id is not None and state.selected_frame_index is not None:
+            state = self._state_for_frame(
+                state,
+                indexed[selected_id],
+                state.selected_frame_index,
+            )
+        self._series = indexed
+        return self._commit(state, SelectionOrigin.SYSTEM)
 
     def detach_series(self, series_id: str) -> SelectionOutcome:
         normalized = self._required_text(series_id, "series id")

@@ -255,6 +255,29 @@ class MainWindowPhysicsWorkspaceTests(unittest.TestCase):
 
         self.assertEqual(window.selection_session.state, before)
 
+    def test_same_revision_series_replacement_drops_removed_session_entries(self) -> None:
+        window = self.make_window()
+        source = self.sparse_series()
+        replacement = replace(source, series_id="filtered:y", name="Filtered y")
+        self.assertTrue(window.set_physics_series((source,)))
+        before_revision = window.selection_session.state.selection_revision
+
+        self.assertTrue(window.set_physics_series((replacement,)))
+
+        state = window.selection_session.state
+        self.assertEqual(window.selection_session.series_ids, (replacement.series_id,))
+        self.assertEqual(state.selected_series_id, replacement.series_id)
+        self.assertEqual(state.selection_revision, before_revision + 1)
+        self.assertIs(window.physics_workspace.series_model.series, replacement)
+        self.assertEqual(
+            [index.row() for index in window.physics_workspace.series_table.selectionModel().selectedRows()],
+            [state.selected_sample_index],
+        )
+        self.assertEqual(
+            window.analysis_workspace_controller.state.selected_series_id,
+            replacement.series_id,
+        )
+
     def test_table_video_and_video_table_share_one_selection_session(self) -> None:
         window = self.make_window()
         window.current_task.media_info = MediaInfo(
