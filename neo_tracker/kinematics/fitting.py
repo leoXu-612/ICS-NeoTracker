@@ -107,6 +107,8 @@ def _linear_regression(
         raise ValueError(
             f"{request.model.value} fit requires at least {parameter_count} eligible samples"
         )
+    if request.initial_parameters:
+        raise ValueError("initial parameters are supported only for nonlinear models")
     if request.bounds:
         raise ValueError("bounds are supported only for nonlinear models")
     time_s = series.time_s[mask]

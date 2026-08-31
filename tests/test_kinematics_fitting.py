@@ -122,6 +122,17 @@ class LinearQuadraticFitTests(unittest.TestCase):
         bounded = fit_series(source, bounded_request)
         self.assertIs(bounded.status, FitStatus.FAILED)
         self.assertIn("only for nonlinear", bounded.message)
+        initialized_request = FitRequest(
+            series_id=source.series_id,
+            model="linear",
+            range_start_s=float(source.time_s[0]),
+            range_end_s=float(source.time_s[-1]),
+            source_revision=source.source_revision,
+            initial_parameters={"slope": 2.0},
+        )
+        initialized = fit_series(source, initialized_request)
+        self.assertIs(initialized.status, FitStatus.FAILED)
+        self.assertIn("only for nonlinear", initialized.message)
 
     def test_stale_and_cancelled_requests_are_single_terminal_results(self) -> None:
         source = uniform_linear().sample_series()

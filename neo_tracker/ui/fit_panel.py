@@ -259,8 +259,14 @@ class FitPanel(QWidget):
         series_id = self.series_combo.currentData()
         if series_id is None or str(series_id) not in self._series:
             raise ValueError("Choose a physical series before running a fit.")
-        initial = self._numeric_mapping(self.initial_parameters_edit.text(), "Initial parameters")
-        bounds_data = self._json_mapping(self.bounds_edit.text(), "Bounds")
+        model = str(self.model_combo.currentData())
+        nonlinear = model in {"exponential", "sinusoidal"}
+        initial = (
+            self._numeric_mapping(self.initial_parameters_edit.text(), "Initial parameters")
+            if nonlinear
+            else {}
+        )
+        bounds_data = self._json_mapping(self.bounds_edit.text(), "Bounds") if nonlinear else {}
         bounds: dict[str, tuple[float, float]] = {}
         for key, value in bounds_data.items():
             if not isinstance(value, list) or len(value) != 2:
@@ -273,7 +279,7 @@ class FitPanel(QWidget):
             bounds[key] = (float(value[0]), float(value[1]))
         return FitDraft(
             series_id=str(series_id),
-            model=str(self.model_combo.currentData()),
+            model=model,
             range_start_s=self.range_start_spin.value(),
             range_end_s=self.range_end_spin.value(),
             initial_parameters=initial,

@@ -69,6 +69,21 @@ class FitPanelTests(unittest.TestCase):
             panel.status_label.text(),
         )
 
+    def test_linear_model_does_not_submit_hidden_nonlinear_settings(self) -> None:
+        panel = FitPanel()
+        panel.set_series((make_series(),))
+        panel.model_combo.setCurrentText("Sinusoidal")
+        panel.initial_parameters_edit.setText('{"omega": 3.0}')
+        panel.bounds_edit.setText('{"omega": [0.1, 10.0]}')
+
+        panel.model_combo.setCurrentText("Linear")
+        draft = panel.draft()
+
+        self.assertEqual(draft.initial_parameters, {})
+        self.assertEqual(draft.bounds, {})
+        self.assertEqual(panel.initial_parameters_edit.text(), '{"omega": 3.0}')
+        self.assertEqual(panel.bounds_edit.text(), '{"omega": [0.1, 10.0]}')
+
     def test_boolean_json_values_are_not_coerced_to_fit_numbers(self) -> None:
         panel = FitPanel()
         panel.set_series((make_series(),))
