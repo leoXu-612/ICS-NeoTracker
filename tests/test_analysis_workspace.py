@@ -161,6 +161,24 @@ class PhysicsWorkspaceTests(unittest.TestCase):
             "4 aligned samples · derived · m/s",
         )
 
+    def test_series_only_selection_updates_data_and_plot_sources(self) -> None:
+        workspace = PhysicsWorkspace()
+        source = make_series()
+        velocity = replace(
+            source,
+            series_id="derived:v",
+            name="Velocity",
+            unit="m/s",
+            source_kind="derived",
+        )
+        workspace.set_series((source, velocity))
+
+        workspace.apply_selection(velocity.series_id, None, None, None, "unavailable")
+
+        self.assertEqual(workspace.series_combo.currentData(), velocity.series_id)
+        self.assertIs(workspace.series_model.series, velocity)
+        self.assertEqual(workspace.plot.series_ids, (velocity.series_id,))
+
     def test_selection_keeps_an_overflow_series_visible_in_the_bounded_plot(self) -> None:
         workspace = PhysicsWorkspace()
         source = make_series()

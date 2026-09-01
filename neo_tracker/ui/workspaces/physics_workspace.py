@@ -331,13 +331,15 @@ class PhysicsWorkspace(QFrame):
         """Render a session event without emitting a feedback selection."""
 
         source = self._series.get(series_id or "")
-        if source is not None and sample_index is not None and 0 <= int(sample_index) < len(source):
+        if source is not None:
             combo_index = self.series_combo.findData(source.series_id)
             if combo_index >= 0 and combo_index != self.series_combo.currentIndex():
                 self.series_combo.blockSignals(True)
                 self.series_combo.setCurrentIndex(combo_index)
                 self.series_combo.blockSignals(False)
                 self.series_model.set_series(source)
+            self._ensure_plot_series_visible(source)
+        if source is not None and sample_index is not None and 0 <= int(sample_index) < len(source):
             selection = self.series_table.selectionModel()
             selection.blockSignals(True)
             self.series_table.selectRow(int(sample_index))
@@ -346,7 +348,6 @@ class PhysicsWorkspace(QFrame):
                 QAbstractItemView.ScrollHint.EnsureVisible,
             )
             selection.blockSignals(False)
-            self._ensure_plot_series_visible(source)
             self.plot.set_selected_sample(int(sample_index), source.series_id)
             self.copy_row_button.setEnabled(True)
             self._set_data_status(source, int(sample_index))
