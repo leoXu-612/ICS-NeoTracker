@@ -145,6 +145,38 @@ class VFRAnalysisIntegrationTests(unittest.TestCase):
         self.assertEqual(len(failed), 1)
         self.assertIn("window_length must be an integer", failed[0])
 
+    def test_smoothing_worker_preserves_one_sided_edge_policy(self) -> None:
+        coordinator = self.make_coordinator()
+        source = uniform_linear(21).sample_series()
+        outputs: list[KinematicsWorkspaceOutput] = []
+        coordinator.output_ready.connect(lambda _job, output: outputs.append(output))
+
+        self.assertTrue(
+            coordinator.start(
+                KinematicsWorkspaceTask(
+                    owner=source,
+                    task_id=TASK_ID,
+                    results_generation=0,
+                    operation="smooth",
+                    source=source,
+                    configuration={
+                        "method": "savgol_uniform",
+                        "window_length": 5,
+                        "polyorder": 2,
+                        "uniformity_tolerance": 1e-3,
+                        "edge_policy": "one_sided",
+                        "gap_policy": "split",
+                        "resample": False,
+                    },
+                )
+            )
+        )
+        pump_until(lambda: not coordinator.busy)
+
+        smoothed = outputs[-1].series[0]
+        self.assertTrue(smoothed.valid_mask.all())
+        self.assertEqual(smoothed.processing_chain[-1].parameters["edge_policy"], "one_sided")
+
     def test_source_revision_hashes_only_engine_consumed_fields(self) -> None:
         first = tracker_results([0.0, 0.1, 0.2])
         second = tracker_results([0.0, 0.1, 0.2])

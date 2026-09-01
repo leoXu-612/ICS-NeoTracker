@@ -305,6 +305,7 @@ class KinematicsWorkspaceWorker(QObject):
                 window_length=task.configuration["window_length"],
                 polyorder=task.configuration["polyorder"],
                 uniformity_tolerance=task.configuration["uniformity_tolerance"],
+                edge_policy=task.configuration.get("edge_policy", "invalid"),
                 cancellation=self._cancellation,
             )
             return KinematicsWorkspaceOutput(
