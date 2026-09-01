@@ -160,7 +160,7 @@ class ProjectTaskControllerTests(unittest.TestCase):
         self.assertIsNone(self.controller.calibration_rod_to_dict(invalid))
         self.assertFalse(self.controller.apply_calibration_rod_to_task(restored, invalid))
 
-    def test_calibration_snapshot_rejects_type_confused_values(self) -> None:
+    def test_calibration_snapshot_rejects_invalid_field_types_and_units(self) -> None:
         valid = {
             "start_px": [0.0, 0.0],
             "end_px": [100.0, 0.0],
@@ -172,6 +172,8 @@ class ProjectTaskControllerTests(unittest.TestCase):
             "numeric string endpoint": {"start_px": ["0", 0.0]},
             "boolean length": {"real_length": True},
             "numeric unit": {"unit": 50},
+            "overlong unit": {"unit": "abcdefghijklm"},
+            "control character unit": {"unit": "cm\nmetric"},
         }
         for label, replacement in invalid_fields.items():
             with self.subTest(label=label):

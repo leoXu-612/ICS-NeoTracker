@@ -744,7 +744,12 @@ class ProjectTaskController:
             unit=unit,
             y_positive=y_positive,
         )
-        if not unit or y_positive not in {"up", "down"} or rod.unit_per_pixel() is None:
+        if (
+            not 1 <= len(unit) <= 12
+            or not unit.isprintable()
+            or y_positive not in {"up", "down"}
+            or rod.unit_per_pixel() is None
+        ):
             return None
         return rod
 
