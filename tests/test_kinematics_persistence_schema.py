@@ -192,6 +192,13 @@ class KinematicsProjectSchemaTests(unittest.TestCase):
         ]["resample"] = True
         mutations.append((implicit_resampling, "resample must be false"))
 
+        empty_analysis = json.loads(json.dumps(valid))
+        empty_definition = empty_analysis["tasks"][0]["analysis_workspace"]["definitions"][0]
+        empty_definition["derivative_config"] = None
+        empty_definition["smoothing_config"] = None
+        empty_definition["fit_config"] = None
+        mutations.append((empty_analysis, "requires derivative, smoothing, or fit"))
+
         for payload, message in mutations:
             with self.subTest(message=message), self.assertRaisesRegex(
                 (TypeError, ValueError), message

@@ -811,6 +811,8 @@ class AnalysisDefinition:
             if request.source_revision != self.source_series.source_revision:
                 raise ValueError("analysis fit_config source_revision must match source_series")
             fit = request.to_dict()
+        if derivative is None and smoothing is None and fit is None:
+            raise ValueError("analysis definition requires derivative, smoothing, or fit config")
 
         selected_range: tuple[float, float] | None = None
         if self.selected_range_s is not None:
