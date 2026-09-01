@@ -113,6 +113,19 @@ class UnavailableFitOperator(RecordingFitOperator):
         )
 
 
+class MisalignedFitOperator(RecordingFitOperator):
+    def fit(self, series, request, *, cancellation=None):
+        result = fit_result(series, request)
+        mask = result.valid_mask[:-1]
+        return replace(
+            result,
+            predicted=result.predicted[:-1],
+            residuals=result.residuals[:-1],
+            valid_mask=mask,
+            sample_count=int(np.count_nonzero(mask)),
+        )
+
+
 class AnalysisWorkspaceControllerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -182,6 +195,23 @@ class AnalysisWorkspaceControllerTests(unittest.TestCase):
         self.assertFalse(controller.state.residual_visible)
         self.assertTrue(controller.request_export())
         self.assertIsNone(exports[-1].configuration["fit_result"])
+
+    def test_misaligned_fit_result_is_rejected_before_controller_state_changes(self) -> None:
+        operator = MisalignedFitOperator()
+        controller = AnalysisWorkspaceController(TaskSupervisor(), fit_operator=operator)
+        self.addCleanup(controller.close)
+        owner = object()
+        source = make_series()
+        controller.set_series(owner, (source,))
+        delivered: list[FitResult] = []
+        controller.fitResultReady.connect(delivered.append)
+
+        self.assertTrue(controller.run_fit(owner, FitDraft(source.series_id, "linear", 0.0, 1.0)))
+        pump_until(lambda: not controller.busy)
+
+        self.assertEqual(delivered, [])
+        self.assertEqual(controller.state.status, "stale")
+        self.assertIsNone(controller.state.fit_result)
 
     def test_source_change_cancels_active_fit_and_rejects_late_result(self) -> None:
         supervisor = TaskSupervisor()

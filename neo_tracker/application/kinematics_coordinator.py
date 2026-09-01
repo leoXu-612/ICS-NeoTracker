@@ -270,4 +270,5 @@ class KinematicsFitCoordinator(QObject):
             and result.model is request.model
             and result.range_start_s == request.range_start_s
             and result.range_end_s == request.range_end_s
+            and len(result.predicted) == len(task.series)
         )
