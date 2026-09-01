@@ -712,6 +712,10 @@ class ProjectPersistenceTests(unittest.TestCase):
             ({**valid, "compute_backend": "x" * 129}, "must not exceed 128 characters"),
             ({**valid, "source_path": 3}, "source_path must be a string"),
             ({**valid, "source_identity": {"bad": True}}, "valid media identity"),
+            (
+                {**valid, "tracking-elapsed-s": 0.5},
+                "tracking run record contains unknown fields: tracking-elapsed-s",
+            ),
         ]
         for data, message in invalid_cases:
             with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):

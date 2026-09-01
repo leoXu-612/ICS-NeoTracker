@@ -87,6 +87,28 @@ _TASK_FIELDS_V3 = frozenset(
     }
 )
 _LEGACY_TASK_FIELDS = _TASK_FIELDS_V3 - {"task_id", "analysis_workspace"}
+_TRACKING_RUN_FIELDS = frozenset(
+    {
+        "started_at",
+        "duration_s",
+        "mode",
+        "outcome",
+        "start_frame",
+        "end_frame",
+        "processed_frames",
+        "result_count",
+        "note",
+        "pipeline_config",
+        "tracking_elapsed_s",
+        "input_s",
+        "processing_s",
+        "peak_debug_bytes",
+        "prefetch_frames",
+        "compute_backend",
+        "source_path",
+        "source_identity",
+    }
+)
 
 
 def _bounded_string(value: object, label: str, limit: int, *, allow_empty: bool = True) -> str:
@@ -599,6 +621,7 @@ class TrackingRunRecord:
     def from_dict(cls, data: object) -> "TrackingRunRecord":
         if not isinstance(data, dict):
             raise ValueError("tracking run record must be a dictionary")
+        _reject_unknown_fields(data, _TRACKING_RUN_FIELDS, "tracking run record")
         pipeline_config = data.get("pipeline_config")
         if not isinstance(pipeline_config, dict):
             raise ValueError("tracking run pipeline_config must be a non-empty dictionary")
