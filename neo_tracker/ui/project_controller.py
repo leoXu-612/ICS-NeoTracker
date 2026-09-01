@@ -166,10 +166,6 @@ def short_config_value(value: object) -> str:
     return text if len(text) <= 80 else f"{text[:77]}..."
 
 
-def _finite_values(*values: float) -> bool:
-    return all(isfinite(float(value)) for value in values)
-
-
 class ProjectTaskController:
     """UI-independent creation and persistence rules for desktop tasks."""
 
@@ -683,22 +679,30 @@ class ProjectTaskController:
             raise ValueError(f"project media_info {label} must be a non-negative integer")
         return int(value)
 
-    @staticmethod
-    def calibration_rod_to_dict(rod: CalibrationRod | None) -> dict[str, object] | None:
-        if rod is None or rod.start_px is None or rod.end_px is None or rod.real_length is None:
+    @classmethod
+    def calibration_rod_to_dict(
+        cls,
+        rod: CalibrationRod | None,
+    ) -> dict[str, object] | None:
+        if rod is None:
             return None
-        if (
-            rod.unit_per_pixel() is None
-            or rod.y_positive not in {"up", "down"}
-            or not all(_finite_values(*point) for point in (rod.start_px, rod.end_px))
-        ):
+        parsed = cls.calibration_rod_from_dict(
+            {
+                "start_px": rod.start_px,
+                "end_px": rod.end_px,
+                "real_length": rod.real_length,
+                "unit": rod.unit,
+                "y_positive": rod.y_positive,
+            }
+        )
+        if parsed is None:
             return None
         return {
-            "start_px": [float(rod.start_px[0]), float(rod.start_px[1])],
-            "end_px": [float(rod.end_px[0]), float(rod.end_px[1])],
-            "real_length": float(rod.real_length),
-            "unit": rod.unit,
-            "y_positive": rod.y_positive,
+            "start_px": [parsed.start_px[0], parsed.start_px[1]],  # type: ignore[index]
+            "end_px": [parsed.end_px[0], parsed.end_px[1]],  # type: ignore[index]
+            "real_length": parsed.real_length,
+            "unit": parsed.unit,
+            "y_positive": parsed.y_positive,
         }
 
     @staticmethod
@@ -852,14 +856,12 @@ class ProjectTaskController:
 
     @classmethod
     def apply_calibration_rod_to_task(cls, task: DesktopTask, rod: CalibrationRod) -> bool:
+        parsed = cls.calibration_rod_from_dict(cls.calibration_rod_to_dict(rod))
+        if parsed is None:
+            return False
+        rod = parsed
         unit_per_pixel = rod.unit_per_pixel()
-        if (
-            rod.start_px is None
-            or rod.end_px is None
-            or unit_per_pixel is None
-            or not rod.unit.strip()
-            or rod.y_positive not in {"up", "down"}
-        ):
+        if unit_per_pixel is None:
             return False
         task.calibration_rod = rod
         old_coordinate_model = task.pipeline.coordinate_model
