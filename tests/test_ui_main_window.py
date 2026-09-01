@@ -2621,6 +2621,31 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertIn('"unit": "cm"', window.advanced_config_view.toPlainText())
         self.assertIn('"unit_per_pixel": 0.5', window.advanced_config_view.toPlainText())
 
+    def test_preset_change_reapplies_or_clears_calibration_by_coordinate_model(self) -> None:
+        window = NeoTrackerWindow()
+        self.addCleanup(close_window_safely, window)
+        self.assertTrue(
+            window._apply_calibration_rod((0.0, 0.0), (100.0, 0.0), 50.0, "cm")
+        )
+
+        combo = window.preset_combo
+        combo.setCurrentIndex(combo.findData("wavefront"))
+
+        self.assertAlmostEqual(window.current_task.calibration_rod.unit_per_pixel(), 0.5)
+        self.assertEqual(
+            window.current_task.pipeline.coordinate_model.to_config()["type"],
+            "linear_world",
+        )
+        self.assertTrue(window.calibration_editor.isEnabled())
+
+        combo.setCurrentIndex(combo.findData("circular_motion"))
+
+        self.assertIsNone(window._calibration_rod_to_dict(window.current_task.calibration_rod))
+        self.assertEqual(window.current_task.pipeline.coordinate_model.to_config()["type"], "polar")
+        self.assertFalse(window.calibration_editor.isEnabled())
+        self.assertFalse(window.mark_calibration_button.isEnabled())
+        self.assertIn("does not accept", window.mark_calibration_button.toolTip())
+
     def test_calibration_line_uses_editable_draft_before_length_and_unit_apply(self) -> None:
         window = NeoTrackerWindow()
         self.addCleanup(close_window_safely, window)

@@ -856,6 +856,8 @@ class ProjectTaskController:
 
     @classmethod
     def apply_calibration_rod_to_task(cls, task: DesktopTask, rod: CalibrationRod) -> bool:
+        if not cls.supports_calibration_rod(task.pipeline.coordinate_model):
+            return False
         parsed = cls.calibration_rod_from_dict(cls.calibration_rod_to_dict(rod))
         if parsed is None:
             return False
@@ -920,6 +922,13 @@ class ProjectTaskController:
                     new_unit_scale / old_unit_scale,
                 )
         return True
+
+    @staticmethod
+    def supports_calibration_rod(coordinate_model: object) -> bool:
+        return isinstance(
+            coordinate_model,
+            (ImageCoordinate, LinearWorldCoordinate, AnnularCoordinate, PathCoordinate),
+        )
 
     @staticmethod
     def state_model_with_calibration_unit(state_model: object, coordinate_model: object, unit: str) -> object:

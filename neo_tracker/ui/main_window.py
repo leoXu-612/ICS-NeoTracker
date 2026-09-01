@@ -3420,9 +3420,15 @@ class NeoTrackerWindow(
             self._discard_unapplied_drafts()
         with QSignalBlocker(self.preset_combo):
             self.preset_combo.setCurrentIndex(index)
+        calibration_rod = self.current_task.calibration_rod
         self._invalidate_review_responses(self.current_task)
         self.current_task.pipeline_key = key
         self.current_task.pipeline = self.registry[key].factory()
+        if calibration_rod is None or not self._apply_calibration_rod_to_task(
+            self.current_task,
+            calibration_rod,
+        ):
+            self.current_task.calibration_rod = CalibrationRod()
         self.current_task.mark_results_changed()
         self.current_task.tracking_outcome = ""
         self.current_task.tracking_note = ""
@@ -3847,6 +3853,22 @@ class NeoTrackerWindow(
         self.roi_geometry_editor.set_config(config)
         self._render_curve_half_width(task)
         rod = task.calibration_rod or CalibrationRod()
+        calibration_supported = self.project_controller.supports_calibration_rod(
+            task.pipeline.coordinate_model
+        )
+        calibration_tip = (
+            "Draw a two-point calibration rod on the video frame."
+            if calibration_supported
+            else "This pipeline's coordinate model does not accept a two-point length calibration."
+        )
+        self.calibration_editor.setEnabled(calibration_supported)
+        self.calibration_editor.setToolTip("" if calibration_supported else calibration_tip)
+        self.calibration_editor.setAccessibleDescription(
+            "" if calibration_supported else calibration_tip
+        )
+        self.mark_calibration_button.setEnabled(calibration_supported)
+        self.mark_calibration_button.setToolTip(calibration_tip)
+        self.mark_calibration_button.setAccessibleDescription(calibration_tip)
         has_axis = isinstance(
             task.pipeline.coordinate_model,
             (ImageCoordinate, LinearWorldCoordinate),
@@ -3855,9 +3877,12 @@ class NeoTrackerWindow(
         self.preview_label.set_calibration_axis(has_axis, rod.y_positive)
         self.calibration_editor.set_calibration(self.project_controller.calibration_rod_to_dict(rod))
         self.reset_calibration_button.setEnabled(
-            rod.start_px is not None and rod.end_px is not None and rod.real_length is not None
+            calibration_supported
+            and rod.start_px is not None
+            and rod.end_px is not None
+            and rod.real_length is not None
         )
-        scale = rod.unit_per_pixel()
+        scale = rod.unit_per_pixel() if calibration_supported else None
         if scale is not None:
             text = f"1 px = {scale:.6g} {rod.unit}"
             if has_axis:

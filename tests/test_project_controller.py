@@ -199,6 +199,20 @@ class ProjectTaskControllerTests(unittest.TestCase):
                 self.assertFalse(self.controller.apply_calibration_rod_to_task(task, rod))
                 self.assertIsNone(self.controller.calibration_rod_to_dict(task.calibration_rod))
 
+    def test_calibration_rejects_coordinate_models_without_length_scale(self) -> None:
+        task = self.controller.new_task(None, "circular_motion")
+        coordinate_config = task.pipeline.coordinate_model.to_config()
+        rod = CalibrationRod(
+            start_px=(0.0, 0.0),
+            end_px=(100.0, 0.0),
+            real_length=50.0,
+            unit="cm",
+        )
+
+        self.assertFalse(self.controller.apply_calibration_rod_to_task(task, rod))
+        self.assertIsNone(self.controller.calibration_rod_to_dict(task.calibration_rod))
+        self.assertEqual(task.pipeline.coordinate_model.to_config(), coordinate_config)
+
     def test_invalid_snapshot_pipeline_geometry_is_rejected(self) -> None:
         config = self.registry["color_marker"].factory().to_config()
         config["roi"]["width"] = 0.0
