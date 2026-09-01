@@ -105,6 +105,11 @@ class ActionRegistry(QObject):
             )
             action.setText(presentation.text)
             action.setToolTip(presentation.tool_tip)
+            for button in self._buttons[key]:
+                button.setEnabled(action.isEnabled())
+                button.setText(action.text())
+                button.setToolTip(action.toolTip())
+                button.setIcon(action.icon())
 
     def set_actions_blocked(self, keys: Iterable[str], blocked: bool) -> None:
         normalized = {str(key) for key in keys}

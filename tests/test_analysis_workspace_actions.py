@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 from PySide6.QtCore import QCoreApplication
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import QApplication, QWidget
 
 from neo_tracker.ui.analysis_workspace_controller import KinematicsOperationRequest
@@ -129,6 +130,19 @@ class PhysicsActionRegistryTests(unittest.TestCase):
             window._set_media_probe_busy(False)
 
         self.assertTrue(all(window.action_registry.action(key).isEnabled() for key in action_keys))
+
+    def test_canceling_close_restores_all_physics_export_surfaces(self) -> None:
+        window = self.make_window()
+        window.set_physics_series((make_series(),))
+        window._confirm_project_transition = lambda _action: False  # type: ignore[method-assign]
+        event = QCloseEvent()
+
+        window.closeEvent(event)
+
+        self.assertFalse(event.isAccepted())
+        self.assertTrue(window.action_registry.action("physics.export").isEnabled())
+        self.assertTrue(window.export_physics_analysis_button.isEnabled())
+        self.assertTrue(window.fit_panel.export_button.isEnabled())
 
 
 if __name__ == "__main__":
