@@ -96,7 +96,9 @@ class PipelineConfigTests(unittest.TestCase):
     def test_invalid_roi_geometry_preserves_existing_module(self) -> None:
         invalid_configs = [
             {"type": "rectangle", "x": 0.0, "y": 0.0, "width": 0.0, "height": 20.0},
+            {"type": "rectangle", "x": "0", "y": 0.0, "width": 20.0, "height": 20.0},
             {"type": "circle", "center": [10.0, 10.0], "radius": float("nan")},
+            {"type": "circle", "center": [10.0, 10.0], "radius": True},
             {"type": "annulus", "center": [10.0, 10.0], "inner_radius": 20.0, "outer_radius": 10.0},
             {"type": "polygon", "points": [[0.0, 0.0], [1.0, float("inf")], [2.0, 0.0]]},
             {"type": "curve_band", "polyline": [[0.0, 0.0], [2.0, 2.0]], "half_width": -1.0},

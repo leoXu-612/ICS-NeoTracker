@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from math import isfinite
+from numbers import Real
 from typing import Any, TypeVar
 
 import numpy as np
@@ -46,6 +47,12 @@ MAX_DEBUG_HISTORY_BYTES = 256 * 1024 * 1024
 
 def _finite_values(*values: float) -> bool:
     return all(isfinite(float(value)) for value in values)
+
+
+def _roi_number(value: object) -> float:
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise TypeError("ROI geometry must be numeric")
+    return float(value)
 
 
 def apply_pipeline_config(pipeline: TrackingPipeline, config: dict[str, Any] | None) -> TrackingPipeline:
@@ -128,34 +135,42 @@ def validate_roi_config(config: object) -> str | None:
     roi_type = config.get("type")
     try:
         if roi_type == "rectangle":
-            x, y = float(config["x"]), float(config["y"])
-            width, height = float(config["width"]), float(config["height"])
+            x, y = _roi_number(config["x"]), _roi_number(config["y"])
+            width, height = _roi_number(config["width"]), _roi_number(config["height"])
             if not _finite_values(x, y, width, height) or width <= 0.0 or height <= 0.0:
                 return "rectangle width and height must be positive finite numbers"
             return None
         if roi_type == "circle":
             center = config["center"]
-            cx, cy, radius = float(center[0]), float(center[1]), float(config["radius"])  # type: ignore[index]
+            cx, cy = _roi_number(center[0]), _roi_number(center[1])  # type: ignore[index]
+            radius = _roi_number(config["radius"])
             if not _finite_values(cx, cy, radius) or radius <= 0.0:
                 return "circle center and radius must be finite, with radius greater than zero"
             return None
         if roi_type == "annulus":
             center = config["center"]
-            cx, cy = float(center[0]), float(center[1])  # type: ignore[index]
-            inner, outer = float(config["inner_radius"]), float(config["outer_radius"])
+            cx, cy = _roi_number(center[0]), _roi_number(center[1])  # type: ignore[index]
+            inner = _roi_number(config["inner_radius"])
+            outer = _roi_number(config["outer_radius"])
             if not _finite_values(cx, cy, inner, outer) or inner <= 0.0 or outer <= inner:
                 return "annulus radii must be finite, positive, and ordered"
             return None
         if roi_type == "polygon":
-            points = tuple((float(row[0]), float(row[1])) for row in config["points"])  # type: ignore[index]
+            points = tuple(
+                (_roi_number(row[0]), _roi_number(row[1]))  # type: ignore[index]
+                for row in config["points"]
+            )
             if len(points) < 3 or not all(_finite_values(x, y) for x, y in points):
                 return "polygon must contain at least three finite points"
             if len(points) > MAX_ROI_POINTS:
                 return f"polygon must not exceed {MAX_ROI_POINTS:,} points"
             return None
         if roi_type == "curve_band":
-            points = tuple((float(row[0]), float(row[1])) for row in config["polyline"])  # type: ignore[index]
-            half_width = float(config["half_width"])
+            points = tuple(
+                (_roi_number(row[0]), _roi_number(row[1]))  # type: ignore[index]
+                for row in config["polyline"]
+            )
+            half_width = _roi_number(config["half_width"])
             if (
                 len(points) < 2
                 or not all(_finite_values(x, y) for x, y in points)
