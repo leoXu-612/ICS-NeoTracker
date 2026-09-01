@@ -253,7 +253,7 @@ def _normalize_smoothing_config(value: object) -> dict[str, object]:
     if tolerance >= 1.0:
         raise ValueError("analysis smoothing_config uniformity_tolerance must be below 1")
     edge = data.get("edge_policy", "invalid")
-    if edge not in {"invalid", "one_sided"}:
+    if not isinstance(edge, str) or edge not in {"invalid", "one_sided"}:
         raise ValueError("analysis smoothing_config edge_policy is unsupported")
     if data.get("gap_policy", "split") != "split":
         raise ValueError("analysis smoothing_config gap_policy must be split")

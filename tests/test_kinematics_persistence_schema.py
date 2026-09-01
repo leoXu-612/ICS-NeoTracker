@@ -199,6 +199,12 @@ class KinematicsProjectSchemaTests(unittest.TestCase):
         ]["resample"] = True
         mutations.append((implicit_resampling, "resample must be false"))
 
+        type_confused_edge = json.loads(json.dumps(valid))
+        type_confused_edge["tasks"][0]["analysis_workspace"]["definitions"][0][
+            "smoothing_config"
+        ]["edge_policy"] = []
+        mutations.append((type_confused_edge, "edge_policy is unsupported"))
+
         empty_analysis = json.loads(json.dumps(valid))
         empty_definition = empty_analysis["tasks"][0]["analysis_workspace"]["definitions"][0]
         empty_definition["derivative_config"] = None
