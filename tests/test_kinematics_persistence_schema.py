@@ -160,6 +160,13 @@ class KinematicsProjectSchemaTests(unittest.TestCase):
         task_unknown["tasks"][0]["unexpected"] = True
         mutations.append((task_unknown, "unknown fields"))
 
+        for field in ("media_info", "roi", "calibration_rod", "pipeline_config"):
+            wrong_mapping = json.loads(json.dumps(valid))
+            wrong_mapping["tasks"][0][field] = []
+            mutations.append(
+                (wrong_mapping, f"project task {field} must be a dictionary or null")
+            )
+
         unknown_type = json.loads(json.dumps(valid))
         unknown_type["tasks"][0]["analysis_workspace"]["definitions"][0][
             "analysis_type"

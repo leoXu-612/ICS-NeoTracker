@@ -285,6 +285,14 @@ def _bounded_list(value: object, label: str, limit: int) -> list[Any]:
     return value
 
 
+def _optional_dict(value: object, label: str) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise ValueError(f"{label} must be a dictionary or null")
+    return dict(value)
+
+
 def _finite_float(value: object, label: str, *, minimum: float | None = None, maximum: float | None = None) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{label} must be a finite number")
@@ -1065,10 +1073,14 @@ class ProjectTaskSnapshot:
                 data.get("preview_frame_index", 0),
                 label="project task preview_frame_index",
             ),
-            media_info=data.get("media_info") if isinstance(data.get("media_info"), dict) else None,
-            roi=data.get("roi") if isinstance(data.get("roi"), dict) else None,
-            calibration_rod=data.get("calibration_rod") if isinstance(data.get("calibration_rod"), dict) else None,
-            pipeline_config=data.get("pipeline_config") if isinstance(data.get("pipeline_config"), dict) else None,
+            media_info=_optional_dict(data.get("media_info"), "project task media_info"),
+            roi=_optional_dict(data.get("roi"), "project task roi"),
+            calibration_rod=_optional_dict(
+                data.get("calibration_rod"), "project task calibration_rod"
+            ),
+            pipeline_config=_optional_dict(
+                data.get("pipeline_config"), "project task pipeline_config"
+            ),
             results=results,
             edit_history=edit_history,
             tracking_outcome=_tracking_outcome_from_data(data.get("tracking_outcome")),
