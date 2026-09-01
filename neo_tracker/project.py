@@ -1152,6 +1152,7 @@ class ProjectTaskSnapshot:
                 data.get("pipeline_key", ""),
                 "project task pipeline_key",
                 PIPELINE_KEY_LIMIT,
+                allow_empty=False,
             ),
             preview_frame_index=_frame_index(
                 data.get("preview_frame_index", 0),

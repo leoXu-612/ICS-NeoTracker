@@ -560,6 +560,21 @@ class ProjectPersistenceTests(unittest.TestCase):
                 }
             )
 
+    def test_project_task_pipeline_key_must_not_be_empty(self) -> None:
+        project = NeoTrackerProject(
+            name="pipeline-key",
+            tasks=[ProjectTaskSnapshot(media_path=None, pipeline_key="color_marker")],
+        ).to_dict()
+        for missing in (False, True):
+            with self.subTest(missing=missing):
+                malformed = json.loads(json.dumps(project))
+                if missing:
+                    malformed["tasks"][0].pop("pipeline_key")
+                else:
+                    malformed["tasks"][0]["pipeline_key"] = ""
+                with self.assertRaisesRegex(ValueError, "project task pipeline_key must not be empty"):
+                    NeoTrackerProject.from_dict(malformed)
+
     def test_project_result_mapping_types_fail_closed(self) -> None:
         result = {
             "frame_index": 0,
