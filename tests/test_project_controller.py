@@ -43,6 +43,24 @@ class ProjectTaskControllerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unknown project task pipeline 'unknown'"):
             self.controller.task_from_snapshot(snapshot)
 
+    def test_snapshot_media_info_rejects_type_confused_fields(self) -> None:
+        invalid_fields = (
+            ({"available": "false"}, "available must be a boolean"),
+            ({"fps": "30"}, "fps must be a finite non-negative number"),
+            ({"frame_count": 1.5}, "frame_count must be a non-negative integer"),
+            ({"kind": []}, "kind must be a string"),
+            ({"source_identity": {"bad": True}}, "source_identity must be a valid media identity"),
+        )
+        for media_info, message in invalid_fields:
+            with self.subTest(media_info=media_info):
+                snapshot = ProjectTaskSnapshot(
+                    media_path=None,
+                    pipeline_key="color_marker",
+                    media_info=media_info,
+                )
+                with self.assertRaisesRegex(ValueError, message):
+                    self.controller.task_from_snapshot(snapshot)
+
     def test_preprobed_media_info_avoids_duplicate_source_inspection(self) -> None:
         preprobed = MediaInfo(
             fps=60.0,

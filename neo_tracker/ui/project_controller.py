@@ -583,51 +583,88 @@ class ProjectTaskController:
         if live_info is not None and live_info.available:
             return live_info
 
-        kind = cls._snapshot_string(snapshot_info.get("kind"), live_info.kind if live_info else "video")
-        sample_rate = cls._snapshot_float(snapshot_info.get("sample_rate_hz"), 0.0)
-        fps = cls._snapshot_float(snapshot_info.get("fps"), sample_rate if kind == "audio" else 0.0)
+        kind = cls._snapshot_string(
+            snapshot_info.get("kind"),
+            live_info.kind if live_info else "video",
+            "kind",
+        )
+        if kind not in {"audio", "video"}:
+            raise ValueError("project media_info kind must be audio or video")
+        sample_rate = cls._snapshot_float(
+            snapshot_info.get("sample_rate_hz"), 0.0, "sample_rate_hz"
+        )
+        fps = cls._snapshot_float(
+            snapshot_info.get("fps"),
+            sample_rate if kind == "audio" else 0.0,
+            "fps",
+        )
         if kind == "audio":
             if sample_rate <= 0.0:
                 sample_rate = fps
             if fps <= 0.0:
                 fps = sample_rate
-        error = live_info.error if live_info is not None and live_info.error else cls._snapshot_string(
-            snapshot_info.get("error"), ""
+        snapshot_error = cls._snapshot_string(
+            snapshot_info.get("error"), "", "error"
         )
-        source_identity = MediaIdentity.from_dict(snapshot_info.get("source_identity"))
+        error = live_info.error if live_info is not None and live_info.error else snapshot_error
+        available = snapshot_info.get("available", False)
+        if not isinstance(available, bool):
+            raise ValueError("project media_info available must be a boolean")
+        source_identity_data = snapshot_info.get("source_identity")
+        source_identity = MediaIdentity.from_dict(source_identity_data)
+        if source_identity_data is not None and source_identity is None:
+            raise ValueError("project media_info source_identity must be a valid media identity")
         return MediaInfo(
             fps=fps,
-            frame_count=cls._snapshot_int(snapshot_info.get("frame_count"), 0),
-            width=cls._snapshot_int(snapshot_info.get("width"), 0),
-            height=cls._snapshot_int(snapshot_info.get("height"), 0),
-            duration_s=cls._snapshot_float(snapshot_info.get("duration_s"), 0.0),
-            available=False if live_info is not None else bool(snapshot_info.get("available", False)),
+            frame_count=cls._snapshot_int(
+                snapshot_info.get("frame_count"), 0, "frame_count"
+            ),
+            width=cls._snapshot_int(snapshot_info.get("width"), 0, "width"),
+            height=cls._snapshot_int(snapshot_info.get("height"), 0, "height"),
+            duration_s=cls._snapshot_float(
+                snapshot_info.get("duration_s"), 0.0, "duration_s"
+            ),
+            available=False if live_info is not None else available,
             kind=kind,
             sample_rate_hz=sample_rate,
-            channels=cls._snapshot_int(snapshot_info.get("channels"), 0),
-            sample_width_bytes=cls._snapshot_int(snapshot_info.get("sample_width_bytes"), 0),
+            channels=cls._snapshot_int(snapshot_info.get("channels"), 0, "channels"),
+            sample_width_bytes=cls._snapshot_int(
+                snapshot_info.get("sample_width_bytes"), 0, "sample_width_bytes"
+            ),
             error=error,
             source_identity=source_identity,
         )
 
     @staticmethod
-    def _snapshot_string(value: object, default: str) -> str:
-        return str(value) if value not in (None, "") else default
+    def _snapshot_string(value: object, default: str, label: str) -> str:
+        if value is None or value == "":
+            return default
+        if not isinstance(value, str):
+            raise ValueError(f"project media_info {label} must be a string")
+        return value
 
     @staticmethod
-    def _snapshot_float(value: object, default: float) -> float:
-        try:
-            parsed = float(value)
-        except (TypeError, ValueError):
+    def _snapshot_float(value: object, default: float, label: str) -> float:
+        if value is None:
             return float(default)
-        return parsed if isfinite(parsed) else float(default)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(
+                f"project media_info {label} must be a finite non-negative number"
+            )
+        parsed = float(value)
+        if not isfinite(parsed) or parsed < 0.0:
+            raise ValueError(
+                f"project media_info {label} must be a finite non-negative number"
+            )
+        return parsed
 
     @staticmethod
-    def _snapshot_int(value: object, default: int) -> int:
-        try:
-            return int(value)
-        except (TypeError, ValueError, OverflowError):
+    def _snapshot_int(value: object, default: int, label: str) -> int:
+        if value is None:
             return int(default)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError(f"project media_info {label} must be a non-negative integer")
+        return int(value)
 
     @staticmethod
     def calibration_rod_to_dict(rod: CalibrationRod | None) -> dict[str, object] | None:
