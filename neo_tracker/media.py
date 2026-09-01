@@ -91,7 +91,7 @@ class MediaIdentity:
 
     @classmethod
     def from_dict(cls, data: object) -> MediaIdentity | None:
-        if not isinstance(data, dict):
+        if not isinstance(data, dict) or set(data) != {"strategy", "sha256", "size_bytes", "sampled_bytes"}:
             return None
         strategy = data.get("strategy")
         digest = data.get("sha256")

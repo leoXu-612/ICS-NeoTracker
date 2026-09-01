@@ -147,6 +147,7 @@ class MediaLayerTests(unittest.TestCase):
                 {**identity.to_dict(), "size_bytes": True, "sampled_bytes": True}
             )
         )
+        self.assertIsNone(media.MediaIdentity.from_dict({**identity.to_dict(), "complete": False}))
         self.assertIsNone(media.MediaIdentity.from_dict({"strategy": "full-sha256-v1", "sha256": "bad"}))
         impossible_sampled = {
             "strategy": "sampled-sha256-v1",
