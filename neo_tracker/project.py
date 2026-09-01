@@ -1058,6 +1058,12 @@ class ProjectTaskSnapshot:
     analysis_workspace: AnalysisWorkspaceSnapshot = field(default_factory=AnalysisWorkspaceSnapshot)
 
     def __post_init__(self) -> None:
+        self.pipeline_key = _bounded_string(
+            self.pipeline_key,
+            "project task pipeline_key",
+            PIPELINE_KEY_LIMIT,
+            allow_empty=False,
+        )
         self.task_id = _canonical_uuid(self.task_id, "project task task_id")
         if not isinstance(self.analysis_workspace, AnalysisWorkspaceSnapshot):
             raise TypeError("project task analysis_workspace must be an AnalysisWorkspaceSnapshot")

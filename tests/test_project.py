@@ -575,6 +575,10 @@ class ProjectPersistenceTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "project task pipeline_key must not be empty"):
                     NeoTrackerProject.from_dict(malformed)
 
+    def test_project_task_snapshot_constructor_requires_pipeline_key(self) -> None:
+        with self.assertRaisesRegex(ValueError, "project task pipeline_key must not be empty"):
+            ProjectTaskSnapshot(media_path=None, pipeline_key="")
+
     def test_project_result_mapping_types_fail_closed(self) -> None:
         result = {
             "frame_index": 0,
