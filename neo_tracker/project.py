@@ -293,6 +293,12 @@ def _optional_dict(value: object, label: str) -> dict[str, Any] | None:
     return dict(value)
 
 
+def _required_dict(value: object, label: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{label} must be a dictionary")
+    return dict(value)
+
+
 def _finite_float(value: object, label: str, *, minimum: float | None = None, maximum: float | None = None) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{label} must be a finite number")
@@ -644,14 +650,15 @@ def observation_to_dict(observation: ObservationCandidate | None) -> dict[str, A
 
 
 def observation_from_dict(data: object) -> ObservationCandidate | None:
-    if not isinstance(data, dict):
+    data = _optional_dict(data, "observation")
+    if data is None:
         return None
     return ObservationCandidate(
-        state=_state_to_dict(data.get("state") if isinstance(data.get("state"), dict) else {}) or {},
+        state=_state_to_dict(_required_dict(data.get("state", {}), "observation state")) or {},
         score=_finite_float(data.get("score", 0.0), "observation score", minimum=0.0, maximum=1.0),
         image_point=_point_from_data(data.get("image_point")),
         label=_bounded_string(data.get("label", "candidate"), "observation label", OBSERVATION_LABEL_LIMIT),
-        raw=data.get("raw") if isinstance(data.get("raw"), dict) else {},
+        raw=_required_dict(data.get("raw", {}), "observation raw"),
     )
 
 
@@ -686,9 +693,14 @@ def tracker_result_from_dict(data: object) -> TrackerResult:
     return TrackerResult(
         frame_index=_frame_index(data.get("frame_index", 0)),
         time_s=_finite_float(data.get("time_s", 0.0), "tracker result time_s", minimum=0.0),
-        state=_state_to_dict(data.get("state") if isinstance(data.get("state"), dict) else {}) or {},
+        state=_state_to_dict(
+            _required_dict(data.get("state", {}), "tracker result state")
+        )
+        or {},
         filtered_state=_state_to_dict(
-            data.get("filtered_state") if isinstance(data.get("filtered_state"), dict) else {}
+            _required_dict(
+                data.get("filtered_state", {}), "tracker result filtered_state"
+            )
         )
         or {},
         confidence=_finite_float(
@@ -699,8 +711,10 @@ def tracker_result_from_dict(data: object) -> TrackerResult:
         ),
         status=_bounded_string(data.get("status", "unknown"), "tracker result status", RESULT_STATUS_LIMIT),
         observation=observation_from_dict(data.get("observation")),
-        prediction=_state_to_dict(data.get("prediction") if isinstance(data.get("prediction"), dict) else None),
-        debug=data.get("debug") if isinstance(data.get("debug"), dict) else {},
+        prediction=_state_to_dict(
+            _optional_dict(data.get("prediction"), "tracker result prediction")
+        ),
+        debug=_required_dict(data.get("debug", {}), "tracker result debug"),
     )
 
 

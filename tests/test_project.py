@@ -560,6 +560,43 @@ class ProjectPersistenceTests(unittest.TestCase):
                 }
             )
 
+    def test_project_result_mapping_types_fail_closed(self) -> None:
+        result = {
+            "frame_index": 0,
+            "time_s": 0.0,
+            "state": {},
+            "filtered_state": {},
+            "confidence": 1.0,
+            "status": "ok",
+            "observation": {"state": {}, "raw": {}},
+            "prediction": None,
+            "debug": {},
+        }
+        cases = (
+            (("state",), "tracker result state must be a dictionary"),
+            (("filtered_state",), "tracker result filtered_state must be a dictionary"),
+            (("prediction",), "tracker result prediction must be a dictionary or null"),
+            (("debug",), "tracker result debug must be a dictionary"),
+            (("observation",), "observation must be a dictionary or null"),
+            (("observation", "state"), "observation state must be a dictionary"),
+            (("observation", "raw"), "observation raw must be a dictionary"),
+        )
+        for path, message in cases:
+            with self.subTest(field=".".join(path)):
+                malformed = json.loads(json.dumps(result))
+                target = malformed
+                for key in path[:-1]:
+                    target = target[key]
+                target[path[-1]] = []
+                with self.assertRaisesRegex(ValueError, message):
+                    ProjectTaskSnapshot.from_dict(
+                        {
+                            "media_path": None,
+                            "pipeline_key": "color_marker",
+                            "results": [malformed],
+                        }
+                    )
+
     def test_project_task_outcome_validation_and_legacy_defaults(self) -> None:
         for outcome in ("", "complete", "partial", "canceled", "failed"):
             with self.subTest(outcome=outcome):
