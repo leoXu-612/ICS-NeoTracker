@@ -95,7 +95,7 @@ class MediaIdentity:
             return None
         strategy = data.get("strategy")
         digest = data.get("sha256")
-        if strategy not in _MEDIA_IDENTITY_STRATEGIES or not isinstance(digest, str):
+        if not isinstance(strategy, str) or strategy not in _MEDIA_IDENTITY_STRATEGIES or not isinstance(digest, str):
             return None
         normalized_digest = digest.strip().lower()
         if len(normalized_digest) != 64 or any(character not in "0123456789abcdef" for character in normalized_digest):
