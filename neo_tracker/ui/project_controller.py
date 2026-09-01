@@ -461,7 +461,7 @@ class ProjectTaskController:
             pipeline_key=task.pipeline_key,
             preview_frame_index=int(task.preview_frame_index),
             media_info=self.media_info_to_dict(persisted_media_info),
-            roi=dict(task.roi) if isinstance(task.roi, dict) else None,
+            roi=task.pipeline.roi.to_config() if isinstance(task.roi, dict) else None,
             calibration_rod=self.calibration_rod_to_dict(task.calibration_rod),
             pipeline_config=task.pipeline.to_config(),
             results=list(task.pipeline.results),

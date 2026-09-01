@@ -133,6 +133,28 @@ class ProjectTaskControllerTests(unittest.TestCase):
         self.assertEqual(restored.run_history[0].processed_frames, 18)
         self.assertEqual(restored.run_history[0].pipeline_digest, task.run_history[0].pipeline_digest)
 
+    def test_snapshot_uses_applied_pipeline_roi_precision(self) -> None:
+        task = self.controller.new_task(None, "color_marker")
+        self.assertTrue(
+            self.controller.apply_roi_config_to_task(
+                task,
+                {
+                    "type": "rectangle",
+                    "x": 0.12345,
+                    "y": 0.0,
+                    "width": 100.12345,
+                    "height": 50.0,
+                },
+            )
+        )
+
+        snapshot = self.controller.snapshot_from_task(task)
+
+        self.assertEqual(snapshot.roi, snapshot.pipeline_config["roi"])
+        restored = self.controller.task_from_snapshot(snapshot)
+        self.assertEqual(restored.pipeline.roi.to_config()["x"], 0.12345)
+        self.assertEqual(restored.pipeline.roi.to_config()["width"], 100.12345)
+
     def test_legacy_calibration_keeps_pipeline_axis_direction(self) -> None:
         task = self.controller.new_task("missing.mp4", "color_marker")
         self.assertTrue(
