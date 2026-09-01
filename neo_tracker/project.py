@@ -109,6 +109,13 @@ _TRACKING_RUN_FIELDS = frozenset(
         "source_identity",
     }
 )
+_OBSERVATION_FIELDS = frozenset({"state", "score", "image_point", "label", "raw"})
+_TRACKER_RESULT_REQUIRED_FIELDS = frozenset(
+    {"frame_index", "time_s", "state", "filtered_state", "confidence", "status"}
+)
+_TRACKER_RESULT_FIELDS = _TRACKER_RESULT_REQUIRED_FIELDS | frozenset(
+    {"observation", "prediction", "debug"}
+)
 
 
 def _bounded_string(value: object, label: str, limit: int, *, allow_empty: bool = True) -> str:
@@ -122,7 +129,7 @@ def _bounded_string(value: object, label: str, limit: int, *, allow_empty: bool 
 
 
 def _reject_unknown_fields(value: Mapping[str, object], allowed: set[str] | frozenset[str], label: str) -> None:
-    unknown = sorted(set(value) - set(allowed))
+    unknown = sorted(set(value).difference(allowed))
     if unknown:
         raise ValueError(f"{label} contains unknown fields: {', '.join(unknown)}")
 
@@ -703,7 +710,7 @@ def observation_from_dict(data: object) -> ObservationCandidate | None:
         return None
     _reject_unknown_fields(
         data,
-        {"state", "score", "image_point", "label", "raw"},
+        _OBSERVATION_FIELDS,
         "observation",
     )
     return ObservationCandidate(
@@ -743,41 +750,30 @@ def tracker_result_to_dict(result: TrackerResult) -> dict[str, Any]:
 def tracker_result_from_dict(data: object) -> TrackerResult:
     if not isinstance(data, dict):
         raise ValueError("tracker result must be a dictionary")
-    _reject_unknown_fields(
-        data,
-        {
-            "frame_index",
-            "time_s",
-            "state",
-            "filtered_state",
-            "confidence",
-            "status",
-            "observation",
-            "prediction",
-            "debug",
-        },
-        "tracker result",
-    )
+    _reject_unknown_fields(data, _TRACKER_RESULT_FIELDS, "tracker result")
+    missing = sorted(_TRACKER_RESULT_REQUIRED_FIELDS.difference(data))
+    if missing:
+        raise ValueError(f"tracker result is missing required fields: {', '.join(missing)}")
     return TrackerResult(
-        frame_index=_frame_index(data.get("frame_index", 0)),
-        time_s=_finite_float(data.get("time_s", 0.0), "tracker result time_s", minimum=0.0),
+        frame_index=_frame_index(data["frame_index"]),
+        time_s=_finite_float(data["time_s"], "tracker result time_s", minimum=0.0),
         state=_state_to_dict(
-            _required_dict(data.get("state", {}), "tracker result state")
+            _required_dict(data["state"], "tracker result state")
         )
         or {},
         filtered_state=_state_to_dict(
             _required_dict(
-                data.get("filtered_state", {}), "tracker result filtered_state"
+                data["filtered_state"], "tracker result filtered_state"
             )
         )
         or {},
         confidence=_finite_float(
-            data.get("confidence", 0.0),
+            data["confidence"],
             "tracker result confidence",
             minimum=0.0,
             maximum=1.0,
         ),
-        status=_bounded_string(data.get("status", "unknown"), "tracker result status", RESULT_STATUS_LIMIT),
+        status=_bounded_string(data["status"], "tracker result status", RESULT_STATUS_LIMIT),
         observation=observation_from_dict(data.get("observation")),
         prediction=_state_to_dict(
             _optional_dict(data.get("prediction"), "tracker result prediction")

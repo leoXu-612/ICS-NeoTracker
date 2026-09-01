@@ -625,6 +625,31 @@ class ProjectPersistenceTests(unittest.TestCase):
                     )
                 target.pop(field)
 
+    def test_project_result_required_fields_fail_closed(self) -> None:
+        result = {
+            "frame_index": 0,
+            "time_s": 0.0,
+            "state": {},
+            "filtered_state": {},
+            "confidence": 1.0,
+            "status": "ok",
+        }
+        for field in tuple(result):
+            with self.subTest(field=field):
+                malformed = dict(result)
+                malformed.pop(field)
+                with self.assertRaisesRegex(
+                    ValueError,
+                    f"tracker result is missing required fields: {field}",
+                ):
+                    ProjectTaskSnapshot.from_dict(
+                        {
+                            "media_path": None,
+                            "pipeline_key": "color_marker",
+                            "results": [malformed],
+                        }
+                    )
+
     def test_project_edit_history_consumer_fields_fail_closed(self) -> None:
         cases = (
             ({"frame_index": []}, "edit history frame_index must be a non-negative integer"),
