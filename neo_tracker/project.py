@@ -653,6 +653,11 @@ def observation_from_dict(data: object) -> ObservationCandidate | None:
     data = _optional_dict(data, "observation")
     if data is None:
         return None
+    _reject_unknown_fields(
+        data,
+        {"state", "score", "image_point", "label", "raw"},
+        "observation",
+    )
     return ObservationCandidate(
         state=_state_to_dict(_required_dict(data.get("state", {}), "observation state")) or {},
         score=_finite_float(data.get("score", 0.0), "observation score", minimum=0.0, maximum=1.0),
@@ -690,6 +695,21 @@ def tracker_result_to_dict(result: TrackerResult) -> dict[str, Any]:
 def tracker_result_from_dict(data: object) -> TrackerResult:
     if not isinstance(data, dict):
         raise ValueError("tracker result must be a dictionary")
+    _reject_unknown_fields(
+        data,
+        {
+            "frame_index",
+            "time_s",
+            "state",
+            "filtered_state",
+            "confidence",
+            "status",
+            "observation",
+            "prediction",
+            "debug",
+        },
+        "tracker result",
+    )
     return TrackerResult(
         frame_index=_frame_index(data.get("frame_index", 0)),
         time_s=_finite_float(data.get("time_s", 0.0), "tracker result time_s", minimum=0.0),

@@ -597,6 +597,34 @@ class ProjectPersistenceTests(unittest.TestCase):
                         }
                     )
 
+    def test_project_result_unknown_fields_fail_closed(self) -> None:
+        result = {
+            "frame_index": 0,
+            "time_s": 0.0,
+            "state": {},
+            "filtered_state": {},
+            "confidence": 1.0,
+            "status": "ok",
+            "observation": {"state": {}, "raw": {}},
+            "prediction": None,
+            "debug": {},
+        }
+        for target, field, message in (
+            (result, "filtered-state", "tracker result contains unknown fields: filtered-state"),
+            (result["observation"], "raw_data", "observation contains unknown fields: raw_data"),
+        ):
+            with self.subTest(field=field):
+                target[field] = {}
+                with self.assertRaisesRegex(ValueError, message):
+                    ProjectTaskSnapshot.from_dict(
+                        {
+                            "media_path": None,
+                            "pipeline_key": "color_marker",
+                            "results": [result],
+                        }
+                    )
+                target.pop(field)
+
     def test_project_task_outcome_validation_and_legacy_defaults(self) -> None:
         for outcome in ("", "complete", "partial", "canceled", "failed"):
             with self.subTest(outcome=outcome):
