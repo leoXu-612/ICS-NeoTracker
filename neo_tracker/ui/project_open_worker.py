@@ -33,6 +33,7 @@ from neo_tracker.project import (
     NeoTrackerProject,
     ProjectTaskSnapshot,
     TrackingRunRecord,
+    edit_history_entry_from_dict,
     no_duplicate_json_keys,
     project_content_fingerprint,
     tracker_result_from_dict,
@@ -518,7 +519,7 @@ def _read_project_open_stage(
                         value,
                         base_depth=4,
                     )
-                    task.edit_history.append(dict(value))
+                    task.edit_history.append(edit_history_entry_from_dict(value))
                 elif kind == "run_history":
                     if (
                         len(task.results) != task.expected_results

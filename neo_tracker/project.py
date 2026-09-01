@@ -340,6 +340,31 @@ def _frame_index(value: object, label: str = "tracker result frame_index") -> in
     return int(value)
 
 
+def edit_history_entry_from_dict(data: object) -> dict[str, Any]:
+    if not isinstance(data, dict):
+        raise ValueError("project task edit_history entries must be dictionaries")
+    entry = dict(data)
+    for key in ("frame_index", "superseded_by_rerun_start_frame"):
+        if entry.get(key) is not None:
+            _frame_index(entry[key], f"edit history {key}")
+    if "details" not in entry:
+        return entry
+    details = entry["details"]
+    if not isinstance(details, dict):
+        raise ValueError("edit history details must be a dictionary")
+    if entry.get("type") == "manual_correction" and "point_px" in details:
+        point = details["point_px"]
+        if not isinstance(point, (list, tuple)) or len(point) != 2:
+            raise ValueError("edit history point_px must contain two finite numbers")
+        _finite_float(point[0], "edit history point_px x")
+        _finite_float(point[1], "edit history point_px y")
+    if entry.get("type") == "rerun_after":
+        for key in ("start_frame", "end_frame"):
+            if details.get(key) is not None:
+                _frame_index(details[key], f"edit history rerun {key}")
+    return entry
+
+
 def _tracking_outcome_from_data(value: object) -> str:
     if value is None:
         return ""
@@ -1061,7 +1086,9 @@ class ProjectTaskSnapshot:
             "calibration_rod": _json_safe(self.calibration_rod),
             "pipeline_config": _json_safe(self.pipeline_config),
             "results": [tracker_result_to_dict(result) for result in self.results],
-            "edit_history": _json_safe(self.edit_history),
+            "edit_history": _json_safe(
+                [edit_history_entry_from_dict(entry) for entry in self.edit_history]
+            ),
             "tracking_outcome": _tracking_outcome_from_data(self.tracking_outcome),
             "tracking_note": _tracking_note_from_data(self.tracking_note),
             "run_history": [record.to_dict() for record in self.run_history],
@@ -1092,9 +1119,7 @@ class ProjectTaskSnapshot:
             "project task edit_history",
             MAX_TASK_EDIT_HISTORY,
         )
-        if not all(isinstance(item, dict) for item in history_data):
-            raise ValueError("project task edit_history entries must be dictionaries")
-        edit_history = [dict(item) for item in history_data]
+        edit_history = [edit_history_entry_from_dict(item) for item in history_data]
         run_history_data = data.get("run_history", [])
         if not isinstance(run_history_data, list):
             raise ValueError("project task run_history must be a list")
@@ -1477,7 +1502,7 @@ def project_content_fingerprint(
             add_record("result", tracker_result_to_dict(result))
             cooperate_after_record()
         for edit in task.edit_history:
-            add_record("edit_history", _json_safe(edit))
+            add_record("edit_history", _json_safe(edit_history_entry_from_dict(edit)))
             cooperate_after_record()
         for run in task.run_history:
             add_record("run_history", run.to_dict())

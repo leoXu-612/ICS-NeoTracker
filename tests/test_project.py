@@ -625,6 +625,29 @@ class ProjectPersistenceTests(unittest.TestCase):
                     )
                 target.pop(field)
 
+    def test_project_edit_history_consumer_fields_fail_closed(self) -> None:
+        cases = (
+            ({"frame_index": []}, "edit history frame_index must be a non-negative integer"),
+            ({"details": []}, "edit history details must be a dictionary"),
+            (
+                {"type": "manual_correction", "details": {"point_px": ["bad", 1.0]}},
+                "edit history point_px x must be a finite number",
+            ),
+            (
+                {"type": "rerun_after", "details": {"start_frame": [], "end_frame": 2}},
+                "edit history rerun start_frame must be a non-negative integer",
+            ),
+        )
+        for entry, message in cases:
+            with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
+                ProjectTaskSnapshot.from_dict(
+                    {
+                        "media_path": None,
+                        "pipeline_key": "color_marker",
+                        "edit_history": [entry],
+                    }
+                )
+
     def test_project_task_outcome_validation_and_legacy_defaults(self) -> None:
         for outcome in ("", "complete", "partial", "canceled", "failed"):
             with self.subTest(outcome=outcome):
