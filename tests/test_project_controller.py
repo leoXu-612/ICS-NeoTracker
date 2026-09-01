@@ -194,6 +194,18 @@ class ProjectTaskControllerTests(unittest.TestCase):
                 ):
                     self.controller.task_from_snapshot(snapshot)
 
+    def test_snapshot_pipeline_rejects_numeric_boolean_config(self) -> None:
+        config = self.registry["color_marker"].factory().to_config()
+        config["optimizer"]["maximize"] = 1
+        snapshot = ProjectTaskSnapshot(
+            media_path=None,
+            pipeline_key="color_marker",
+            pipeline_config=config,
+        )
+
+        with self.assertRaisesRegex(ValueError, r"\$\.optimizer\.maximize did not apply exactly"):
+            self.controller.task_from_snapshot(snapshot)
+
     def test_invalid_snapshot_roi_fails_closed_and_invalid_calibration_ignored(self) -> None:
         snapshot = ProjectTaskSnapshot(
             media_path=None,

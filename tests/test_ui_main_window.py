@@ -829,6 +829,12 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertFalse(window._validate_advanced_config())
         self.assertIn("width and height must be positive", window.json_validation_message.text())
 
+        type_confused_config = window.current_task.pipeline.to_config()
+        type_confused_config["optimizer"]["maximize"] = 1
+        window.advanced_config_view.setPlainText(json.dumps(type_confused_config, indent=2))
+        self.assertFalse(window._validate_advanced_config())
+        self.assertIn("$.optimizer.maximize did not apply exactly", window.json_validation_message.text())
+
         window.advanced_config_view.setPlainText(json.dumps(window.current_task.pipeline.to_config(), indent=2))
         self.assertEqual(window.json_status_label.text(), "Edited")
         self.assertTrue(window.json_validation_message.isHidden())

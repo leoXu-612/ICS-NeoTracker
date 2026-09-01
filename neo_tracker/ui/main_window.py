@@ -137,6 +137,8 @@ from neo_tracker.ui.project_controller import (
     DesktopTask,
     MediaRelinkAssessment,
     ProjectTaskController,
+    first_config_diff,
+    short_config_value,
 )
 from neo_tracker.ui.shell.configuration_protection_mixin import ConfigurationProtectionMixin
 from neo_tracker.ui.roi_geometry_editor import ROIGeometryEditor
@@ -3640,11 +3642,12 @@ class NeoTrackerWindow(
         pipeline = self.registry[pipeline_key].factory()
         apply_pipeline_config(pipeline, config)
         applied = pipeline.to_config()
-        if applied != config:
-            path, expected, actual = self._first_config_diff(config, applied)
+        config_diff = first_config_diff(config, applied)
+        if config_diff is not None:
+            path, expected, actual = config_diff
             raise ValueError(
-                f"{path} did not apply exactly: expected {self._short_config_value(expected)}, "
-                f"got {self._short_config_value(actual)}"
+                f"{path} did not apply exactly: expected {short_config_value(expected)}, "
+                f"got {short_config_value(actual)}"
             )
         return pipeline_key, pipeline
 
@@ -3656,62 +3659,6 @@ class NeoTrackerWindow(
                 raise ValueError(f"unknown preset {pipeline_key!r}")
             return pipeline_key
         return self.current_task.pipeline_key
-
-    @classmethod
-    def _first_config_diff(cls, expected: object, actual: object, path: str = "$") -> tuple[str, object, object]:
-        if expected == actual:
-            return path, expected, actual
-        if isinstance(expected, dict) and isinstance(actual, dict):
-            for key in expected:
-                child_path = f"{path}.{key}"
-                if key not in actual:
-                    return child_path, expected[key], "<missing>"
-                if expected[key] != actual[key]:
-                    return cls._first_config_diff(expected[key], actual[key], child_path)
-            for key in actual:
-                if key not in expected:
-                    return f"{path}.{key}", "<missing>", actual[key]
-            return path, expected, actual
-        if isinstance(expected, list) and isinstance(actual, list):
-            for index, (expected_item, actual_item) in enumerate(zip(expected, actual)):
-                if expected_item != actual_item:
-                    return cls._first_config_diff(expected_item, actual_item, f"{path}[{index}]")
-            if len(expected) != len(actual):
-                return f"{path}.length", len(expected), len(actual)
-        return path, expected, actual
-
-    @classmethod
-    def _first_expected_config_diff(
-        cls,
-        expected: object,
-        actual: object,
-        path: str = "$",
-    ) -> tuple[str, object, object] | None:
-        if isinstance(expected, dict) and isinstance(actual, dict):
-            for key, expected_value in expected.items():
-                child_path = f"{path}.{key}"
-                if key not in actual:
-                    return child_path, expected_value, "<missing>"
-                diff = cls._first_expected_config_diff(expected_value, actual[key], child_path)
-                if diff is not None:
-                    return diff
-            return None
-        if isinstance(expected, list) and isinstance(actual, list):
-            if len(expected) != len(actual):
-                return path, expected, actual
-            for index, (expected_value, actual_value) in enumerate(zip(expected, actual)):
-                diff = cls._first_expected_config_diff(expected_value, actual_value, f"{path}[{index}]")
-                if diff is not None:
-                    return diff
-            return None
-        if expected != actual:
-            return path, expected, actual
-        return None
-
-    @staticmethod
-    def _short_config_value(value: object) -> str:
-        text = repr(value)
-        return text if len(text) <= 80 else f"{text[:77]}..."
 
     def _render_media_info(self, task: DesktopTask) -> None:
         backend_text = "OpenCV available" if has_media_backend() else "OpenCV not installed"

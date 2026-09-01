@@ -139,9 +139,25 @@ def first_expected_config_diff(
             if diff is not None:
                 return diff
         return None
-    if expected != actual:
+    if isinstance(expected, bool) != isinstance(actual, bool) or expected != actual:
         return path, expected, actual
     return None
+
+
+def first_config_diff(
+    expected: object,
+    actual: object,
+) -> tuple[str, object, object] | None:
+    """Return the first differing field, including unexpected actual fields."""
+
+    diff = first_expected_config_diff(expected, actual)
+    if diff is not None:
+        return diff
+    reverse = first_expected_config_diff(actual, expected)
+    if reverse is None:
+        return None
+    path, actual_value, expected_value = reverse
+    return path, expected_value, actual_value
 
 
 def short_config_value(value: object) -> str:
