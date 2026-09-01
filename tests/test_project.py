@@ -568,7 +568,7 @@ class ProjectPersistenceTests(unittest.TestCase):
             "filtered_state": {},
             "confidence": 1.0,
             "status": "ok",
-            "observation": {"state": {}, "raw": {}},
+            "observation": {"state": {}, "score": 0.5, "raw": {}},
             "prediction": None,
             "debug": {},
         }
@@ -605,7 +605,7 @@ class ProjectPersistenceTests(unittest.TestCase):
             "filtered_state": {},
             "confidence": 1.0,
             "status": "ok",
-            "observation": {"state": {}, "raw": {}},
+            "observation": {"state": {}, "score": 0.5, "raw": {}},
             "prediction": None,
             "debug": {},
         }
@@ -641,6 +641,32 @@ class ProjectPersistenceTests(unittest.TestCase):
                 with self.assertRaisesRegex(
                     ValueError,
                     f"tracker result is missing required fields: {field}",
+                ):
+                    ProjectTaskSnapshot.from_dict(
+                        {
+                            "media_path": None,
+                            "pipeline_key": "color_marker",
+                            "results": [malformed],
+                        }
+                    )
+
+    def test_project_observation_required_fields_fail_closed(self) -> None:
+        result = {
+            "frame_index": 0,
+            "time_s": 0.0,
+            "state": {},
+            "filtered_state": {},
+            "confidence": 1.0,
+            "status": "ok",
+            "observation": {"state": {}, "score": 0.5},
+        }
+        for field in ("state", "score"):
+            with self.subTest(field=field):
+                malformed = json.loads(json.dumps(result))
+                malformed["observation"].pop(field)
+                with self.assertRaisesRegex(
+                    ValueError,
+                    f"observation is missing required fields: {field}",
                 ):
                     ProjectTaskSnapshot.from_dict(
                         {

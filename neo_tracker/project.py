@@ -109,7 +109,10 @@ _TRACKING_RUN_FIELDS = frozenset(
         "source_identity",
     }
 )
-_OBSERVATION_FIELDS = frozenset({"state", "score", "image_point", "label", "raw"})
+_OBSERVATION_REQUIRED_FIELDS = frozenset({"state", "score"})
+_OBSERVATION_FIELDS = _OBSERVATION_REQUIRED_FIELDS | frozenset(
+    {"image_point", "label", "raw"}
+)
 _TRACKER_RESULT_REQUIRED_FIELDS = frozenset(
     {"frame_index", "time_s", "state", "filtered_state", "confidence", "status"}
 )
@@ -713,9 +716,12 @@ def observation_from_dict(data: object) -> ObservationCandidate | None:
         _OBSERVATION_FIELDS,
         "observation",
     )
+    missing = sorted(_OBSERVATION_REQUIRED_FIELDS.difference(data))
+    if missing:
+        raise ValueError(f"observation is missing required fields: {', '.join(missing)}")
     return ObservationCandidate(
-        state=_state_to_dict(_required_dict(data.get("state", {}), "observation state")) or {},
-        score=_finite_float(data.get("score", 0.0), "observation score", minimum=0.0, maximum=1.0),
+        state=_state_to_dict(_required_dict(data["state"], "observation state")) or {},
+        score=_finite_float(data["score"], "observation score", minimum=0.0, maximum=1.0),
         image_point=_point_from_data(data.get("image_point")),
         label=_bounded_string(data.get("label", "candidate"), "observation label", OBSERVATION_LABEL_LIMIT),
         raw=_required_dict(data.get("raw", {}), "observation raw"),
