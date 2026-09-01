@@ -2444,6 +2444,56 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertEqual(window.current_task.pipeline.roi.to_config()["type"], "rectangle")
         self.assertIn("1 px = 0.5 cm", window.scale_status_label.text())
 
+    def test_reset_roi_preserves_scaled_coordinate_calibration(self) -> None:
+        cases = (
+            (
+                "travelling_flame",
+                {
+                    "type": "annulus",
+                    "center": [100.0, 110.0],
+                    "inner_radius": 30.0,
+                    "outer_radius": 60.0,
+                },
+                {"center_px": [320.0, 240.0], "inner_radius": 90.0, "outer_radius": 125.0},
+            ),
+            (
+                "path_motion",
+                {
+                    "type": "curve_band",
+                    "polyline": [[5.0, 6.0], [40.0, 8.0], [60.0, 32.0]],
+                    "half_width": 17.5,
+                },
+                {"polyline": [[60.0, 240.0], [250.0, 240.0], [420.0, 180.0]]},
+            ),
+        )
+        for preset_key, roi, expected_geometry in cases:
+            with self.subTest(preset_key=preset_key):
+                window = NeoTrackerWindow()
+                self.addCleanup(close_window_safely, window)
+                combo = window.preset_combo
+                combo.setCurrentIndex(combo.findData(preset_key))
+                window._roi_selected(roi)
+                window._apply_calibration_rod(
+                    (0.0, 0.0),
+                    (100.0, 0.0),
+                    50.0,
+                    "cm",
+                )
+                motion_config = window.current_task.pipeline.motion_model.to_config()
+
+                window._reset_roi_to_preset()
+
+                mapping = window.current_task.pipeline.coordinate_model.to_config()
+                self.assertAlmostEqual(mapping["unit_per_pixel"], 0.5)
+                self.assertEqual(mapping["unit"], "cm")
+                for field, value in expected_geometry.items():
+                    self.assertEqual(mapping[field], value)
+                self.assertEqual(
+                    window.current_task.pipeline.motion_model.to_config(),
+                    motion_config,
+                )
+                self.assertIn("1 px = 0.5 cm", window.scale_status_label.text())
+
     def test_playback_controls_are_present_and_safe_without_media(self) -> None:
         window = NeoTrackerWindow()
         self.addCleanup(close_window_safely, window)

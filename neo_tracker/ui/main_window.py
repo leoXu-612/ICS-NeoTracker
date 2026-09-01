@@ -5125,8 +5125,18 @@ class NeoTrackerWindow(
         preset_pipeline = self.registry[task.pipeline_key].factory()
         task.roi = None
         task.pipeline.roi = preset_pipeline.roi
-        if isinstance(preset_pipeline.coordinate_model, (AnnularCoordinate, PathCoordinate, PolarCoordinate)):
-            task.pipeline.coordinate_model = preset_pipeline.coordinate_model
+        coordinate_model = preset_pipeline.coordinate_model
+        if isinstance(coordinate_model, (AnnularCoordinate, PathCoordinate)):
+            rod = task.calibration_rod
+            scale = rod.unit_per_pixel() if rod is not None else None
+            if scale is not None:
+                coordinate_model = replace(
+                    coordinate_model,
+                    unit_per_pixel=scale,
+                    unit=rod.unit,
+                )
+        if isinstance(coordinate_model, (AnnularCoordinate, PathCoordinate, PolarCoordinate)):
+            task.pipeline.coordinate_model = coordinate_model
         self.preview_label.set_roi_config(None)
         self._clear_tracking_results("ROI reset to preset. Run tracking again.")
         self._render_calibration(task)
