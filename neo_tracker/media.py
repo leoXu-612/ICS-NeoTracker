@@ -100,10 +100,14 @@ class MediaIdentity:
         normalized_digest = digest.strip().lower()
         if len(normalized_digest) != 64 or any(character not in "0123456789abcdef" for character in normalized_digest):
             return None
-        try:
-            size_bytes = int(data.get("size_bytes", -1))
-            sampled_bytes = int(data.get("sampled_bytes", -1))
-        except (TypeError, ValueError, OverflowError):
+        size_bytes = data.get("size_bytes")
+        sampled_bytes = data.get("sampled_bytes")
+        if (
+            isinstance(size_bytes, bool)
+            or not isinstance(size_bytes, int)
+            or isinstance(sampled_bytes, bool)
+            or not isinstance(sampled_bytes, int)
+        ):
             return None
         if size_bytes < 0 or sampled_bytes < 0 or sampled_bytes > size_bytes:
             return None
