@@ -277,6 +277,10 @@ class ProjectTaskControllerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, r"project task \$\.roi is invalid"):
             self.controller.task_from_snapshot(snapshot)
 
+        snapshot.roi = {}
+        with self.assertRaisesRegex(ValueError, r"project task \$\.roi is invalid"):
+            self.controller.task_from_snapshot(snapshot)
+
         valid_roi_snapshot = ProjectTaskSnapshot(
             media_path=None,
             pipeline_key="color_marker",

@@ -536,7 +536,7 @@ class ProjectTaskController:
             roi_error = validate_roi_config(applied.get("roi"))
             if roi_error is not None:
                 raise ValueError(f"project pipeline $.roi is invalid: {roi_error}")
-        if snapshot.roi:
+        if snapshot.roi is not None:
             roi_error = validate_roi_config(snapshot.roi)
             if roi_error is not None:
                 raise ValueError(f"project task $.roi is invalid: {roi_error}")
