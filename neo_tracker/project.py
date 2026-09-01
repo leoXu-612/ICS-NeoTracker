@@ -810,6 +810,12 @@ class AnalysisDefinition:
             request = FitRequest.from_dict(raw_fit)
             if request.source_revision != self.source_series.source_revision:
                 raise ValueError("analysis fit_config source_revision must match source_series")
+            if (
+                derivative is None
+                and smoothing is None
+                and request.series_id != self.source_series.series_id
+            ):
+                raise ValueError("analysis fit_config series_id must match source_series")
             fit = request.to_dict()
         if derivative is None and smoothing is None and fit is None:
             raise ValueError("analysis definition requires derivative, smoothing, or fit config")

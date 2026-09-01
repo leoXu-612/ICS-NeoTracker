@@ -199,6 +199,13 @@ class KinematicsProjectSchemaTests(unittest.TestCase):
         empty_definition["fit_config"] = None
         mutations.append((empty_analysis, "requires derivative, smoothing, or fit"))
 
+        misbound_fit = json.loads(json.dumps(valid))
+        fit_definition = misbound_fit["tasks"][0]["analysis_workspace"]["definitions"][0]
+        fit_definition["derivative_config"] = None
+        fit_definition["smoothing_config"] = None
+        fit_definition["fit_config"]["series_id"] = "state:y"
+        mutations.append((misbound_fit, "fit_config series_id must match source_series"))
+
         for payload, message in mutations:
             with self.subTest(message=message), self.assertRaisesRegex(
                 (TypeError, ValueError), message
