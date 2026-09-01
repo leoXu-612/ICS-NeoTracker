@@ -160,6 +160,25 @@ class ProjectTaskControllerTests(unittest.TestCase):
         self.assertIsNone(self.controller.calibration_rod_to_dict(invalid))
         self.assertFalse(self.controller.apply_calibration_rod_to_task(restored, invalid))
 
+    def test_calibration_snapshot_rejects_type_confused_values(self) -> None:
+        valid = {
+            "start_px": [0.0, 0.0],
+            "end_px": [100.0, 0.0],
+            "real_length": 50.0,
+            "unit": "cm",
+            "y_positive": "up",
+        }
+        invalid_fields = {
+            "numeric string endpoint": {"start_px": ["0", 0.0]},
+            "boolean length": {"real_length": True},
+            "numeric unit": {"unit": 50},
+        }
+        for label, replacement in invalid_fields.items():
+            with self.subTest(label=label):
+                self.assertIsNone(
+                    self.controller.calibration_rod_from_dict(valid | replacement)
+                )
+
     def test_invalid_snapshot_pipeline_geometry_is_rejected(self) -> None:
         config = self.registry["color_marker"].factory().to_config()
         config["roi"]["width"] = 0.0

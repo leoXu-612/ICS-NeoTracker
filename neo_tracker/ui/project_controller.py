@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field, replace
 from math import isfinite
+from numbers import Real
 from pathlib import Path
 from uuid import uuid4
 
@@ -707,17 +708,35 @@ class ProjectTaskController:
         try:
             start = data["start_px"]
             end = data["end_px"]
+            real_length = data["real_length"]
+        except KeyError:
+            return None
+        unit = data.get("unit", "cm")
+        y_positive = data.get("y_positive", "up")
+        if (
+            not isinstance(start, (list, tuple))
+            or len(start) != 2
+            or not isinstance(end, (list, tuple))
+            or len(end) != 2
+            or any(
+                isinstance(value, (bool, np.bool_)) or not isinstance(value, Real)
+                for value in (*start, *end, real_length)
+            )
+            or not isinstance(unit, str)
+            or not isinstance(y_positive, str)
+        ):
+            return None
+        try:
             start_px = (float(start[0]), float(start[1]))  # type: ignore[index]
             end_px = (float(end[0]), float(end[1]))  # type: ignore[index]
-            real_length = float(data["real_length"])
-            unit = str(data.get("unit", "cm")).strip()
-            y_positive = str(data.get("y_positive", "up"))
-        except (KeyError, TypeError, ValueError, IndexError, OverflowError):
+            parsed_length = float(real_length)
+        except (TypeError, ValueError, OverflowError):
             return None
+        unit = unit.strip()
         rod = CalibrationRod(
             start_px=start_px,
             end_px=end_px,
-            real_length=real_length,
+            real_length=parsed_length,
             unit=unit,
             y_positive=y_positive,
         )
