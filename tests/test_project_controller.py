@@ -37,6 +37,12 @@ class ProjectTaskControllerTests(unittest.TestCase):
         self.assertEqual(self.probed_paths, ["missing.mp4"])
         self.assertFalse(task.media_info.available)
 
+    def test_snapshot_unknown_pipeline_fails_closed(self) -> None:
+        snapshot = ProjectTaskSnapshot(media_path=None, pipeline_key="unknown")
+
+        with self.assertRaisesRegex(ValueError, "unknown project task pipeline 'unknown'"):
+            self.controller.task_from_snapshot(snapshot)
+
     def test_preprobed_media_info_avoids_duplicate_source_inspection(self) -> None:
         preprobed = MediaInfo(
             fps=60.0,

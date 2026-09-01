@@ -467,7 +467,9 @@ class ProjectTaskController:
         live_media_info: MediaInfo | None = None,
         persisted_debug_is_compact: bool = False,
     ) -> DesktopTask:
-        pipeline_key = snapshot.pipeline_key if snapshot.pipeline_key in self.registry else self.default_pipeline_key
+        if snapshot.pipeline_key not in self.registry:
+            raise ValueError(f"unknown project task pipeline {snapshot.pipeline_key!r}")
+        pipeline_key = snapshot.pipeline_key
         task = self.new_task(
             snapshot.media_path,
             pipeline_key,
