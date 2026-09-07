@@ -143,6 +143,37 @@ class KinematicsPersistenceIntegrationTests(unittest.TestCase):
         self.assertIn("stale definition", cursor.toolTip())
         self.assertEqual(cursor.toolTip(), cursor.accessibleDescription())
 
+    def test_hidden_dependency_leaves_downstream_definition_unavailable_on_open(self) -> None:
+        source_window = self.make_window()
+        source_id = self.build_saved_derivative(source_window)
+        self.assertTrue(source_window.analysis_workspace_controller.request_derivative(1))
+        pump_until(lambda: not source_window._kinematics_workspace_coordinator.busy)
+        source, downstream = source_window.current_task.analysis_workspace.definitions
+        definitions = AnalysisWorkspaceSnapshot((replace(source, visible=False), downstream))
+        source_window.current_task.analysis_workspace = definitions
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "hidden-dependency.ntproj"
+            source_window._project_from_window(path).save(path)
+            restored_window = self.make_window()
+            restored_window._load_project(path)
+            pump_until(
+                lambda: "filtered_state:x" in restored_window._physics_series_by_id
+                and not restored_window._kinematics_workspace_coordinator.busy
+                and not restored_window._physics_replay_queue
+            )
+
+        self.assertNotIn(source_id, restored_window._physics_series_by_id)
+        self.assertNotIn(downstream.analysis_id, restored_window._physics_series_by_id)
+        self.assertEqual(restored_window._physics_definition_states[source_id], "hidden")
+        self.assertEqual(
+            restored_window._physics_definition_states[downstream.analysis_id],
+            "unavailable",
+        )
+        self.assertIn("source series is unavailable", restored_window.statusBar().currentMessage())
+        self.assertEqual(restored_window.current_task.analysis_workspace, definitions)
+        self.assertFalse(restored_window._project_dirty)
+
     def test_v2_project_opens_with_empty_analysis_workspace_and_saves_as_v3(self) -> None:
         payload = {
             "format": "neo-tracker-project",

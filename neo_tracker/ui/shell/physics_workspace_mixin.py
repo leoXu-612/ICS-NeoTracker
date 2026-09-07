@@ -682,6 +682,9 @@ class PhysicsWorkspaceMixin:
             self._physics_replay_active_operation = operation
             return True
         unresolved = len(queue)
+        for _operation, definition in queue:
+            if self._physics_definition_states[definition.analysis_id] != "deferred":
+                self._physics_definition_states[definition.analysis_id] = "unavailable"
         queue.clear()
         unavailable = unresolved - deferred_fit_count
         if deferred_fit_count:
