@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -174,6 +175,68 @@ class AnalysisExportIntegrationTests(unittest.TestCase):
             self.assertTrue(
                 all(target.read_bytes() != b"existing-evidence" for target in targets)
             )
+
+    def test_dialog_context_changes_cancel_export_before_any_file_write(self) -> None:
+        for boundary in ("picker", "overwrite"):
+            for change in ("source", "task", "generation"):
+                with (
+                    self.subTest(boundary=boundary, change=change),
+                    tempfile.TemporaryDirectory() as directory,
+                ):
+                    source = make_series()
+                    targets = tuple(
+                        Path(directory) / f"Filtered-x.{suffix}"
+                        for suffix in ("csv", "npz", "md")
+                    )
+                    if boundary == "overwrite":
+                        for target in targets:
+                            target.write_bytes(b"existing-evidence")
+
+                    def change_context(parent: NeoTrackerWindow) -> str:
+                        if change == "source":
+                            parent.set_physics_series((replace(
+                                source,
+                                source_revision="sha256:changed-during-dialog",
+                                values=source.values + 10.0,
+                            ),))
+                        elif change == "task":
+                            parent.scratch_task = parent._new_task(None, parent.default_pipeline_key)
+                            parent.current_task = parent.scratch_task
+                            parent.set_physics_series((source,))
+                        else:
+                            parent.current_task.mark_results_changed()
+                        return directory
+
+                    window = NeoTrackerWindow(physics_export_directory_picker=(
+                        change_context if boundary == "picker" else lambda _parent: directory
+                    ))
+                    self.addCleanup(close_window, window)
+                    window.set_physics_series((source,))
+
+                    def confirm_replace(*_args: object) -> QMessageBox.StandardButton:
+                        change_context(window)
+                        return QMessageBox.StandardButton.Yes
+
+                    with (
+                        patch("PySide6.QtWidgets.QMessageBox.question", side_effect=confirm_replace),
+                        patch.object(
+                            window._kinematics_workspace_coordinator,
+                            "start",
+                            wraps=window._kinematics_workspace_coordinator.start,
+                        ) as start,
+                    ):
+                        window._export_physics_analysis()
+                        pump_until(lambda: not window._kinematics_workspace_coordinator.busy)
+
+                    start.assert_not_called()
+                    self.assertIn("changed", window.statusBar().currentMessage().lower())
+                    if boundary == "overwrite":
+                        self.assertEqual(
+                            [path.read_bytes() for path in targets], [b"existing-evidence"] * 3
+                        )
+                        self.assertEqual(set(Path(directory).iterdir()), set(targets))
+                    else:
+                        self.assertEqual(list(Path(directory).iterdir()), [])
 
 
 if __name__ == "__main__":

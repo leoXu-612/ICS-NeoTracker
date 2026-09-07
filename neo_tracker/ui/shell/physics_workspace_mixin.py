@@ -383,6 +383,8 @@ class PhysicsWorkspaceMixin:
     def _physics_operation_requested(self, request: object) -> None:
         if not isinstance(request, KinematicsOperationRequest):
             return
+        owner = self.current_task
+        generation = owner.results_generation
         self.physicsOperationRequested.emit(request)
         if self._background_tasks.closing:
             return
@@ -430,10 +432,22 @@ class PhysicsWorkspaceMixin:
                         5000,
                     )
                     return
+        if self._background_tasks.closing:
+            return
+        if (
+            self.current_task is not owner
+            or owner.results_generation != generation
+            or self._physics_series_by_id.get(request.series_id) is not source
+        ):
+            self.statusBar().showMessage(
+                "Physics request canceled because its task or Results changed. Try again with the current series.",
+                6000,
+            )
+            return
         task = KinematicsWorkspaceTask(
-            owner=self.current_task,
-            task_id=self.current_task.task_id,
-            results_generation=self.current_task.results_generation,
+            owner=owner,
+            task_id=owner.task_id,
+            results_generation=generation,
             operation=request.operation,
             source=source,
             configuration=request.configuration,
