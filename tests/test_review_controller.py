@@ -230,6 +230,34 @@ class ReviewControllerTests(unittest.TestCase):
         self.assertNotIn((10.0, 20.0), overlay.trajectory)
         self.assertNotIn((10.0, 20.0), overlay.measurements)
 
+    def test_manual_correction_updates_cached_overlay_for_first_result(self) -> None:
+        pipeline = default_preset_registry()["color_marker"].factory()
+        pipeline.results = [tracking_result(index, float(index), 20.0) for index in range(3)]
+        self.controller.overlay(
+            pipeline,
+            0,
+            show_observation=False,
+            show_measurement=True,
+            show_candidates=False,
+            show_prediction=False,
+        )
+
+        self.controller.manual_correction(pipeline, 0, (30.0, 35.0))
+        overlay = self.controller.overlay(
+            pipeline,
+            0,
+            show_observation=False,
+            show_measurement=True,
+            show_candidates=False,
+            show_prediction=False,
+        )
+
+        self.assertEqual(overlay.current_point, (30.0, 35.0))
+        self.assertIn((30.0, 35.0), overlay.trajectory)
+        self.assertIn((30.0, 35.0), overlay.measurements)
+        self.assertNotIn((0.0, 20.0), overlay.trajectory)
+        self.assertNotIn((0.0, 20.0), overlay.measurements)
+
 
 if __name__ == "__main__":
     unittest.main()

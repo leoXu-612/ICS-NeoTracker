@@ -290,11 +290,11 @@ class ReviewController:
         if result_index < 0 or result_index >= len(pipeline.results):
             raise IndexError("review result index is out of range")
         result = pipeline.results[result_index]
-        previous_result = result
+        original_result = result
         previous_status = result.status
         previous_point = self.result_image_point(pipeline, result)
-        previous_result = pipeline.results[result_index - 1] if result_index > 0 else None
-        previous_state = previous_result.filtered_state if previous_result is not None else None
+        prior_result = pipeline.results[result_index - 1] if result_index > 0 else None
+        previous_state = prior_result.filtered_state if prior_result is not None else None
         candidate = ObservationCandidate(
             state=pipeline.coordinate_model.image_to_state_space(point_px),
             score=1.0,
@@ -317,7 +317,7 @@ class ReviewController:
             observation=candidate,
             debug={
                 **result.debug,
-                "filter": {"velocity": self.velocity_from_previous(state, previous_result, result.time_s)},
+                "filter": {"velocity": self.velocity_from_previous(state, prior_result, result.time_s)},
                 "manual_correction": {
                     "point_px": [point_px[0], point_px[1]],
                     "previous_status": previous_status,
@@ -326,7 +326,7 @@ class ReviewController:
             },
         )
         pipeline.results[result_index] = result
-        self.refresh_overlay_result(pipeline, result_index, previous_result=previous_result)
+        self.refresh_overlay_result(pipeline, result_index, previous_result=original_result)
         return ReviewEdit(
             result_index=result_index,
             frame_index=result.frame_index,
