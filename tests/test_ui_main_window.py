@@ -3388,6 +3388,53 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertEqual(window.save_project_button.text(), "Save Project")
         self.assertIn("saved project content is unchanged", window.statusBar().currentMessage())
 
+    def test_task_remove_save_then_undo_requires_saving_restored_task(self) -> None:
+        for task_count in (1, 2):
+            with self.subTest(task_count=task_count), tempfile.TemporaryDirectory() as tmpdir:
+                window = NeoTrackerWindow()
+                self.addCleanup(close_window_safely, window)
+                window._apply_project(
+                    NeoTrackerProject(
+                        name="saved removal",
+                        tasks=[
+                            ProjectTaskSnapshot(
+                                media_path=f"/offline/task-{index}.mp4",
+                                pipeline_key=window.default_pipeline_key,
+                            )
+                            for index in range(task_count)
+                        ],
+                    )
+                )
+                path = Path(tmpdir) / "saved-removal.ntproj"
+                window.project_path = path
+                self.assertTrue(window._save_project())
+                wait_for_project_save(window)
+
+                self.assertTrue(window._remove_current_task())
+                self.assertTrue(window._save_project())
+                wait_for_project_save(window)
+                saved_fingerprint = window._saved_project_fingerprint
+                self.assertEqual(len(NeoTrackerProject.load(path).tasks), task_count - 1)
+                self.assertFalse(window._project_dirty)
+
+                self.assertTrue(window._undo_removed_task())
+
+                self.assertEqual(len(window.tasks), task_count)
+                self.assertTrue(window._project_dirty)
+                self.assertEqual(window._saved_project_fingerprint, saved_fingerprint)
+                self.assertEqual(window.project_state_label.text(), "Unsaved changes")
+                self.assertEqual(window.save_project_button.text(), "Save Changes")
+                with patch.object(
+                    window, "_ask_unsaved_changes", return_value=QMessageBox.StandardButton.Cancel
+                ) as confirm:
+                    self.assertFalse(window._confirm_project_transition("closing the project"))
+                confirm.assert_called_once()
+
+                self.assertTrue(window._save_project())
+                wait_for_project_save(window)
+                self.assertEqual(len(NeoTrackerProject.load(path).tasks), task_count)
+                self.assertFalse(window._project_dirty)
+
     def test_task_remove_then_undo_preserves_preexisting_dirty_state(self) -> None:
         window = NeoTrackerWindow()
         self.addCleanup(close_window_safely, window)

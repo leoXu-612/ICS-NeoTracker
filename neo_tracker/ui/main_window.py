@@ -3327,7 +3327,10 @@ class NeoTrackerWindow(
         self._explicit_empty_project = False
         self.task_actions_panel.clear_undo()
         self._rebuild_task_list(index)
-        if self._project_content_revision == removal_revision:
+        if (
+            self._project_content_revision == removal_revision
+            and self._saved_project_fingerprint == previous_saved_fingerprint
+        ):
             self._project_content_revision += 1
             self._saved_project_fingerprint = previous_saved_fingerprint
             self._current_project_fingerprint = previous_current_fingerprint
