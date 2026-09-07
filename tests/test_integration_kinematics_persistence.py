@@ -81,6 +81,44 @@ class KinematicsPersistenceIntegrationTests(unittest.TestCase):
             atol=1e-11,
         )
 
+    def test_derived_series_range_and_page_survive_save_open_without_fit(self) -> None:
+        source_window = self.make_window()
+        derived_id = self.build_saved_derivative(source_window)
+        self.assertIsNone(source_window.analysis_workspace_controller.state.fit_result)
+        source_window._set_project_clean()
+
+        source_window.physics_workspace.show_page("Plot")
+
+        definition = source_window._physics_definition_by_id(derived_id)
+        self.assertEqual(definition.view_state, {"page": "Plot"})
+        self.assertTrue(source_window._project_dirty)
+        source_window._set_project_clean()
+        source_window.physics_workspace.plot.set_selected_range(0.1, 0.5)
+        source_window.physics_workspace.plot.rangeSelected.emit(0.1, 0.5)
+
+        definition = source_window._physics_definition_by_id(derived_id)
+        self.assertEqual(definition.selected_range_s, (0.1, 0.5))
+        self.assertTrue(source_window._project_dirty)
+        source_window._set_project_clean()
+        source_window.physics_workspace.plot.rangeSelected.emit(0.1, 0.5)
+        self.assertFalse(source_window._project_dirty)
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "derivative-view.ntproj"
+            source_window._project_from_window(path).save(path)
+            restored_window = self.make_window()
+            restored_window._load_project(path)
+            pump_until(
+                lambda: not restored_window._kinematics_workspace_coordinator.busy
+                and derived_id in restored_window._physics_series_by_id
+            )
+
+        self.assertEqual(restored_window.physics_workspace.current_page, "Plot")
+        self.assertEqual(restored_window.physics_workspace.plot.selected_range, (0.1, 0.5))
+        self.assertEqual(restored_window.physics_workspace.series_combo.currentData(), derived_id)
+        self.assertIsNone(restored_window.analysis_workspace_controller.state.fit_result)
+        self.assertFalse(restored_window._project_dirty)
+
     def test_changed_results_leave_saved_definition_disabled_as_stale(self) -> None:
         source_window = self.make_window()
         derived_id = self.build_saved_derivative(source_window)

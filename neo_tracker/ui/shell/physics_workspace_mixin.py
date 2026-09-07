@@ -792,18 +792,21 @@ class PhysicsWorkspaceMixin:
         *,
         selected_range_s: tuple[float, float] | None = None,
     ) -> None:
-        analysis_id = getattr(self, "_physics_active_definition_id", None)
         state = self.analysis_workspace_controller.state
-        if analysis_id is None or state.fit_result is None:
+        analysis_id = (
+            getattr(self, "_physics_active_definition_id", None)
+            if state.fit_result is not None
+            else state.selected_series_id
+        )
+        if analysis_id is None:
             return
         definition = self._physics_definition_by_id(analysis_id)
         if definition is None:
             return
         view_state = dict(definition.view_state)
-        view_state.update(
-            page=self.physics_workspace.current_page,
-            residual_visible=state.residual_visible,
-        )
+        view_state["page"] = self.physics_workspace.current_page
+        if state.fit_result is not None:
+            view_state["residual_visible"] = state.residual_visible
         range_changed = (
             selected_range_s is not None
             and selected_range_s != definition.selected_range_s
