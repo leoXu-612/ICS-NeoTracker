@@ -174,6 +174,42 @@ class KinematicsPersistenceIntegrationTests(unittest.TestCase):
         self.assertEqual(restored_window.current_task.analysis_workspace, definitions)
         self.assertFalse(restored_window._project_dirty)
 
+    def test_deferred_fit_replay_preserves_draft_and_shared_selection(self) -> None:
+        window = self.make_window()
+        self.build_saved_derivative(window)
+        panel = window.fit_panel
+        panel.series_combo.setCurrentIndex(panel.series_combo.findData("filtered_state:x"))
+        panel.range_start_spin.setValue(0.1)
+        panel.range_end_spin.setValue(0.5)
+        panel.run_button.click()
+        pump_until(lambda: not window.analysis_workspace_controller.busy)
+        definition = next(
+            item for item in window.current_task.analysis_workspace.definitions
+            if item.fit_config is not None
+        )
+        window._set_project_clean()
+        panel.series_combo.setCurrentIndex(panel.series_combo.findData("state:x"))
+        panel.range_start_spin.setValue(0.15)
+        self.assertTrue(panel.is_dirty())
+        selection = window.selection_session.state
+        controller_state = window.analysis_workspace_controller.state
+        draft = panel.draft()
+        definitions = window.current_task.analysis_workspace
+        self.assertEqual(selection.selected_series_id, draft.series_id)
+        self.assertNotEqual(draft.series_id, definition.source_series.series_id)
+        window._physics_replay_queue = [("fit", definition)]
+
+        self.assertFalse(window._start_next_physics_replay())
+
+        self.assertEqual(window.selection_session.state, selection)
+        self.assertEqual(window.analysis_workspace_controller.state, controller_state)
+        self.assertEqual(window.physics_workspace.series_combo.currentData(), draft.series_id)
+        self.assertEqual(panel.draft(), draft)
+        self.assertTrue(panel.is_dirty())
+        self.assertEqual(window._physics_definition_states[definition.analysis_id], "deferred")
+        self.assertEqual(window.current_task.analysis_workspace, definitions)
+        self.assertFalse(window._project_dirty)
+
     def test_v2_project_opens_with_empty_analysis_workspace_and_saves_as_v3(self) -> None:
         payload = {
             "format": "neo-tracker-project",

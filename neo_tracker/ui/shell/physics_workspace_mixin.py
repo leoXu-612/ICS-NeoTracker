@@ -630,6 +630,10 @@ class PhysicsWorkspaceMixin:
                 assert fit_request is not None
                 if fit_request.source_revision != source.source_revision:
                     continue
+                if self.fit_panel.is_dirty():
+                    self._physics_definition_states[definition.analysis_id] = "deferred"
+                    deferred_fit_count += 1
+                    continue
                 selection = self.selection_session.select_series(
                     source.series_id,
                     origin=SelectionOrigin.FIT,
@@ -646,10 +650,6 @@ class PhysicsWorkspaceMixin:
                     bounds=fit_request.bounds,
                     use_valid_only=fit_request.use_valid_only,
                 )
-                if self.fit_panel.is_dirty():
-                    self._physics_definition_states[definition.analysis_id] = "deferred"
-                    deferred_fit_count += 1
-                    continue
                 if not self.fit_panel.restore_draft(draft):
                     continue
                 if not self.analysis_workspace_controller.run_fit(self.current_task, draft):
