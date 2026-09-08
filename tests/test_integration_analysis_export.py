@@ -179,6 +179,28 @@ class AnalysisExportIntegrationTests(unittest.TestCase):
                 all(target.read_bytes() != b"existing-evidence" for target in targets)
             )
 
+    def test_dangling_export_symlink_requires_explicit_replace(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "Filtered-x.csv"
+            target.symlink_to("missing-original.csv")
+            window = NeoTrackerWindow(physics_export_directory_picker=lambda _parent: directory)
+            self.addCleanup(close_window, window)
+            window.set_physics_series((make_series(),))
+
+            with patch(
+                "PySide6.QtWidgets.QMessageBox.question",
+                return_value=QMessageBox.StandardButton.No,
+            ) as confirm:
+                window._export_physics_analysis()
+                pump_until(lambda: not window._kinematics_workspace_coordinator.busy)
+
+            confirm.assert_called_once()
+            self.assertTrue(target.is_symlink())
+            self.assertEqual(os.readlink(target), "missing-original.csv")
+            self.assertEqual(set(root.iterdir()), {target})
+            self.assertIn("kept", window.statusBar().currentMessage().lower())
+
     def test_dialog_context_changes_cancel_export_before_any_file_write(self) -> None:
         for boundary in ("picker", "overwrite"):
             for change in ("source", "task", "generation"):

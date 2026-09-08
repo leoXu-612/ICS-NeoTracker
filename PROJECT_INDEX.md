@@ -1,12 +1,14 @@
 # ICSTracker Project Index
 
-更新时间：2026-08-13（Asia/Taipei）
+更新时间：2026-09-08（Asia/Taipei）
 
 ## 权威工作区
 
 - 新路径：`/Users/leo.xu/Desktop/Codex/ICS-Project-/ICS-NeoTracker`
 - 旧路径：`/Users/leo.xu/Desktop/Codex/Codex_Neo-Tracker`
-- 迁移原则：新路径验证通过后作为唯一可写工作区；旧路径暂时保留为回退副本，不再继续开发。
+- 迁移原则：新路径是主仓库，功能开发可在其 Git worktree 中隔离进行；旧路径暂时保留为回退副本，不再继续开发。
+- 当前 v0.4 开发工作树：`/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04`，分支 `codex/preview-selection-draft-protection-v04`。
+- 2026-09-08 实查：主仓库 `main` 仍为 `aa3a2eb`；本轮未执行合并或推送，不能把工作树的功能与测试结果当作主仓库当前状态。
 
 ## 快速入口
 
@@ -19,7 +21,7 @@
 - `collab/FROM_INTEGRATION_V03.md`：Physics Analysis v0.3 集成状态、验收数字、风险与分支交接。
 - `artifacts/integration-v03/`：当前集成 SHA 的 100k、项目打开、真实 SloMo 与验收证据。
 - `artifacts/v0.3.0-alpha/final-summary.md`：Physics Analysis v0.3 工单最终交付报告。
-- `PROJECT_FILE_INDEX.sha256`：当前 599 个稳定文件的内容索引（排除 `.DS_Store`、`*.pyc`、`__pycache__`、`.git/` 与索引自身），可用于完整性校验。
+- `PROJECT_FILE_INDEX.sha256`：历史内容索引（排除 `.DS_Store`、`*.pyc`、`__pycache__`、`.git/` 与索引自身）；不会随开发自动更新，不代表当前工作树的完整性。当前变更以 Git 状态和各轮验证记录为准。
 - `MIGRATION_RECORD.md`：本次目录迁移、备份和验证记录。
 
 ## 代码索引
@@ -39,7 +41,7 @@ neo_tracker/
   csv_utils.py        电子表格公式注入防护与统一 CSV 单元格净化
   analysis.py         有界分块 WAV PCM 解码、一次式 tracking source metadata 发现、低复制/cancel-aware dense-sparse 选中序列、FFT/STFT 与信号分析
   project.py          Schema v3、v1/v2 迁移、64 MiB/100,000-result 有界 .ntproj 原子序列化、稳定 task UUID/results generation、bounded analysis definitions 与 canonical fingerprint
-  kinematics/         immutable SampleSeries、VFR/gap-aware derivative、Savitzky–Golay、线性/二次/可选非线性 fit、residual/unit、atomic CSV/NPZ/Markdown export 与 cancellation runtime
+  kinematics/         immutable SampleSeries、VFR/gap-aware derivative、Savitzky–Golay、线性/二次/可选非线性 fit、residual/unit、逐文件原子导出/三格式发布失败回滚与 cancellation runtime
   application/kinematics_workspace_coordinator.py 后台 series/derivative/smoothing/export、task/generation/revision 陈旧校验、单终态与 close gate
   application/kinematics_coordinator.py 后台 fit protocol、取消/陈旧结果拒绝与单终态
   application/qt_worker_lifecycle.py terminal worker 迁回主事件循环、QThread 退出与延迟销毁的共享边界
@@ -75,7 +77,7 @@ neo_tracker/
   ui/selection_session.py Video/Data/Plot/Fit 唯一 true-time selection transaction、source revision 守卫、nearest/tie 与防回环
   ui/workspaces/physics_workspace.py Data/Plot/Fit 底部实验台、100k 虚拟表、Action Registry 路由、响应式/键盘/AX 文本
   ui/physics_plot.py VFR true-time 绘图、有界 envelope decimation、gap、fit/residual、Retina 导出与键盘选择
-tests/                 681 项 unittest 回归测试（含 14 类解析 fixture、Engine/Workspace/Schema v3/四组 Integration、media/source identity、项目数据保护、后台生命周期、100k、VFR、导出与 UI 回归）
+tests/                 unittest 回归测试（含 14 类解析 fixture、Engine/Workspace/Schema v3/四组 Integration、media/source identity、项目数据保护、后台生命周期、100k、VFR、导出与 UI 回归；最新运行数量见交接.md）
 benchmarks/            可重复的 kinematics 100k/derivative/fit/export、Physics UI/plot、项目打开 heartbeat，以及 tracking/media/ROI/Review/Signal/WAV 工作集和语义对照基准
                         P0-B 真实媒体矩阵（real H.264/HEVC/1080p Full Run、取消、来源替换、截断、重开；主进程 CPU/RSS 采样；stdout JSON / stderr 分离）
 assets/                App 图标与封面资产
@@ -83,7 +85,7 @@ artifacts/             UI 审查截图、实验视频与可复现性能记录
 build/                 历史构建产物，不是源码权威来源
 ```
 
-最新证据状态（2026-08-11）：Physics Analysis v0.3 的 Engine、Workspace、
+历史 v0.3 证据基线（2026-08-11；不代表当前 v0.4 的重新验收）：Physics Analysis v0.3 的 Engine、Workspace、
 Schema v3 与 Application Integration 已在 `integration/physics-analysis-v0.3`
 闭环，远端同名分支已发布并按交付 SHA 验证。本地全量 `674/674`
 （121.656 s），双方 645 个唯一 Test ID 缺失 0 个，`compileall`/`pip check` 通过；
@@ -129,11 +131,14 @@ Revert 精确恢复基线，非二维坐标模型不显示该操作。1024×768 
 
 ## 常用命令
 
+以下命令针对当前 v0.4 开发工作树；主仓库路径见上，合并前两者不等价。
+
 ```bash
-cd /Users/leo.xu/Desktop/Codex/ICS-Project-/ICS-NeoTracker
+cd /Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04
 python3 -m neo_tracker
 PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen python3 -m unittest discover -s tests -v
-LC_ALL=en_US.UTF-8 shasum -a 256 -c PROJECT_FILE_INDEX.sha256
+git status --short --branch
+git diff --check
 ```
 
 源码权威目录始终是 `neo_tracker/`。`build/lib/neo_tracker/` 只用于保留历史构建结果，发布前应从新工作区重新构建。

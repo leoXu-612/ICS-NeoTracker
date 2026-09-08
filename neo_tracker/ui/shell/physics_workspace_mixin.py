@@ -416,7 +416,9 @@ class PhysicsWorkspaceMixin:
                 "npz": directory / f"{stem}.npz",
                 "markdown": directory / f"{stem}.md",
             }
-            existing = tuple(path for path in export_paths.values() if path.exists())
+            existing = tuple(
+                path for path in export_paths.values() if path.exists() or path.is_symlink()
+            )
             if existing:
                 names = ", ".join(path.name for path in existing)
                 decision = QMessageBox.question(
