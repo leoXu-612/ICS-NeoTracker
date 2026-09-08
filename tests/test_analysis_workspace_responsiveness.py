@@ -4,10 +4,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from PySide6.QtCore import QCoreApplication, Qt
+from PySide6.QtCore import QCoreApplication, QPoint, QRect, Qt
 from PySide6.QtGui import QImage
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QHeaderView, QWidget
+from PySide6.QtWidgets import QApplication, QHeaderView, QScrollArea, QWidget
 
 from neo_tracker.ui.main_window import NeoTrackerWindow
 from neo_tracker.ui.physics_plot import PhysicsPlot
@@ -65,6 +65,49 @@ class PhysicsWorkspaceResponsiveTests(unittest.TestCase):
                 window.physics_workspace.set_collapsed(False)
                 QCoreApplication.processEvents()
                 self.assertEqual(window.physics_workspace.collapse_button.text(), "Collapse")
+
+    def test_fit_controls_keep_native_height_and_scroll_with_keyboard_focus(self) -> None:
+        window = self.make_window(PhysicsWorkspaceStateStore())
+        window.resize(1024, 768)
+        window.show()
+        window.set_physics_series((make_series(),))
+        workspace, panel = window.physics_workspace, window.fit_panel
+        workspace.show_page("Fit")
+        for model in ("Linear", "Sinusoidal"):
+            with self.subTest(model=model):
+                panel.model_combo.setCurrentText(model)
+                QCoreApplication.processEvents()
+                controls = [
+                    panel.series_combo, panel.model_combo,
+                    panel.range_start_spin, panel.range_end_spin, panel.valid_only_checkbox,
+                ]
+                if model == "Sinusoidal":
+                    controls.extend((panel.initial_parameters_edit, panel.bounds_edit))
+                controls.extend((panel.run_button, panel.export_button, panel.parameter_table))
+                for widget in controls:
+                    self.assertGreaterEqual(widget.height(), widget.minimumSizeHint().height())
+                self.assertEqual((window.width(), window.height()), (1024, 768))
+                self.assertLessEqual(window.minimumSizeHint().height(), 768)
+
+                scroll = workspace.tabs.currentWidget()
+                self.assertIsInstance(scroll, QScrollArea)
+                self.assertEqual(scroll.horizontalScrollBar().maximum(), 0)
+                self.assertGreater(scroll.verticalScrollBar().maximum(), 0)
+                panel.series_combo.setFocus(Qt.FocusReason.TabFocusReason)
+                QCoreApplication.processEvents()
+                for widget in controls[1:]:
+                    QTest.keyClick(QApplication.focusWidget(), Qt.Key.Key_Tab)
+                    QCoreApplication.processEvents()
+                    self.assertIs(QApplication.focusWidget(), widget)
+                    rectangle = QRect(widget.mapTo(scroll.viewport(), QPoint()), widget.size())
+                    self.assertTrue(scroll.viewport().rect().contains(rectangle))
+                self.assertGreater(scroll.verticalScrollBar().value(), 0)
+                for widget in reversed(controls[:-1]):
+                    QTest.keyClick(QApplication.focusWidget(), Qt.Key.Key_Tab, Qt.KeyboardModifier.ShiftModifier)
+                    QCoreApplication.processEvents()
+                    self.assertIs(QApplication.focusWidget(), widget)
+                    rectangle = QRect(widget.mapTo(scroll.viewport(), QPoint()), widget.size())
+                    self.assertTrue(scroll.viewport().rect().contains(rectangle))
 
     def test_canvas_focus_is_reversible_and_does_not_persist_transient_collapse(self) -> None:
         store = PhysicsWorkspaceStateStore()

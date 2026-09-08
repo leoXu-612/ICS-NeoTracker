@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QHeaderView,
     QLabel,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QStackedWidget,
     QTabWidget,
@@ -176,7 +177,14 @@ class PhysicsWorkspace(QFrame):
             "Choose a physical series, model, and true-time range to run a background fit."
         )
         self.fit_stack.addWidget(self.fit_placeholder)
-        self._add_page("Fit", self.fit_stack)
+        self.fit_stack.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        fit_scroll = QScrollArea()
+        fit_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        fit_scroll.setWidgetResizable(True)
+        fit_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        fit_scroll.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        fit_scroll.setWidget(self.fit_stack)
+        self._add_page("Fit", fit_scroll)
 
         self._add_page(
             "Diagnostics",
