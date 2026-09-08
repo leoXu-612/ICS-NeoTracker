@@ -4,7 +4,7 @@ import json
 import math
 from collections.abc import Sequence
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import QSignalBlocker, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -48,6 +48,7 @@ class FitPanel(QWidget):
         self._engine_available = True
         self._syncing = False
         self._draft_baseline: tuple[object, ...] | None = None
+        self._range_values = [0.0, 0.0]
         self.setAccessibleName("Physics model fit")
         self.setAccessibleDescription(
             "Choose a physical series, model, and true-time range. Fits run in the background."
@@ -73,10 +74,8 @@ class FitPanel(QWidget):
         range_row = QHBoxLayout()
         self.range_start_spin = self._range_spin("Fit range start in true seconds")
         self.range_end_spin = self._range_spin("Fit range end in true seconds")
-        self.range_start_spin.valueChanged.connect(self._update_controls)
-        self.range_start_spin.valueChanged.connect(self._emit_draft_changed)
-        self.range_end_spin.valueChanged.connect(self._update_controls)
-        self.range_end_spin.valueChanged.connect(self._emit_draft_changed)
+        self.range_start_spin.valueChanged.connect(lambda value: self._range_edited(0, value))
+        self.range_end_spin.valueChanged.connect(lambda value: self._range_edited(1, value))
         range_row.addWidget(self.range_start_spin)
         range_row.addWidget(QLabel("to"))
         range_row.addWidget(self.range_end_spin)
@@ -221,8 +220,7 @@ class FitPanel(QWidget):
         try:
             self.series_combo.setCurrentIndex(series_index)
             self.model_combo.setCurrentIndex(model_index)
-            self.range_start_spin.setValue(float(draft.range_start_s))
-            self.range_end_spin.setValue(float(draft.range_end_s))
+            self._set_range(draft.range_start_s, draft.range_end_s)
             self.valid_only_checkbox.setChecked(draft.use_valid_only)
             self.initial_parameters_edit.setText(
                 json.dumps(dict(draft.initial_parameters), sort_keys=True)
@@ -247,8 +245,7 @@ class FitPanel(QWidget):
             model_index = self.model_combo.findData(model)
             if model_index >= 0:
                 self.model_combo.setCurrentIndex(model_index)
-            self.range_start_spin.setValue(float(range_start))
-            self.range_end_spin.setValue(float(range_end))
+            self._set_range(float(range_start), float(range_end))
             self.initial_parameters_edit.setText(str(initial))
             self.bounds_edit.setText(str(bounds))
             self.valid_only_checkbox.setChecked(bool(valid_only))
@@ -280,8 +277,8 @@ class FitPanel(QWidget):
         return FitDraft(
             series_id=str(series_id),
             model=model,
-            range_start_s=self.range_start_spin.value(),
-            range_end_s=self.range_end_spin.value(),
+            range_start_s=self._range_values[0],
+            range_end_s=self._range_values[1],
             initial_parameters=initial,
             bounds=bounds,
             use_valid_only=self.valid_only_checkbox.isChecked(),
@@ -389,14 +386,32 @@ class FitPanel(QWidget):
         valid_times = source.time_s[source.valid_mask]
         if valid_times.size:
             minimum, maximum = float(valid_times[0]), float(valid_times[-1])
-            self.range_start_spin.setRange(-1e12, 1e12)
-            self.range_end_spin.setRange(-1e12, 1e12)
-            self.range_start_spin.setValue(minimum)
-            self.range_end_spin.setValue(maximum)
+            self._set_range(minimum, maximum)
         else:
-            self.range_start_spin.setValue(0.0)
-            self.range_end_spin.setValue(0.0)
+            self._set_range(0.0, 0.0)
         self.clear_result()
+
+    def _set_range(self, start: float, end: float) -> None:
+        previous_syncing = self._syncing
+        self._syncing = True
+        try:
+            for index, value in enumerate((start, end)):
+                spin = (self.range_start_spin, self.range_end_spin)[index]
+                with QSignalBlocker(spin):
+                    spin.setValue(value)
+                self._range_edited(index, min(spin.maximum(), max(spin.minimum(), value)))
+        finally:
+            self._syncing = previous_syncing
+
+    def _range_edited(self, index: int, value: float) -> None:
+        # ponytail: native edits keep nine decimals; a full-precision editor is needed for finer edits.
+        self._range_values[index] = value
+        spin = (self.range_start_spin, self.range_end_spin)[index]
+        detail = f"Exact fit boundary: {value:.17g} s. Display and manual edits use nine decimal places."
+        spin.setToolTip(detail)
+        spin.setAccessibleDescription(detail)
+        self._update_controls()
+        self._emit_draft_changed()
 
     def _model_changed(self, model: str) -> None:
         nonlinear = model in {"Exponential", "Sinusoidal"}
@@ -416,8 +431,8 @@ class FitPanel(QWidget):
         return (
             self.series_combo.currentData(),
             self.model_combo.currentData(),
-            self.range_start_spin.value(),
-            self.range_end_spin.value(),
+            self._range_values[0],
+            self._range_values[1],
             self.initial_parameters_edit.text(),
             self.bounds_edit.text(),
             self.valid_only_checkbox.isChecked(),
@@ -425,7 +440,7 @@ class FitPanel(QWidget):
 
     def _update_controls(self, *_args: object) -> None:
         available = bool(self._series) and self._engine_available and not self._busy
-        valid_range = self.range_start_spin.value() < self.range_end_spin.value()
+        valid_range = self._range_values[0] < self._range_values[1]
         self.series_combo.setEnabled(available)
         self.model_combo.setEnabled(available)
         self.range_start_spin.setEnabled(available)

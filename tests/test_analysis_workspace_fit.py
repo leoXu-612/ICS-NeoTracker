@@ -284,6 +284,29 @@ class FitPanelTests(unittest.TestCase):
         self.assertAlmostEqual(panel.range_end_spin.value(), 0.7)
 
 
+    def test_restored_range_preserves_exact_bounds_until_that_endpoint_is_edited(self) -> None:
+        panel = FitPanel()
+        source = make_series()
+        times = (source.frame_indices + 1) * (1001 / 30000)
+        source = replace(source, time_s=times)
+        panel.set_series((source,))
+        restored = FitDraft(source.series_id, "linear", float(times[1]), float(times[-2]))
+
+        self.assertTrue(panel.restore_draft(restored))
+        self.assertEqual(panel.draft(), restored)
+        self.assertFalse(panel.is_dirty())
+        self.assertIn(format(restored.range_start_s, ".17g"), panel.range_start_spin.toolTip())
+        self.assertEqual(panel.range_start_spin.accessibleDescription(), panel.range_start_spin.toolTip())
+
+        panel.range_end_spin.setValue(0.25)
+        self.assertEqual(panel.draft().range_start_s, restored.range_start_s)
+        self.assertEqual(panel.draft().range_end_s, 0.25)
+        self.assertTrue(panel.is_dirty())
+        panel.revert_draft()
+        self.assertEqual(panel.draft(), restored)
+        self.assertFalse(panel.is_dirty())
+
+
 class MainWindowFitIntegrationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -336,6 +359,25 @@ class MainWindowFitIntegrationTests(unittest.TestCase):
         self.assertIsNone(window.physics_workspace.plot._fit_series)
         self.assertIsNone(window.selection_session.state.selected_fit_id)
         self.assertIn("Physics fit", window._unapplied_draft_names())
+
+    def test_default_fit_range_includes_both_unrounded_true_time_endpoints(self) -> None:
+        window = self.make_window()
+        source = make_series()
+        times = (source.frame_indices + 1) * (1001 / 30000)
+        source = replace(source, time_s=times, values=2.0 * times + 1.0)
+        window.set_physics_series((source,))
+
+        window.fit_panel.run_button.click()
+        pump_until(lambda: not window.analysis_workspace_controller.busy)
+
+        result = window.analysis_workspace_controller.state.fit_result
+        self.assertIsNotNone(result)
+        self.assertEqual(result.sample_count, len(source))
+        self.assertEqual(result.range_start_s, float(times[0]))
+        self.assertEqual(result.range_end_s, float(times[-1]))
+        self.assertTrue(result.valid_mask[0])
+        self.assertTrue(result.valid_mask[-1])
+        self.assertFalse(window.fit_panel.is_dirty())
 
     def test_equivalent_parameter_order_reuses_persisted_fit_definition(self) -> None:
         window = self.make_window()
