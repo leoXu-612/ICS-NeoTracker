@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import csv
 import json
+import os
+import stat
 import tempfile
 import unittest
 from pathlib import Path
@@ -10,7 +12,7 @@ from unittest.mock import patch
 import numpy as np
 
 from benchmarks.kinematics_fixtures import missing_segments, uniform_linear
-from neo_tracker.kinematics.export import CSV_FIELDS, export_csv, export_markdown, export_npz
+from neo_tracker.kinematics.export import CSV_FIELDS, export_bundle, export_csv, export_markdown, export_npz
 from neo_tracker.kinematics.fitting import fit_series
 from neo_tracker.kinematics.runtime import CancellationToken, KinematicsCancelled
 from neo_tracker.kinematics.types import FitRequest, SampleSeries
@@ -154,6 +156,95 @@ class KinematicsExportTests(unittest.TestCase):
             with patch("neo_tracker.kinematics.export.fsync_parent_directory") as fsync_parent:
                 export_csv(path, series)
             fsync_parent.assert_called_once_with(path)
+
+    def test_bundle_publication_failure_rolls_back_all_targets(self) -> None:
+        series = uniform_linear(10).sample_series()
+        real_replace = os.replace
+        for existing_count in (0, 1, 3):
+            for failed_format in ("npz", "markdown"):
+                with (
+                    self.subTest(existing=existing_count, failed_format=failed_format),
+                    tempfile.TemporaryDirectory() as directory,
+                ):
+                    paths = {
+                        key: Path(directory).resolve() / key / f"analysis.{suffix}"
+                        for key, suffix in (("csv", "csv"), ("npz", "npz"), ("markdown", "md"))
+                    }
+                    previous = set(tuple(paths.values())[:existing_count])
+                    for path in previous:
+                        path.parent.mkdir()
+                        path.write_bytes(b"previous-evidence")
+
+                    def fail_publication(source: object, target: object) -> None:
+                        if Path(target) == paths[failed_format] and Path(source).name == "new":
+                            raise OSError("publication denied")
+                        real_replace(source, target)
+
+                    with (
+                        patch("neo_tracker.kinematics.export.os.replace", side_effect=fail_publication),
+                        patch("neo_tracker.kinematics.export.os.link", side_effect=OSError("hard links unavailable")),
+                    ):
+                        with self.assertRaisesRegex(OSError, "publication denied"):
+                            export_bundle(paths, series)
+
+                    for path in paths.values():
+                        if path in previous:
+                            self.assertEqual(path.read_bytes(), b"previous-evidence")
+                        else:
+                            self.assertFalse(path.exists())
+                        self.assertEqual(set(path.parent.iterdir()), {path} if path in previous else set())
+
+    def test_bundle_copy_fallback_restores_a_dangling_symlink(self) -> None:
+        series = uniform_linear(10).sample_series()
+        real_replace = os.replace
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            paths = {key: root / key for key in ("csv", "npz", "markdown")}
+            paths["csv"].symlink_to("missing-original")
+
+            def fail_publication(source: object, target: object) -> None:
+                if Path(target) == paths["npz"]:
+                    raise OSError("publication denied")
+                real_replace(source, target)
+
+            with (
+                patch("neo_tracker.kinematics.export.os.link", side_effect=NotImplementedError),
+                patch("neo_tracker.kinematics.export.os.replace", side_effect=fail_publication),
+            ):
+                with self.assertRaisesRegex(OSError, "publication denied"):
+                    export_bundle(paths, series)
+
+            self.assertTrue(paths["csv"].is_symlink())
+            self.assertEqual(os.readlink(paths["csv"]), "missing-original")
+            self.assertEqual(set(root.iterdir()), {paths["csv"]})
+
+    def test_bundle_rejects_aliased_targets_and_non_regular_backup(self) -> None:
+        series = uniform_linear(10).sample_series()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "analysis.csv"
+            target.write_bytes(b"previous-evidence")
+            paths = {"csv": target, "npz": root / "sub" / ".." / target.name, "markdown": root / "analysis.md"}
+            with self.assertRaisesRegex(ValueError, "distinct"):
+                export_bundle(paths, series)
+            self.assertEqual(target.read_bytes(), b"previous-evidence")
+            self.assertFalse(paths["markdown"].exists())
+
+            if not hasattr(os, "mkfifo"):
+                return
+            paths["npz"] = root / "pipe"
+            os.mkfifo(paths["npz"])
+            for link_error in (None, OSError("hard links unavailable")):
+                with (
+                    self.subTest(copy_fallback=link_error is not None),
+                    patch("neo_tracker.kinematics.export.os.link", wraps=os.link, side_effect=link_error),
+                    self.assertRaisesRegex(ValueError, "regular file"),
+                ):
+                    export_bundle(paths, series)
+                self.assertEqual(target.read_bytes(), b"previous-evidence")
+                self.assertTrue(stat.S_ISFIFO(paths["npz"].lstat().st_mode))
+                self.assertFalse(paths["markdown"].exists())
+                self.assertEqual(list(root.glob(".neo-tracker-export-*")), [])
 
 
 if __name__ == "__main__":

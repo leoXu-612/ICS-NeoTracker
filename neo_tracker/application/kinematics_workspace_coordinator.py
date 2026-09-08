@@ -22,9 +22,9 @@ from neo_tracker.application.gc_guard import (
 from neo_tracker.application.task_supervisor import BackgroundTaskToken, TaskSupervisor
 from neo_tracker.application.qt_worker_lifecycle import bind_worker_retirement
 from neo_tracker.kinematics.derivatives import derive_series
-from neo_tracker.kinematics.export import export_csv, export_markdown, export_npz
+from neo_tracker.kinematics.export import export_bundle
 from neo_tracker.kinematics.protocols import CancellationProbe
-from neo_tracker.kinematics.runtime import check_cancelled
+from neo_tracker.kinematics.runtime import KinematicsCancelled, check_cancelled
 from neo_tracker.kinematics.series import (
     TrackingResultSnapshot,
     TrackingSeriesBuilder,
@@ -245,12 +245,14 @@ class KinematicsWorkspaceWorker(QObject):
         try:
             output = self._execute()
         except Exception as exc:
-            if self._cancellation.is_cancelled():
+            if isinstance(exc, KinematicsCancelled) or (
+                self.task.operation != "export" and self._cancellation.is_cancelled()
+            ):
                 self.canceled.emit()
             else:
                 self.failed.emit(str(exc))
             return
-        if self._cancellation.is_cancelled():
+        if self._cancellation.is_cancelled() and output.operation != "export":
             self.canceled.emit()
         else:
             self.completed.emit(output)
@@ -320,16 +322,8 @@ class KinematicsWorkspaceWorker(QObject):
         assert isinstance(task.configuration, Mapping)
         fit = task.configuration["fit_result"]
         assert fit is None or isinstance(fit, FitResult)
-        paths = task.export_paths
-        exported = (
-            export_csv(paths["csv"], task.source, fit, cancellation=self._cancellation),
-            export_npz(paths["npz"], task.source, fit, cancellation=self._cancellation),
-            export_markdown(
-                paths["markdown"],
-                task.source,
-                fit,
-                cancellation=self._cancellation,
-            ),
+        exported = export_bundle(
+            task.export_paths, task.source, fit, cancellation=self._cancellation
         )
         return KinematicsWorkspaceOutput(
             task.task_id,
@@ -439,7 +433,7 @@ class KinematicsWorkspaceCoordinator(QObject):
 
     def _handle_completed(self, output: object) -> None:
         job = self._job
-        if not self._accepts(job) or job.cancelled:
+        if not self._accepts(job) or (job.cancelled and job.task.operation != "export"):
             return
         self._terminal_received = True
         self._stage = "applying"
@@ -447,6 +441,7 @@ class KinematicsWorkspaceCoordinator(QObject):
             job.cancelled = True
             self.canceled.emit(job)
         else:
+            job.cancelled = False
             job.completed = True
             apply_started = time.perf_counter()
             self.output_ready.emit(job, output)
@@ -456,9 +451,10 @@ class KinematicsWorkspaceCoordinator(QObject):
 
     def _handle_failed(self, message: str) -> None:
         job = self._job
-        if not self._accepts(job) or job.cancelled:
+        if not self._accepts(job) or (job.cancelled and job.task.operation != "export"):
             return
         self._terminal_received = True
+        job.cancelled = False
         job.failure_detail = str(message)
         self.failed.emit(job, job.failure_detail)
         self.state_changed.emit("finishing")

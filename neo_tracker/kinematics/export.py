@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import json
 import os
+import shutil
 import tempfile
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
@@ -352,4 +353,93 @@ def export_markdown(
     return target
 
 
-__all__ = ["CSV_FIELDS", "export_csv", "export_markdown", "export_npz"]
+def export_bundle(
+    paths: Mapping[str, str | Path],
+    series: SampleSeries,
+    fit: FitResult | None = None,
+    *,
+    cancellation: CancellationProbe | None = None,
+) -> tuple[Path, ...]:
+    """Prepare all formats before publishing; roll back a failed publication.
+
+    Cancellation ends at publication. A returned bundle is fully published.
+    Independent paths cannot be one crash-atomic filesystem transaction.
+    """
+
+    exporters = (("csv", export_csv), ("npz", export_npz), ("markdown", export_markdown))
+    if not isinstance(paths, Mapping) or set(paths) != {name for name, _writer in exporters}:
+        raise ValueError("export bundle requires csv, npz, and markdown paths")
+    if not isinstance(series, SampleSeries):
+        raise TypeError("series must be a SampleSeries")
+    _validate_fit(series, fit)
+    check_cancelled(cancellation, phase="export bundle")
+    targets = tuple(_target_path(paths[name]) for name, _writer in exporters)
+    targets = tuple(path.parent.resolve() / path.name for path in targets)
+    if len(set(targets)) != len(targets):
+        raise ValueError("export bundle paths must be distinct")
+    directories: list[Path] = []
+    staged: dict[Path, Path] = {}
+    backups: dict[Path, Path] = {}
+    published: list[Path] = []
+    keep_backups = False
+    try:
+        for (_name, writer), target in zip(exporters, targets, strict=True):
+            check_cancelled(cancellation, phase="export bundle preparation")
+            directory = Path(tempfile.mkdtemp(prefix=".neo-tracker-export-", dir=target.parent))
+            directories.append(directory)
+            staged[target] = directory / "new"
+            writer(staged[target], series, fit, cancellation=cancellation)
+        for target in targets:
+            check_cancelled(cancellation, phase="export bundle backup")
+            if target.exists() or target.is_symlink():
+                if not target.is_symlink() and not target.is_file():
+                    raise ValueError("export target must be a regular file or symlink")
+                backup = staged[target].parent / "previous"
+                try:
+                    os.link(target, backup, follow_symlinks=False)
+                except (OSError, NotImplementedError):
+                    shutil.copy2(target, backup, follow_symlinks=False)
+                if not backup.is_symlink():
+                    if not backup.is_file():
+                        raise ValueError("export target must be a regular file or symlink")
+                    with backup.open("rb") as handle:
+                        os.fsync(handle.fileno())
+                fsync_parent_directory(backup)
+                backups[target] = backup
+        check_cancelled(cancellation, phase="export bundle publication")
+        # ponytail: three renames with rollback; a single container is needed for crash atomicity.
+        for target in targets:
+            os.replace(staged[target], target)
+            published.append(target)
+            fsync_parent_directory(target)
+    except BaseException as exc:
+        rollback_errors: list[str] = []
+        for target in reversed(published):
+            try:
+                if target in backups:
+                    os.replace(backups[target], target)
+                else:
+                    target.unlink()
+                fsync_parent_directory(target)
+            except BaseException as rollback_error:
+                rollback_errors.append(f"{target}: {rollback_error}")
+        if rollback_errors:
+            keep_backups = True
+            recovery = "; ".join(
+                f"{target} -> {backup}"
+                for target, backup in backups.items()
+                if backup.exists() or backup.is_symlink()
+            )
+            raise OSError(
+                "Export rollback incomplete. Recovery backups retained: "
+                f"{recovery or 'no original files existed'}. Errors: {'; '.join(rollback_errors)}"
+            ) from exc
+        raise
+    finally:
+        if not keep_backups:
+            for directory in directories:
+                shutil.rmtree(directory, ignore_errors=True)
+    return targets
+
+
+__all__ = ["CSV_FIELDS", "export_bundle", "export_csv", "export_markdown", "export_npz"]

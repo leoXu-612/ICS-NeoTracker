@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 import csv
+import os
 import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
+from threading import Event
 from unittest.mock import patch
 
 import numpy as np
 from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
 
 from neo_tracker.kinematics import SampleSeries
+from neo_tracker.kinematics.runtime import KinematicsCancelled
 from neo_tracker.ui.analysis_workspace_controller import FitDraft
 from neo_tracker.ui.main_window import NeoTrackerWindow
 from tests.integration_kinematics_support import close_window, pump_until
@@ -237,6 +240,138 @@ class AnalysisExportIntegrationTests(unittest.TestCase):
                         self.assertEqual(set(Path(directory).iterdir()), set(targets))
                     else:
                         self.assertEqual(list(Path(directory).iterdir()), [])
+
+    def test_failed_or_canceled_export_keeps_all_previous_files(self) -> None:
+        for terminal in ("failed", "canceled"):
+            for existing in (False, True):
+                with (
+                    self.subTest(terminal=terminal, existing=existing),
+                    tempfile.TemporaryDirectory() as directory,
+                ):
+                    window = NeoTrackerWindow(physics_export_directory_picker=lambda _parent: directory)
+                    self.addCleanup(close_window, window)
+                    window.set_physics_series((make_series(),))
+                    targets = tuple(Path(directory) / f"Filtered-x.{suffix}" for suffix in ("csv", "npz", "md"))
+                    if existing:
+                        for path in targets:
+                            path.write_bytes(b"previous-evidence")
+                    outcomes: list[str] = []
+                    coordinator = window._kinematics_workspace_coordinator
+                    coordinator.failed.connect(lambda *_args: outcomes.append("failed"))
+                    coordinator.canceled.connect(lambda *_args: outcomes.append("canceled"))
+                    coordinator.output_ready.connect(lambda *_args: outcomes.append("complete"))
+
+                    def interrupt_npz(*_args: object, **_kwargs: object) -> None:
+                        if terminal == "canceled":
+                            coordinator._worker.request_cancel()
+                            raise KinematicsCancelled("canceled while preparing NPZ")
+                        raise OSError("disk full while preparing NPZ")
+
+                    with (
+                        patch("neo_tracker.kinematics.export.np.savez_compressed", side_effect=interrupt_npz),
+                        patch("PySide6.QtWidgets.QMessageBox.question", return_value=QMessageBox.StandardButton.Yes),
+                    ):
+                        window._export_physics_analysis()
+                        pump_until(lambda: not coordinator.busy)
+
+                    self.assertEqual(outcomes, [terminal])
+                    if existing:
+                        self.assertEqual([path.read_bytes() for path in targets], [b"previous-evidence"] * 3)
+                        self.assertEqual(set(Path(directory).iterdir()), set(targets))
+                    else:
+                        self.assertEqual(list(Path(directory).iterdir()), [])
+
+    def test_cancel_during_publication_reports_the_committed_bundle(self) -> None:
+        real_replace = os.replace
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            window = NeoTrackerWindow(physics_export_directory_picker=lambda _parent: str(root))
+            self.addCleanup(close_window, window)
+            source = make_series()
+            window.set_physics_series((source,))
+            coordinator = window._kinematics_workspace_coordinator
+            published, release = Event(), Event()
+            outcomes: list[str] = []
+            coordinator.output_ready.connect(lambda *_args: outcomes.append("complete"))
+            coordinator.canceled.connect(lambda *_args: outcomes.append("canceled"))
+            coordinator.failed.connect(lambda *_args: outcomes.append("failed"))
+
+            def pause_after_first_publication(staged: object, target: object) -> None:
+                real_replace(staged, target)
+                if Path(target) == root / "Filtered-x.csv":
+                    published.set()
+                    if not release.wait(timeout=10.0):
+                        raise TimeoutError("test did not release publication")
+
+            with patch("neo_tracker.kinematics.export.os.replace", side_effect=pause_after_first_publication):
+                window._export_physics_analysis()
+                try:
+                    pump_until(published.is_set)
+                    job = coordinator.job
+                    self.assertTrue(coordinator.cancel())
+                finally:
+                    release.set()
+                pump_until(lambda: not coordinator.busy)
+
+            self.assertEqual(outcomes, ["complete"])
+            self.assertIsNotNone(job)
+            self.assertTrue(job.completed)
+            self.assertFalse(job.cancelled)
+            self.assertIn("Exported physics analysis", window.statusBar().currentMessage())
+            self.assertEqual({path.suffix for path in root.iterdir()}, {".csv", ".npz", ".md"})
+            with np.load(root / "Filtered-x.npz", allow_pickle=False) as archive:
+                np.testing.assert_array_equal(archive["values"], source.values)
+
+    def test_cancel_cannot_hide_failed_rollback_or_delete_recovery_backups(self) -> None:
+        real_replace = os.replace
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            window = NeoTrackerWindow(physics_export_directory_picker=lambda _parent: str(root))
+            self.addCleanup(close_window, window)
+            window.set_physics_series((make_series(),))
+            targets = {suffix: root / f"Filtered-x.{suffix}" for suffix in ("csv", "npz", "md")}
+            for path in targets.values():
+                path.write_bytes(b"previous-evidence")
+            coordinator = window._kinematics_workspace_coordinator
+            failing, release = Event(), Event()
+            failures: list[str] = []
+            outcomes: list[str] = []
+            coordinator.failed.connect(lambda _job, message: (outcomes.append("failed"), failures.append(message)))
+            coordinator.output_ready.connect(lambda *_args: outcomes.append("complete"))
+            coordinator.canceled.connect(lambda *_args: outcomes.append("canceled"))
+
+            def deny_publication_and_rollback(staged: object, target: object) -> None:
+                if Path(target) == targets["npz"] and Path(staged).name == "new":
+                    failing.set()
+                    if not release.wait(timeout=10.0):
+                        raise TimeoutError("test did not release publication")
+                    raise PermissionError("publication denied")
+                if Path(target) == targets["csv"] and Path(staged).name == "previous":
+                    raise PermissionError("rollback denied")
+                real_replace(staged, target)
+
+            with (
+                patch("neo_tracker.kinematics.export.os.replace", side_effect=deny_publication_and_rollback),
+                patch("PySide6.QtWidgets.QMessageBox.question", return_value=QMessageBox.StandardButton.Yes),
+            ):
+                window._export_physics_analysis()
+                try:
+                    pump_until(failing.is_set)
+                    self.assertTrue(coordinator.cancel())
+                finally:
+                    release.set()
+                pump_until(lambda: not coordinator.busy)
+
+            self.assertEqual(outcomes, ["failed"])
+            self.assertIn("rollback incomplete", failures[0])
+            self.assertIn(str(targets["csv"]), failures[0])
+            backups = list(root.glob(".neo-tracker-export-*/previous"))
+            self.assertEqual(len(backups), 3)
+            self.assertTrue(all(path.read_bytes() == b"previous-evidence" for path in backups))
+            self.assertTrue(all(str(path) in failures[0] for path in backups))
+            self.assertIn("rollback incomplete", window.statusBar().currentMessage())
+            self.assertEqual(targets["npz"].read_bytes(), b"previous-evidence")
+            self.assertEqual(targets["md"].read_bytes(), b"previous-evidence")
 
 
 if __name__ == "__main__":
