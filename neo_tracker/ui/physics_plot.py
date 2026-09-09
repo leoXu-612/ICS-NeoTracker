@@ -651,10 +651,15 @@ class PhysicsPlot(QWidget):
             y = self._y_for_value(value, plot_rect, bounds[2], bounds[3])
             painter.setBrush(QColor("#C55232"))
             painter.drawEllipse(QPointF(x, y), 3.5, 3.5)
+        text = f"{time_s:.6f} s"
+        metrics = painter.fontMetrics()
+        width = min(plot_rect.width(), float(metrics.horizontalAdvance(text)) + 8.0)
+        height = max(18.0, float(metrics.height()) + 2.0)
+        left = max(plot_rect.left(), min(x - width / 2.0, plot_rect.right() - width))
         painter.drawText(
-            QRectF(max(plot_rect.left(), x - 62.0), plot_rect.top() + 4.0, 124.0, 18.0),
+            QRectF(left, plot_rect.top() + 4.0, width, height),
             Qt.AlignmentFlag.AlignCenter,
-            f"{time_s:.6f} s",
+            text,
         )
 
     def _paint_focus_ring(self, painter: QPainter) -> None:

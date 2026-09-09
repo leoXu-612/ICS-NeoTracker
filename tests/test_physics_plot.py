@@ -184,6 +184,7 @@ class PhysicsPlotWidgetTests(unittest.TestCase):
         bounds = plot._data_bounds()
         assert bounds is not None
         painter = Mock()
+        painter.fontMetrics.return_value = plot.fontMetrics()
 
         plot.set_selected_sample(0)
         plot._paint_cursor(painter, plot._plot_rect(), bounds)
@@ -195,6 +196,44 @@ class PhysicsPlotWidgetTests(unittest.TestCase):
         plot._paint_cursor(painter, plot._plot_rect(), bounds)
         painter.drawLine.assert_called_once()
         painter.drawEllipse.assert_not_called()
+
+    def test_cursor_label_fits_inside_plot_at_time_edges_with_larger_fonts(self) -> None:
+        plot = PhysicsPlot()
+        self.addCleanup(plot.close)
+        source = make_series(20)
+        plot.set_series((source,))
+        bounds = plot._data_bounds()
+        assert bounds is not None
+
+        for width in (320, 640, 1440):
+            plot.resize(width, 280)
+            for font_size in (12, 24):
+                font = plot.font()
+                font.setPointSize(font_size)
+                plot.setFont(font)
+                for index in (0, 5, len(source) - 1):
+                    with self.subTest(width=width, font_size=font_size, index=index):
+                        plot.set_selected_sample(index)
+                        painter = Mock()
+                        painter.fontMetrics.return_value = plot.fontMetrics()
+                        plot_rect = plot._plot_rect()
+
+                        plot._paint_cursor(painter, plot_rect, bounds)
+
+                        painter.drawText.assert_called_once()
+                        label_rect, _alignment, text = painter.drawText.call_args.args
+                        self.assertEqual(text, f"{source.time_s[index]:.6f} s")
+                        self.assertTrue(plot_rect.contains(label_rect), str(label_rect))
+                        self.assertGreaterEqual(
+                            label_rect.width(), plot.fontMetrics().horizontalAdvance(text)
+                        )
+                        self.assertGreaterEqual(label_rect.height(), plot.fontMetrics().height())
+                        start, end = painter.drawLine.call_args.args
+                        expected_x = plot._x_for_time(
+                            float(source.time_s[index]), plot_rect, bounds[0], bounds[1]
+                        )
+                        self.assertEqual((start.x(), end.x()), (expected_x, expected_x))
+                        self.assertEqual(plot.selected_sample_index, index)
 
     def test_all_invalid_series_is_not_reported_as_an_unselected_plot(self) -> None:
         plot = PhysicsPlot()

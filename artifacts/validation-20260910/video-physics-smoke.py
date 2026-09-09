@@ -10,6 +10,7 @@ import csv
 from datetime import datetime
 import hashlib
 import json
+import math
 from pathlib import Path
 import platform
 import subprocess
@@ -18,6 +19,7 @@ import sys
 import numpy as np
 import PySide6
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QImage
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
@@ -35,7 +37,9 @@ def main() -> None:
     output.mkdir(parents=True, exist_ok=False)
     exports = output / "exports"
     exports.mkdir()
-    source_diff = subprocess.check_output(["git", "diff", "HEAD", "--", "neo_tracker", "tests"])
+    source_diff = subprocess.check_output([
+        "git", "diff", "HEAD", "--", "neo_tracker", "tests", __file__,
+    ])
     (output / "source.diff").write_bytes(source_diff)
     app = QApplication([])
     app.setQuitOnLastWindowClosed(False)
@@ -154,10 +158,26 @@ def main() -> None:
         QTest.qWait(100)
         assert restored.grab().save(str(output / "restored-fit.png"))
         restored.physics_workspace.show_page("Plot")
+        plot = restored.physics_workspace.plot
+        plot.set_selected_sample(len(source) - 1, source.series_id)
         QTest.qWait(100)
         report["window_exposed"] = restored.windowHandle().isExposed()
         report["device_pixel_ratio"] = restored.devicePixelRatioF()
         assert restored.grab().save(str(output / "restored-plot.png"))
+        image_path = output / "restored-plot-export.png"
+        assert plot.export_image(image_path)
+        image = QImage(str(image_path))
+        assert not image.isNull()
+        assert (image.width(), image.height()) == (
+            math.ceil(plot.width() * plot.devicePixelRatioF()),
+            math.ceil(plot.height() * plot.devicePixelRatioF()),
+        )
+        report["plot_cursor"] = {
+            "sample_index": plot.selected_sample_index,
+            "time_label": f"{source.time_s[-1]:.6f} s",
+            "export_size": [image.width(), image.height()],
+        }
+        mark("last-sample cursor rendered in the window and exported PNG")
     finally:
         for window in reversed(windows):
             window._discard_unapplied_drafts(show_status=False)
