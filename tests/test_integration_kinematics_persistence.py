@@ -115,8 +115,47 @@ class KinematicsPersistenceIntegrationTests(unittest.TestCase):
 
         self.assertEqual(restored_window.physics_workspace.current_page, "Plot")
         self.assertEqual(restored_window.physics_workspace.plot.selected_range, (0.1, 0.5))
+        self.assertEqual(restored_window.physics_inspector.object_label.text(), "Plot")
+        self.assertEqual(restored_window.physics_inspector.range_label.text(), "0.1–0.5 s")
         self.assertEqual(restored_window.physics_workspace.series_combo.currentData(), derived_id)
         self.assertIsNone(restored_window.analysis_workspace_controller.state.fit_result)
+        self.assertFalse(restored_window._project_dirty)
+
+    def test_consecutive_plot_replays_refresh_inspector_without_changing_definitions(self) -> None:
+        source_window = self.make_window()
+        first_id = self.build_saved_derivative(source_window)
+        source_window.physics_workspace.show_page("Plot")
+        source_window.physics_workspace.plot.set_selected_range(0.1, 0.5)
+        source_window.physics_workspace.plot.rangeSelected.emit(0.1, 0.5)
+
+        controller = source_window.analysis_workspace_controller
+        self.assertTrue(controller.select_series("filtered_state:x"))
+        self.assertTrue(controller.request_derivative(2))
+        pump_until(lambda: not source_window._kinematics_workspace_coordinator.busy)
+        second_id = controller.state.selected_series_id
+        self.assertNotEqual(first_id, second_id)
+        source_window.physics_workspace.plot.set_selected_range(0.2, 0.6)
+        source_window.physics_workspace.plot.rangeSelected.emit(0.2, 0.6)
+        definitions = source_window.current_task.analysis_workspace
+        self.assertEqual(len(definitions.definitions), 2)
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "two-plot-views.ntproj"
+            source_window._project_from_window(path).save(path)
+            restored_window = self.make_window()
+            restored_window._load_project(path)
+            pump_until(
+                lambda: not restored_window._kinematics_workspace_coordinator.busy
+                and not restored_window._physics_replay_queue
+                and second_id in restored_window._physics_series_by_id
+            )
+
+        self.assertEqual(restored_window.physics_workspace.current_page, "Plot")
+        self.assertEqual(restored_window.physics_workspace.plot.selected_range, (0.2, 0.6))
+        self.assertEqual(restored_window.physics_inspector.object_label.text(), "Plot")
+        self.assertEqual(restored_window.physics_inspector.range_label.text(), "0.2–0.6 s")
+        self.assertIn("0.2–0.6 s", restored_window.physics_inspector.accessibleDescription())
+        self.assertEqual(restored_window.current_task.analysis_workspace, definitions)
         self.assertFalse(restored_window._project_dirty)
 
     def test_changed_results_leave_saved_definition_disabled_as_stale(self) -> None:
@@ -303,6 +342,8 @@ class KinematicsPersistenceIntegrationTests(unittest.TestCase):
         self.assertAlmostEqual(float(fit_result.parameters[0]), 2.0, places=10)
         self.assertEqual(restored_window.physics_workspace.current_page, "Plot")
         self.assertEqual(restored_window.physics_workspace.plot.selected_range, (0.25, 0.65))
+        self.assertEqual(restored_window.physics_inspector.object_label.text(), "Plot")
+        self.assertEqual(restored_window.physics_inspector.range_label.text(), "0.25–0.65 s")
         self.assertEqual(restored_window.fit_panel.series_combo.currentData(), "filtered_state:x")
         self.assertEqual(restored_window.fit_panel.model_combo.currentData(), "linear")
         self.assertAlmostEqual(restored_window.fit_panel.range_start_spin.value(), 0.15)

@@ -743,14 +743,15 @@ class PhysicsWorkspaceMixin:
             self.analysis_workspace_controller.set_residual_visible(
                 residual_visible is True
             )
+        if definition.selected_range_s is not None:
+            self.physics_workspace.plot.set_selected_range(*definition.selected_range_s)
         page = definition.view_state.get("page")
         if isinstance(page, str):
             try:
                 self.physics_workspace.show_page(page)
             except ValueError:
                 pass
-        if definition.selected_range_s is not None:
-            self.physics_workspace.plot.set_selected_range(*definition.selected_range_s)
+        self._refresh_physics_page_inspector(self.physics_workspace.current_page)
         self._physics_definition_states[definition.analysis_id] = "current"
 
     def _persist_operation_definition(
@@ -898,6 +899,10 @@ class PhysicsWorkspaceMixin:
             and self.selection_session.state.selected_series_id != fit_series_id
         ):
             self._physics_series_activated(fit_series_id, SelectionOrigin.FIT)
+        self._refresh_physics_page_inspector(page)
+        self._persist_active_physics_view()
+
+    def _refresh_physics_page_inspector(self, page: str) -> None:
         state = self.analysis_workspace_controller.state
         source = self._physics_series_by_id.get(state.selected_series_id or "")
         if page == "Plot":
@@ -914,7 +919,6 @@ class PhysicsWorkspaceMixin:
             self.physics_inspector.show_series(source)
         else:
             self.physics_inspector.clear()
-        self._persist_active_physics_view()
 
     def _physics_range_selected(self, start_s: float, end_s: float) -> None:
         selected_range_s = tuple(sorted((float(start_s), float(end_s))))
