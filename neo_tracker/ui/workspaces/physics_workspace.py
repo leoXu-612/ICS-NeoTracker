@@ -184,6 +184,7 @@ class PhysicsWorkspace(QFrame):
         fit_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         fit_scroll.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         fit_scroll.setWidget(self.fit_stack)
+        self.fit_stack.setAutoFillBackground(False)
         self._add_page("Fit", fit_scroll)
 
         self._add_page(

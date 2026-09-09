@@ -858,7 +858,7 @@ class NeoTrackerWindow(
     def _apply_style(self) -> None:
         self.setStyleSheet(
             """
-            QMainWindow {
+            QMainWindow, QScrollArea, QStatusBar {
                 background: #f5f5f7;
             }
             QWidget {
@@ -1547,6 +1547,7 @@ class NeoTrackerWindow(
         page.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         page.setAccessibleName(f"{label} workflow")
         page.setWidget(content)
+        content.setAutoFillBackground(False)
         self.sidebar_tabs.addTab(page, label)
         return page
 

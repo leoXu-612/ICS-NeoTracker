@@ -17,8 +17,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import numpy as np
 import shiboken6
-from PySide6.QtCore import QCoreApplication, Qt, QTimer
-from PySide6.QtGui import QCloseEvent
+from PySide6.QtCore import QCoreApplication, QPoint, Qt, QTimer
+from PySide6.QtGui import QCloseEvent, QColor, QPalette
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import (
     QApplication,
@@ -54,6 +54,7 @@ from neo_tracker.project import NeoTrackerProject, ProjectTaskSnapshot, Tracking
 from neo_tracker.roi import AnnularROI
 from neo_tracker.ui.analysis_controller import AnalysisController
 from neo_tracker.ui.main_window import NeoTrackerWindow, PreviewDecodeJob
+from neo_tracker.ui.view_state import PhysicsWorkspaceStateStore
 from neo_tracker.ui.isolated_media import (
     IsolatedMediaLimits,
     PreviewDecoderSession,
@@ -683,6 +684,42 @@ class MainWindowStructureTests(unittest.TestCase):
             window.close()
         finally:
             app.setFont(original_font)
+
+    def test_light_scroll_surfaces_and_status_bar_ignore_dark_system_background(self) -> None:
+        original_palette = self.app.palette()
+        self.addCleanup(self.app.setPalette, original_palette)
+        dark_palette = QPalette(original_palette)
+        dark_palette.setColor(QPalette.ColorRole.Window, QColor("#333333"))
+        dark_palette.setColor(QPalette.ColorRole.Base, QColor("#242424"))
+        self.app.setPalette(dark_palette)
+
+        window = NeoTrackerWindow(physics_layout_store=PhysicsWorkspaceStateStore())
+        self.addCleanup(close_window_safely, window)
+        window.resize(1440, 900)
+        window.show()
+
+        def assert_light_background(widget: QWidget) -> None:
+            QCoreApplication.processEvents()
+            image = window.grab().toImage()
+            point = widget.mapTo(window, QPoint(2, 2))
+            scale = image.devicePixelRatio()
+            self.assertEqual(
+                image.pixelColor(int(point.x() * scale), int(point.y() * scale)).name(),
+                "#f5f5f7",
+                widget.objectName(),
+            )
+
+        for index in range(window.sidebar_tabs.count()):
+            with self.subTest(page=window.sidebar_tabs.tabText(index)):
+                window.sidebar_tabs.setCurrentIndex(index)
+                assert_light_background(window.sidebar_tabs.widget(index).viewport())
+
+        window.physics_workspace.show_page("Fit")
+        fit_scroll = window.physics_workspace.findChild(QScrollArea, "physicsFitPage")
+        self.assertIsNotNone(fit_scroll)
+        assert_light_background(fit_scroll.viewport())
+        assert_light_background(window.statusBar())
+        self.assertEqual(self.app.palette(), dark_palette)
 
     def test_preview_transport_exposes_named_frame_controls_and_label_buddy(self) -> None:
         window = NeoTrackerWindow()
