@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from neo_tracker.kinematics import FitResult, FitStatus, SampleSeries
+from neo_tracker.kinematics import FitRequest, FitResult, FitStatus, SampleSeries
 from neo_tracker.ui.analysis_workspace_controller import AnalysisWorkspaceState, FitDraft
 
 
@@ -48,6 +48,7 @@ class FitPanel(QWidget):
         self._engine_available = True
         self._syncing = False
         self._draft_baseline: tuple[object, ...] | None = None
+        self._request_baseline: FitRequest | None = None
         self._range_values = [0.0, 0.0]
         self.setAccessibleName("Physics model fit")
         self.setAccessibleDescription(
@@ -191,18 +192,30 @@ class FitPanel(QWidget):
         )
         self._update_controls()
         if not preserve_draft:
-            self._draft_baseline = self._draft_state() if items else None
+            self.mark_draft_applied()
         self._syncing = False
 
     def is_dirty(self) -> bool:
-        return bool(
-            self._series
-            and self._draft_baseline is not None
-            and self._draft_state() != self._draft_baseline
-        )
+        if (
+            not self._series
+            or self._draft_baseline is None
+            or self._draft_state() == self._draft_baseline
+        ):
+            return False
+        try:
+            draft = self.draft()
+            return draft.to_request(self._series[draft.series_id]) != self._request_baseline
+        except Exception:
+            # Invalid edits remain a draft until corrected or explicitly discarded.
+            return True
 
     def mark_draft_applied(self) -> None:
         self._draft_baseline = self._draft_state() if self._series else None
+        try:
+            draft = self.draft()
+            self._request_baseline = draft.to_request(self._series[draft.series_id])
+        except Exception:
+            self._request_baseline = None
 
     def restore_draft(self, draft: FitDraft) -> bool:
         if self.is_dirty():
@@ -227,7 +240,7 @@ class FitPanel(QWidget):
             )
             self.bounds_edit.setText(json.dumps(dict(draft.bounds), sort_keys=True))
             self.clear_result()
-            self._draft_baseline = self._draft_state()
+            self.mark_draft_applied()
         finally:
             self._syncing = False
         return True

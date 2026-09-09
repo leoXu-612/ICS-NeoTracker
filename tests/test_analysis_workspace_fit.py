@@ -106,6 +106,28 @@ class FitPanelTests(unittest.TestCase):
         self.assertEqual(drafts, [])
         self.assertIn("Bounds.omega must contain numeric values", panel.status_label.text())
 
+    def test_draft_comparison_ignores_hidden_settings_and_revert_preserves_text(self) -> None:
+        panel = FitPanel()
+        panel.set_series((make_series(),))
+        panel.initial_parameters_edit.setText("unfinished hidden JSON")
+        panel.bounds_edit.setText("unfinished hidden bounds")
+        self.assertFalse(panel.is_dirty())
+
+        panel.model_combo.setCurrentText("Sinusoidal")
+        panel.initial_parameters_edit.setText('{ "omega": 3 }')
+        panel.bounds_edit.setText('{ "omega": [0.1, 10] }')
+        panel.mark_draft_applied()
+        panel.initial_parameters_edit.setText('{"omega": 3.0}')
+        panel.bounds_edit.setText('{"omega": [0.1, 10.0]}')
+        self.assertFalse(panel.is_dirty())
+
+        panel.initial_parameters_edit.setText('{"omega": 4.0}')
+        self.assertTrue(panel.is_dirty())
+        panel.revert_draft()
+        self.assertFalse(panel.is_dirty())
+        self.assertEqual(panel.initial_parameters_edit.text(), '{ "omega": 3 }')
+        self.assertEqual(panel.bounds_edit.text(), '{ "omega": [0.1, 10] }')
+
     def test_numeric_json_strings_are_not_coerced_to_fit_numbers(self) -> None:
         panel = FitPanel()
         panel.set_series((make_series(),))
@@ -393,12 +415,23 @@ class MainWindowFitIntegrationTests(unittest.TestCase):
         window.fit_panel.run_button.click()
         pump_until(lambda: not window.analysis_workspace_controller.busy)
 
+        result = window.analysis_workspace_controller.state.fit_result
+        fit_id = window.selection_session.state.selected_fit_id
+        self.assertIsNotNone(result)
+        window.fit_panel.residual_checkbox.setChecked(True)
         window.fit_panel.initial_parameters_edit.setText(
-            '{"amplitude": 1.0, "omega": 3.0}'
+            '{ "amplitude": 1, "omega": 3 }'
         )
         window.fit_panel.bounds_edit.setText(
-            '{"amplitude": [0.1, 2.0], "omega": [0.1, 10.0]}'
+            '{ "amplitude": [0.1, 2], "omega": [0.1, 10] }'
         )
+        self.assertFalse(window.fit_panel.is_dirty())
+        self.assertNotIn("Physics fit", window._unapplied_draft_names())
+        self.assertIs(window.analysis_workspace_controller.state.fit_result, result)
+        self.assertEqual(window.selection_session.state.selected_fit_id, fit_id)
+        self.assertIsNotNone(window.physics_workspace.plot._fit_series)
+        self.assertTrue(window.fit_panel.residual_checkbox.isChecked())
+        self.assertTrue(window.fit_panel.export_button.isEnabled())
         window.fit_panel.run_button.click()
         pump_until(lambda: not window.analysis_workspace_controller.busy)
 
@@ -408,6 +441,41 @@ class MainWindowFitIntegrationTests(unittest.TestCase):
             if item.fit_config is not None
         ]
         self.assertEqual(len(definitions), 1)
+
+    def test_changed_or_invalid_fit_values_still_invalidate_the_result(self) -> None:
+        for field, text in (
+            ("initial_parameters_edit", '{"omega": 4}'),
+            ("initial_parameters_edit", '{"omega": true}'),
+            ("initial_parameters_edit", '{"omega":'),
+            ("initial_parameters_edit", '{"omega": 3, "omega": 3}'),
+            ("initial_parameters_edit", '{"omega": NaN}'),
+            ("bounds_edit", '{"omega": [0.1, 0.1]}'),
+            ("bounds_edit", '{"omega": [false, 10]}'),
+        ):
+            with self.subTest(field=field, text=text):
+                window = self.make_window()
+                window.set_kinematics_fit_operator(RecordingFitOperator())
+                window.set_physics_series((make_series(),))
+                panel = window.fit_panel
+                panel.model_combo.setCurrentText("Sinusoidal")
+                panel.initial_parameters_edit.setText('{ "omega": 3 }')
+                panel.bounds_edit.setText('{ "omega": [0.1, 10] }')
+                panel.run_button.click()
+                pump_until(lambda: not window.analysis_workspace_controller.busy)
+                self.assertIsNotNone(window.analysis_workspace_controller.state.fit_result)
+
+                getattr(panel, field).setText(text)
+
+                self.assertIn("Physics fit", window._unapplied_draft_names())
+                self.assertEqual(window.analysis_workspace_controller.state.status, "dirty")
+                self.assertIsNone(window.analysis_workspace_controller.state.fit_result)
+                self.assertIsNone(window.physics_workspace.plot._fit_series)
+                self.assertFalse(panel.residual_checkbox.isEnabled())
+                self.assertTrue(panel.export_button.isEnabled())  # The source series is still exportable.
+                window._discard_unapplied_drafts(show_status=False)
+                self.assertNotIn("Physics fit", window._unapplied_draft_names())
+                self.assertEqual(panel.initial_parameters_edit.text(), '{ "omega": 3 }')
+                self.assertIsNone(window.analysis_workspace_controller.state.fit_result)
 
     def test_fit_series_change_updates_the_shared_action_source(self) -> None:
         window = self.make_window()
