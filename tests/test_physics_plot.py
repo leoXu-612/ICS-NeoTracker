@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import numpy as np
 from PySide6.QtCore import QPoint, Qt
@@ -123,9 +123,12 @@ class PhysicsPlotWidgetTests(unittest.TestCase):
         )
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "plot.png"
+            path.write_bytes(b"previous export")
             self.assertTrue(plot.export_image(path))
             self.assertGreater(path.stat().st_size, 0)
             image = QImage(str(path))
+            self.assertFalse(image.isNull())
+            self.assertEqual(list(Path(tmpdir).iterdir()), [path])
         plot_rect = plot._plot_rect()
         background = image.pixelColor(0, 0).rgba()
         self.assertTrue(
@@ -143,6 +146,36 @@ class PhysicsPlotWidgetTests(unittest.TestCase):
             )
         )
         plot.close()
+
+    def test_failed_image_export_preserves_target_and_removes_partial_file(self) -> None:
+        plot = PhysicsPlot()
+        self.addCleanup(plot.close)
+        plot.resize(320, 200)
+        plot.set_series((make_series(20),))
+
+        def partial_save(filename: str, _format: str) -> bool:
+            Path(filename).write_bytes(b"partial PNG")
+            return False
+
+        for existing in (False, True):
+            for failure in ("encode", "replace"):
+                with self.subTest(existing=existing, failure=failure), tempfile.TemporaryDirectory() as directory:
+                    target = Path(directory) / "plot.png"
+                    previous = b"previous export"
+                    if existing:
+                        target.write_bytes(previous)
+                    writer_failure = (
+                        patch("neo_tracker.ui.physics_plot.QPixmap.save", side_effect=partial_save)
+                        if failure == "encode"
+                        else patch("neo_tracker.atomic_io.os.replace", side_effect=OSError("replace failed"))
+                    )
+                    with writer_failure:
+                        self.assertFalse(plot.export_image(target))
+                    if existing:
+                        self.assertEqual(target.read_bytes(), previous)
+                    else:
+                        self.assertFalse(target.exists())
+                    self.assertEqual(list(Path(directory).iterdir()), [target] if existing else [])
 
     def test_mouse_selection_is_limited_to_the_data_rectangle(self) -> None:
         plot = PhysicsPlot()

@@ -88,3 +88,15 @@
 两份报告均记录基础提交 `dc3e15e8979f4d801d9a3c72b5febd1f0f87d70e` 加 `source.diff`，补丁 SHA-256 均为 `4f796dd52eb81785d2c281cd3c71f426478f35401f30b02e08fb3d11d50d3cf3`；72 帧追踪、拟合、三格式回读、项目保存/重开及输入哈希不变均再次通过，窗口正常关闭、后台 idle、进程 exit 0。原生日志仍有一条 IMK mach-port 消息。无 `-final` 的早期输出不包含完整画面等待，不得代替最终证据。
 
 定向 42 项通过（1.801 s）；最终全量 805 项通过（186.275 s、进程 exit 0），`compileall`、`pip check`、`git diff --check` 通过。流程报告的 `passed=true` 表示其断言完成，**不表示完整原生键盘/Retina/无障碍验收通过**：原生按钮 Tab 可达性、真实 2×、物理 OS 按键、VoiceOver 与系统文本缩放仍未关闭。此处 QTest 事件不等同于物理 OS 按键，亦未执行 AX 层级扫描。
+
+## PNG 导出失败保护（2026-09-10）
+
+基础提交 `9aac8b20946973e0649ded6449c705c3752597c2` 的 `PhysicsPlot.export_image` 直接把目标路径交给 `QPixmap.save`，未使用项目已有的原子写入边界。[Qt 官方 API](https://doc.qt.io/qt-6/qpixmap.html#save) 返回成功/失败；不能把失败值当作旧文件未改写的保证。临时目录中的单元测试模拟写入部分内容后返回 false，复现新目标留下半成品、既有目标内容被改写。
+
+按 Ponytail 复用 `atomic_output_path`：先写同目录临时 PNG，写完并同步后才替换目标；编码返回 false 或文件操作抛出 OSError 时返回 false，并由原有窗口状态栏显示失败。绘图、尺寸、像素倍率及布尔返回约定不变，不增加依赖或新的持久化机制。
+
+新增一项回归覆盖新建/覆盖两种目标的部分写入与最终替换失败，共四个子场景；修复前四项失败，修复后均保留旧内容或保持目标不存在，且无临时文件残留。原有成功导出回归补验覆盖旧文件、QImage 回读有效及目录清理。定向 `tests.test_physics_plot tests.test_analysis_workspace tests.test_analysis_workspace_responsiveness tests.test_atomic_export` 合计 53 项通过（1.991 s）。源码与测试补丁 SHA-256 为 `0d60fd73c99c7c2ea348c6b25ff166036260998322d6d83d7327c290dfedf9ac`。
+
+最终全量 806 项通过（175.425 s、进程 exit 0），`compileall`、`pip check`、`git diff --check` 通过。测试使用 `/Library/Frameworks/Python.framework/Versions/3.12/bin/python3`，`PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen`，命令为 `-m unittest discover -s tests -q`。
+
+这些是普通 offscreen 测试中的公开保存 API/文件操作故障模拟，不是实际磁盘耗尽或断电实验。本轮未运行原生 AX 诊断、未改系统设置，亦未重新验证原生 UI、真实 2×、科学数据或长时媒体；前述验收边界保持未关闭。

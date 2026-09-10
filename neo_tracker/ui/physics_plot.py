@@ -11,6 +11,7 @@ from PySide6.QtCore import QPointF, QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QKeyEvent, QMouseEvent, QPainter, QPen, QPixmap, QPolygonF
 from PySide6.QtWidgets import QWidget
 
+from neo_tracker.atomic_io import atomic_output_path
 from neo_tracker.kinematics import FitResult, FitStatus, ProcessingStep, SampleSeries
 
 
@@ -310,7 +311,13 @@ class PhysicsPlot(QWidget):
         image.setDevicePixelRatio(scale)
         image.fill(QColor("#FBFCFC"))
         self.render(image)
-        return bool(image.save(str(target), "PNG"))
+        try:
+            with atomic_output_path(target) as temporary:
+                if not image.save(str(temporary), "PNG"):
+                    raise OSError("Could not write physics plot image")
+        except OSError:
+            return False
+        return True
 
     def paintEvent(self, _event) -> None:  # noqa: N802
         painter = QPainter(self)
