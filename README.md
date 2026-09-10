@@ -353,8 +353,10 @@ neo-tracker
   Gatekeeper/Quarantine 未处理。
 - 最近的平台记录（2026-09-10）：v0.4 的仓库短视频流程在 macOS 26.6.1 arm64、
   Python 3.12.6、PySide6 6.11.1 的 Cocoa 窗口通过，实际倍率为 1×。
-  当前平台 Tab 策略仍跳过 Export PNG；完整原生键盘、VoiceOver、系统文本缩放及当前
-  补丁的真实 2× 验收未关闭。旧平台/旧提交的记录不能替代当前补丁验证，也不能外推到 Intel 或 Linux。
+  经用户授权开启系统“键盘导航”后，加载项目的 Plot 页已验证 Export PNG 双向 Tab 可达；
+  关闭时平台策略仍跳过按钮，复验后已恢复原设置。按键来自 Qt QTest，不是物理 OS 按键。
+  完整原生键盘、VoiceOver、系统文本缩放及当前补丁的真实 2× 验收未关闭；
+  旧平台/旧提交的记录不能替代当前补丁验证，也不能外推到 Intel 或 Linux。
 - 若未来改为分发式 App，需先补齐签名/notarization 与干净环境安装/升级/回滚矩阵
   并另行确认发布授权。
 

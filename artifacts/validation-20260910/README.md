@@ -100,3 +100,15 @@
 最终全量 806 项通过（175.425 s、进程 exit 0），`compileall`、`pip check`、`git diff --check` 通过。测试使用 `/Library/Frameworks/Python.framework/Versions/3.12/bin/python3`，`PYTHONDONTWRITEBYTECODE=1 QT_QPA_PLATFORM=offscreen`，命令为 `-m unittest discover -s tests -q`。
 
 这些是普通 offscreen 测试中的公开保存 API/文件操作故障模拟，不是实际磁盘耗尽或断电实验。本轮未运行原生 AX 诊断、未改系统设置，亦未重新验证原生 UI、真实 2×、科学数据或长时媒体；前述验收边界保持未关闭。
+
+## 经用户授权的系统键盘导航对照（2026-09-10）
+
+用户明确允许临时启用系统“键盘导航”。通过系统设置的键盘页确认原值为 off，切换为 on；验证结束后恢复 off，并再次查看该页确认。没有开启 VoiceOver、辅助功能中的其他键盘功能，或修改应用焦点策略。
+
+两次普通 Cocoa 流程均对应干净提交 `bafed13bc017b235beac65caca0731015acc9fc1`，运行时 `source.diff` 均为空（SHA-256 `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`）。开启时的 11:52:23 +08:00 记录为 `TabFocusAllControls`，加载项目的 Plot 页正反向焦点链均有 21 个控件且 Export PNG 可达；恢复关闭后的 11:53:48 记录为 `TabFocusBehavior.3`，正反向均为 4 个控件且 Export PNG 被跳过。这将该场景的按钮 Tab 差异定位到系统设置，无需新增应用焦点逻辑。
+
+两轮均完成 72 帧追踪、拟合、CSV/NPZ/Markdown 回读、项目保存/重开、PNG 导出、三种窗口尺寸的布局检查及 Data/Plot 方向键与已解码视频帧同步；输入 SHA-256 不变，所有自建窗口关闭、后台 idle、进程 exit 0。开启时的 `keyboard-plot-selection.png` 已查看，画面、帧号 36、1.800000 s 游标及轴标题可见。两轮均为实际 1×，各有一条 IMK mach-port 消息，未阻止流程完成。
+
+完整输出位于共同父目录 `/Users/leo.xu/.codex/visualizations/2026/07/12/019f5664-24a7-7cb0-a53c-2d4c4b1f76b3/` 下的 `video-flow-20260910-cocoa-keyboard-navigation-on/` 与 `video-flow-20260910-cocoa-keyboard-navigation-restored/`。
+
+本节仅关闭“开启系统键盘导航时，已加载项目 Plot 页的双向 Tab 可达性”这一条件性检查；按键仍由 Qt QTest 发送，不是物理 OS 按键，也未覆盖其他所有工作流状态、按钮键盘激活、VoiceOver 或完整 AX。真实 2×、系统文本缩放、真实科学数据与长时媒体验收仍未关闭。本轮按 Ponytail 只补验证记录，没有修改业务代码或验证脚本，未重复运行全量测试。
