@@ -4,6 +4,8 @@
 
 Neo-Tracker 是一个面向物理实验、IYPT 研究和教学分析的 Python 追踪软件原型。它的目标不是把传统 Tracker 再做一遍，而是把“追踪”拆成可组合、可解释、可调参的物理分析流程。
 
+当前 v0.4 开发工作树与主仓库的边界见 [PROJECT_INDEX.md](PROJECT_INDEX.md)；未合并的开发结果不代表主仓库状态。测试与原生界面的最近验证记录见 [2026-09-10 验证记录](artifacts/validation-20260910/README.md)，下文 v0.3 数字仅为历史基线。
+
 核心思想很简单：复杂实验不应该靠一个又一个硬编码补丁解决。用户应该能够选择预设，再调整 ROI、坐标映射、观测模型、状态模型、运动约束和滤波策略，让同一套软件适配色块、小球、圆周运动、波前、火焰前沿、沿轨道运动等常见和特殊场景。
 
 ## Design Philosophy
@@ -282,7 +284,7 @@ Curve Band ROI -> Arc-Length Coordinates -> Brightness/Template Observation -> P
 - Preview 直接把 OpenCV 的连续 BGR 解码帧交给 Qt `BGR888`，保留 owning `QImage.copy()`，不再为显示先分配整帧 RGB；Review 继续使用同一 owner 的 RGB view，公共 `read_frame()` 仍返回连续 RGB。1080p/4K 显示 handoff 分别由 3.241/10.559 降至 2.280/8.146 ms/frame（1.422×/1.296×），最终 RGB 像素逐点一致；可用 `python3 benchmarks/benchmark_preview_bgr_display.py --width 1920 --height 1080 --frames 48 --rounds 9` 重测，边界见 `artifacts/performance-2026-07-16/preview-bgr-display-handoff.md`
 - 主窗口现在可在 1024×768 实际显示：Preview 与侧栏下限收敛，七个工作流页纵向滚动且不产生整窗溢出，Review/Calib/JSON 的密集动作重新分组，长媒体名与运行摘要使用语义不丢失的省略显示。空项目初始焦点落在 Add media，任务列表有无障碍名称；运行中检测到 source drift 会自动返回 Media 的 Relink 恢复入口，取消候选后仍正确显示 `Source changed` 而不是 `Media missing`
 - CSV/NPZ 导出工具；CSV 对所有外部文本执行电子表格公式注入净化，NPZ metadata 使用无 pickle 的 JSON 表示，文件写入复用原子替换边界
-- 当前回归基线为 433 项 unittest；覆盖 Tracking/Probe/Preview/Project-open 进程隔离、IPC/文件/容器上限、来源替换、取消/超时/kill、后台保存、100,000-result 流式打开/协作取消/并发 GC guard/重复替换释放与增量编辑、dirty/undo、1024×768 工具栏徽标/高度/焦点、导出注入和原子失败回滚。下一条保留 2026-07-16 的 330 项基础覆盖清单
+- 历史 433 项 unittest 基线覆盖 Tracking/Probe/Preview/Project-open 进程隔离、IPC/文件/容器上限、来源替换、取消/超时/kill、后台保存、100,000-result 流式打开/协作取消/并发 GC guard/重复替换释放与增量编辑、dirty/undo、1024×768 工具栏徽标/高度/焦点、导出注入和原子失败回滚；这不是当前分支的测试总数。下一条保留 2026-07-16 的 330 项基础覆盖清单
 - 330 项单元测试覆盖核心模块、媒体层、后台批量媒体核验/完整项目读取与任务准备/GUI heartbeat/顺序进度/异常源/整批取消/重复项目路径去重/项目打开取消/窗口关闭收尾/compact clean fingerprint、pre-probed task 无重复探测、连续 RGB/低复制 RGB view/连续 BGR display handoff、RGB/BGR 画布像素一致性、完整/采样 source identity、持久化校验与同元数据内容漂移阻断、Full/Rerun 结果替换默认保护/显式确认/取消不变/零帧恢复/尾段编辑 superseded 持久化与导出/终态作用目标同步/线程终态解锁、worker 严格有界一帧预取/容量包含 in-flight decode/轻量交接/阶段重叠/进度首项/50 ms 限频/强制终态/取消竞态/非法 FPS 前置拒绝/分阶段终态性能指标、WAV 16/24-bit 分块解码数值/所有权/预取消/loading→processing 阶段、tracking source metadata-only discovery/未变化 refresh cache/列表变化检测/显式 force 与内部 edit invalidation/usable-total-omitted/稀疏非有限样本/filtered-state 优先级/已发现 rate 复用/dense no-slice/worker handoff/cancel 与 Stage 1→Stage 2、Review 完整行虚拟模型/有界行缓存/隐藏标签页末行可见/中间行预览联动/diagnostics 单次索引/双项静态缓存/失效边界/诊断图显示像素有界与完整点击目标/原生 Qt Results、ROI 节点和运行比较表格、Review cache 帧数/字节双限额/增量 history accounting/反向贪心 byte selection/ROI-local placement/full-frame Color compact window/按需精确展开/dense fallback/LRU/live peak、Run runtime backend/性能项目往返/UI/最新终态选择/比较/CSV/报告与 legacy 缺省、Color/Brightness ROI 窗口计算/全帧坐标与响应还原/原位归一化与旧公式逐元素一致、Template uint8 ROI 搜索窗口/局部响应 placement/内容变更失效/只读预处理和 FFT 核复用、Tracking 完整模块可见性/运行自动聚焦/取消 last-sample 语义/Signal 方法相关参数显隐、Review Velocity 单位化 selector 与内部 key 保持、OpenCV 局部包围盒/稀疏/稠密全局 component weighting 一致性、暂停 Preview 与处理帧语义、uint8 Color Marker 与负 stride 亮度/融合 Fire response/常量帧原位清零数值一致性、环形直接/线性索引采样、ROI 外证据隔离、float 全帧缩放与非连续空间视图兼容、五类 ROI 广播 mask 与旧稠密网格公式逐元素一致/只读缓存、Curve Band 分段包围盒与画面外/退化线段一致性、Rectangle/Circle/Annulus/Polygon 帧内包围盒与画面外/分数几何一致性、环形 backend 说明与 Live performance 行生命周期、EdgeFront ROI-local 单轴梯度/ROI 外干扰隔离/局部 placement/Review 展开/前沿代表点/非法轴回退、Response RGBA 映射/显示像素有界采样/resize 与 Retina cache key/同对象 plugin handoff 失效、公共连续 RGB/worker 低 copy 输入语义、source-time playback/低 FPS/跳帧说明、解码失败停止与可访问恢复、导航不重算静态 Tracking 汇总、Review overlay 缓存失效/二分与 plugin fallback、静态诊断选帧复用、项目/分析/Review 控制器、UI 结构、大项目状态缓存/精确恢复、项目内容基线/持久未保存状态/Save-Discard-Cancel/Open-Close 防丢失与关闭取消恢复、ROI/定标/JSON/媒体候选/预览选择草稿识别、校验后仍未 Apply 的 JSON、Keep Editing 保留、Discard Drafts 统一恢复、task/preset 选择回滚、scratch/已有项目 Add Media、task 移除/撤销的草稿生命周期、双阶段取消不提前清草稿、任务影响摘要/二次确认/原位撤销/显式空项目保存、离线媒体候选比对/类型拒绝/安全重连、edit-only 结果状态清理、同路径媒体元数据/内容摘要漂移阻断、结果保护、可切换诊断图与响应空间路由、五类 ROI 数值/节点/画布拖动/中点插入/键盘微调与绘制状态、带单位的 ROI/Scale 摘要、定标长度/单位草稿、Apply/Revert 和不重画修正、多候选双后端与向量聚合一致性、模板 NCC 直接/FFT/OpenCV 数值一致性、零方差语义、历史响应图后台恢复与过期隔离、四类 tracking outcome、有界运行历史项目往返、运行/编辑历史筛选、运行双选比较、原序号 CSV 导出与编辑跳帧、ROI/Signal 配置拒绝、提前 EOF、后台任务 generation、终态锁定、过期回调隔离、Tracking/Signal/Review/Media Probe 取消与安全关闭、长信号工作集保护、ROI 缓存、项目迁移兼容性、追踪续跑/遮挡恢复和信号分析
 
 还没有完整完成：
@@ -349,12 +351,14 @@ neo-tracker
   环境与 pip 安装的依赖，见上）。
 - 未提供：`.app` 打包、代码签名（codesign）、notarization、自动更新或回滚通道；
   Gatekeeper/Quarantine 未处理。
-- 平台证据：macOS 15.7.7 Apple Silicon 原生窗口验证（Retina 2×）；其他 macOS 版本、
-  Intel、Linux 未做部署验证。
+- 最近的平台记录（2026-09-10）：v0.4 的仓库短视频流程在 macOS 26.6.1 arm64、
+  Python 3.12.6、PySide6 6.11.1 的 Cocoa 窗口通过，实际倍率为 1×。
+  当前平台 Tab 策略仍跳过 Export PNG；完整原生键盘、VoiceOver、系统文本缩放及当前
+  补丁的真实 2× 验收未关闭。旧平台/旧提交的记录不能替代当前补丁验证，也不能外推到 Intel 或 Linux。
 - 若未来改为分发式 App，需先补齐签名/notarization 与干净环境安装/升级/回滚矩阵
-  （见 FORDEEPSEEK.md P2）。
+  并另行确认发布授权。
 
-## Physics Analysis v0.3 状态
+## Physics Analysis v0.3 状态（历史基线）
 
 `integration/physics-analysis-v0.3` 已集成运动学 Engine、Data/Plot/Fit 工作台、Schema v3、后台协调、持久化重放和安全导出。最终验收为 674/674 tests；Engine/Workspace 的 645 个唯一 Test ID 在 Integration 中缺失 0 个；100k 项目三轮 heartbeat 最大 `52.741 ms` 且 payload/fingerprint 一致；真实 HEVC 1080p/240fps VFR 原片 5,536 帧双跑 digest 一致、取消 44 ms、无孤儿 helper。完整数据见 `artifacts/integration-v03/`、`artifacts/v0.3.0-alpha/final-summary.md` 与 `collab/FROM_INTEGRATION_V03.md`。
 
