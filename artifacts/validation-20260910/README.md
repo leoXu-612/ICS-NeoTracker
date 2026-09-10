@@ -112,3 +112,11 @@
 完整输出位于共同父目录 `/Users/leo.xu/.codex/visualizations/2026/07/12/019f5664-24a7-7cb0-a53c-2d4c4b1f76b3/` 下的 `video-flow-20260910-cocoa-keyboard-navigation-on/` 与 `video-flow-20260910-cocoa-keyboard-navigation-restored/`。
 
 本节仅关闭“开启系统键盘导航时，已加载项目 Plot 页的双向 Tab 可达性”这一条件性检查；按键仍由 Qt QTest 发送，不是物理 OS 按键，也未覆盖其他所有工作流状态、按钮键盘激活、VoiceOver 或完整 AX。真实 2×、系统文本缩放、真实科学数据与长时媒体验收仍未关闭。本轮按 Ponytail 只补验证记录，没有修改业务代码或验证脚本，未重复运行全量测试。
+
+## PNG 按钮空格键激活（2026-09-10）
+
+沿用 `MainWindowPhysicsWorkspaceTests.test_plot_image_export_is_reachable_from_workspace`，将原来的直接 `.click()` 改为可见、启用且已聚焦按钮的 Qt Space 按下/松开：按下时不调用文件选择器，松开后恰好调用一次；实际 PNG 写入后可由 QImage 回读，状态栏报告成功，canonical selection 保持不变。测试窗口显式注入现有内存布局存储，避免 Cocoa 运行写入用户应用偏好。
+
+最终普通 Cocoa 单项通过（0.725 s、exit 0）；offscreen 的 Plot、Workspace、响应式和原子导出相关 53 项通过（1.957 s、exit 0），`git diff --check` 通过。对应基础提交 `313db4559299ed57de98632e9a1587edf6a0666b` 加测试补丁 SHA-256 `5388f3d50c280f49a8f27c291587efc39cbdba098d590a0bf8b47c4be484940b`。保留原 Test ID，没有增加重复测试或业务代码，未重跑全量测试。
+
+这是程序先设置焦点、再发送 Qt 按键的按钮激活检查；文件选择器沿用原测试替身返回临时文件路径，不代表原生文件对话框或物理 OS 键盘操作已验收。系统键盘导航保持上一轮恢复后的状态，本轮没有修改系统设置或运行 AX 诊断；其他原生无障碍与真实实验边界不变。

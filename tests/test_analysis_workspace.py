@@ -8,13 +8,14 @@ from unittest.mock import patch
 
 import numpy as np
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QImage
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QTableView, QWidget
 
 from neo_tracker.kinematics import SampleSeries
 from neo_tracker.media import MediaInfo
 from neo_tracker.ui.main_window import NeoTrackerWindow
-from neo_tracker.ui.view_state import PhysicsWorkspaceState
+from neo_tracker.ui.view_state import PhysicsWorkspaceState, PhysicsWorkspaceStateStore
 from neo_tracker.ui.workspaces.physics_workspace import PhysicsWorkspace
 
 
@@ -227,7 +228,7 @@ class MainWindowPhysicsWorkspaceTests(unittest.TestCase):
         cls.gui_anchor = QWidget()
 
     def make_window(self) -> NeoTrackerWindow:
-        window = NeoTrackerWindow()
+        window = NeoTrackerWindow(physics_layout_store=PhysicsWorkspaceStateStore())
         window._set_project_clean()
 
         def close_cleanly() -> None:
@@ -395,17 +396,31 @@ class MainWindowPhysicsWorkspaceTests(unittest.TestCase):
     def test_plot_image_export_is_reachable_from_workspace(self) -> None:
         window = self.make_window()
         window.set_physics_series((self.sparse_series(),))
+        window.physics_workspace.show_page("Plot")
+        window.show()
+        button = window.physics_workspace.export_plot_image_button
+        button.setFocus(Qt.FocusReason.TabFocusReason)
+        QApplication.processEvents()
+        self.assertTrue(button.isVisible())
+        self.assertTrue(button.isEnabled())
+        self.assertIs(window.focusWidget(), button)
+        selection = window.selection_session.state
 
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "physics-plot.png"
             with patch(
                 "neo_tracker.ui.shell.physics_workspace_mixin.QFileDialog.getSaveFileName",
                 return_value=(str(path), "PNG images (*.png)"),
-            ):
-                window.physics_workspace.export_plot_image_button.click()
+            ) as save_dialog:
+                QTest.keyPress(button, Qt.Key.Key_Space)
+                save_dialog.assert_not_called()
+                QTest.keyRelease(button, Qt.Key.Key_Space)
+                save_dialog.assert_called_once()
 
             self.assertGreater(path.stat().st_size, 0)
+            self.assertFalse(QImage(str(path)).isNull())
         self.assertIn("Exported physics plot", window.statusBar().currentMessage())
+        self.assertEqual(window.selection_session.state, selection)
 
     def test_final_window_close_unsubscribes_selection_session(self) -> None:
         window = self.make_window()
