@@ -65,7 +65,7 @@ class PhysicsWorkspace(QFrame):
         header = QFrame()
         header.setObjectName("physicsWorkspaceHeader")
         header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(10, 5, 8, 5)
+        header_layout.setContentsMargins(10, 4, 8, 4)
         header_layout.setSpacing(8)
         title = QLabel("PHYSICS")
         title.setObjectName("physicsWorkspaceTitle")

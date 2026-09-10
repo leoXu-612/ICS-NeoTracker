@@ -65,3 +65,26 @@
 报告基础提交为 `744a626f34dcb41186d99c2d7517d88aa21e70c5`；运行时 `source.diff` 包含源码、测试与验证脚本，SHA-256 为 `551be1fdb0215dd7ee1bd6b4d3821405fddaddc455b31c18994891c870dd4556`，已与当前补丁复核一致。名称含 `plot-layout` 的早期输出是中间方案，不得替代本次最终证据。
 
 本节关闭此前记录的内嵌 Plot 轴标题裁切，不关闭任意字体/极窄视口、当前补丁的真实 Retina 2×、VoiceOver/完整 AX、科学定标、长时媒体或发布验收。未执行既有原生诊断脚本，未注入、替换私有运行时或修改系统设置。
+
+## 原生键盘选择与显示倍率复核（2026-09-10）
+
+前节提及的附加 Tab/Shift+Tab 按钮可达性来自 **offscreen**，不代表 Cocoa 原生焦点链。本轮在同一代码和仓库视频上增加双向焦点链记录、平台 Tab 策略、屏幕/窗口实际倍率，以及 Data/Plot 方向键的共享选择断言。没有修改系统键盘设置或焦点策略。
+
+最终 Cocoa 运行于 2026-09-10 11:24:52 +08:00，平台 `tabFocusBehavior=3`；Plot 页媒体状态的焦点链只有 Plot、Media tasks、PreviewCanvas、Frame spin 四项，正反向均闭环，但 **Export PNG 不在 Tab 焦点链中**。offscreen 对照运行于 11:23:42，策略为 `TabFocusAllControls`，同状态正反向均为 21 个控件，Export PNG 可达。因此不能把离屏可达性外推为原生完整键盘验收。[Qt 官方文档](https://doc.qt.io/qt-6/qstylehints.html#tabFocusBehavior-prop) 将该只读值定义为平台 Tab 焦点行为。
+
+两个平台均通过三次方向键操作：Data `Down` 到样本/帧 36（1.8 s），Plot `Right` 到 37（1.85 s），`Left` 返回 36（1.8 s）。每次 canonical selection revision 只增加 1，Data 选中行、Plot 样本、视频帧号与保存的 true time 一致，源序列和 FitResult 保持不变。验证现等待对应帧的解码缓存与 `PreviewCanvas.has_frame()`，不把 Loading frame 截图算作预览完成；最终原生 `keyboard-plot-selection.png` 已查看，真实画面、帧号 36、游标 1.800000 s 与焦点边框同时可见。
+
+对照还复现载入项目后的 offscreen 最小窗口为 1024×769，旧 1024×768 空/简单序列测试不足以覆盖它。产品修复仅将工作区标题栏上下留白各从 5 改为 4，按钮与 Plot 最小尺寸不变；完整视频流程在两个平台的 1024×768、1280×808、1440×900 压缩/恢复场景均通过，离屏 1024×768 截图已查看。
+
+`system_profiler SPDisplaysDataType` 只读检查显示内建 Liquid Retina、2880×1864；但当前 Qt 屏幕和窗口实际报告 1×，普通 `show/raise/activateWindow` 后仍为 1×（active/exposed 均为 true）。未更改 Python.app 的 Info.plist、显示设置或 Qt 缩放环境变量，也未使用强制倍率来替代真实 Retina 2× 验收。
+
+最终输出分别保存在以下共同父目录下：
+
+`/Users/leo.xu/.codex/visualizations/2026/07/12/019f5664-24a7-7cb0-a53c-2d4c4b1f76b3/`
+
+- `video-flow-20260910-cocoa-keyboard-final/`：最终普通原生流程、实际 1×。
+- `video-flow-20260910-offscreen-keyboard-final/`：最终离屏对照。
+
+两份报告均记录基础提交 `dc3e15e8979f4d801d9a3c72b5febd1f0f87d70e` 加 `source.diff`，补丁 SHA-256 均为 `4f796dd52eb81785d2c281cd3c71f426478f35401f30b02e08fb3d11d50d3cf3`；72 帧追踪、拟合、三格式回读、项目保存/重开及输入哈希不变均再次通过，窗口正常关闭、后台 idle、进程 exit 0。原生日志仍有一条 IMK mach-port 消息。无 `-final` 的早期输出不包含完整画面等待，不得代替最终证据。
+
+定向 42 项通过（1.801 s）；最终全量 805 项通过（186.275 s、进程 exit 0），`compileall`、`pip check`、`git diff --check` 通过。流程报告的 `passed=true` 表示其断言完成，**不表示完整原生键盘/Retina/无障碍验收通过**：原生按钮 Tab 可达性、真实 2×、物理 OS 按键、VoiceOver 与系统文本缩放仍未关闭。此处 QTest 事件不等同于物理 OS 按键，亦未执行 AX 层级扫描。

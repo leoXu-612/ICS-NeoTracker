@@ -55,6 +55,15 @@ def main() -> None:
             "python": platform.python_version(),
             "pyside6": PySide6.__version__,
             "qt_platform": app.platformName(),
+            "tab_focus_behavior": str(app.styleHints().tabFocusBehavior()),
+            "screens": [
+                {
+                    "name": screen.name(),
+                    "geometry": list(screen.geometry().getRect()),
+                    "device_pixel_ratio": screen.devicePixelRatio(),
+                }
+                for screen in app.screens()
+            ],
         },
         "source": {
             "path": str(source_path),
@@ -213,6 +222,88 @@ def main() -> None:
             "export_size": [image.width(), image.height()],
         }
         mark("last-sample cursor rendered in the window and exported PNG")
+
+        workspace = restored.physics_workspace
+        workspace.show_page("Data")
+        workspace.series_combo.setCurrentIndex(workspace.series_combo.findData(source.series_id))
+        table = workspace.series_table
+        table.setCurrentIndex(workspace.series_model.index(35, 0))
+        QTest.qWait(100)
+        report["keyboard_selection"] = []
+        for page, key, expected in (
+            ("Data", Qt.Key.Key_Down, 36),
+            ("Plot", Qt.Key.Key_Right, 37),
+            ("Plot", Qt.Key.Key_Left, 36),
+        ):
+            workspace.show_page(page)
+            target = table if page == "Data" else plot
+            target.setFocus(Qt.FocusReason.TabFocusReason)
+            QTest.qWait(50)
+            assert restored.focusWidget() is target
+            before_revision = restored.selection_session.state.selection_revision
+            QTest.keyClick(target, key)
+            pump_until(
+                lambda: restored._preview_decode_cache is not None
+                and restored._preview_decode_cache.request.frame_index == int(source.frame_indices[expected])
+                and restored.preview_label.has_frame(),
+                timeout_s=15,
+            )
+            state = restored.selection_session.state
+            assert state.selection_revision == before_revision + 1
+            assert state.selected_series_id == source.series_id
+            assert state.selected_sample_index == expected
+            assert state.selected_frame_index == int(source.frame_indices[expected])
+            assert state.selected_time_s == float(source.time_s[expected])
+            assert restored.current_task.preview_frame_index == state.selected_frame_index
+            assert restored.preview_frame_spin.value() == state.selected_frame_index
+            assert table.selectionModel().selectedRows()[0].row() == expected
+            assert plot.selected_sample_index == expected
+            report["keyboard_selection"].append({
+                "page": page,
+                "key": key.name,
+                "sample_index": expected,
+                "frame_index": state.selected_frame_index,
+                "time_s": state.selected_time_s,
+                "selection_revision_delta": state.selection_revision - before_revision,
+                "preview_loaded": True,
+            })
+        assert restored._physics_series_by_id[source.series_id] == source
+        assert restored.analysis_workspace_controller.state.fit_result == result
+        assert restored.grab().save(str(output / "keyboard-plot-selection.png"))
+        mark("Data and Plot arrow keys update one shared selection revision and aligned frame/time")
+
+        report["keyboard_tab"] = {"event_source": "Qt QTest; not physical OS key events"}
+        for direction, modifiers in (
+            ("forward", Qt.KeyboardModifier.NoModifier),
+            ("reverse", Qt.KeyboardModifier.ShiftModifier),
+        ):
+            plot.setFocus(Qt.FocusReason.TabFocusReason)
+            QTest.qWait(50)
+            seen = [plot]
+            for _ in range(64):
+                QTest.keyClick(restored.focusWidget(), Qt.Key.Key_Tab, modifiers)
+                QTest.qWait(10)
+                focused = restored.focusWidget()
+                assert focused is not None
+                if focused in seen:
+                    assert focused is plot
+                    break
+                seen.append(focused)
+            else:
+                raise AssertionError("keyboard focus traversal did not close within 64 steps")
+            report["keyboard_tab"][direction] = {
+                "loop_closed": True,
+                "export_png_reachable": export_button in seen,
+                "controls": [
+                    {
+                        "class": widget.metaObject().className(),
+                        "object_name": widget.objectName(),
+                        "accessible_name": widget.accessibleName(),
+                    }
+                    for widget in seen
+                ],
+            }
+        mark("Tab and Shift+Tab focus loops recorded under the current platform policy")
     finally:
         for window in reversed(windows):
             window._discard_unapplied_drafts(show_status=False)
