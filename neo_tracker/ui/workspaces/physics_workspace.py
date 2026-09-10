@@ -46,7 +46,6 @@ class PhysicsWorkspace(QFrame):
         self.setObjectName("physicsWorkspace")
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        self.setMinimumHeight(38)
         self.setAccessibleName("Physics analysis workspace")
         self.setAccessibleDescription(
             "Collapsible Data, Plot, Fit, Diagnostics, Runs, Edits, and Signal workspace. "
@@ -162,13 +161,16 @@ class PhysicsWorkspace(QFrame):
         )
         self.export_plot_image_button.setEnabled(False)
         self.export_plot_image_button.clicked.connect(self.plotImageExportRequested)
+        header_layout.insertWidget(2, self.export_plot_image_button)
+        self.export_plot_image_button.hide()
+        self.layoutStateChanged.connect(
+            lambda state: self.export_plot_image_button.setVisible(
+                not state.collapsed and state.page == "Plot"
+            )
+        )
         plot_page = QWidget()
         plot_layout = QVBoxLayout(plot_page)
         plot_layout.setContentsMargins(8, 7, 8, 8)
-        plot_actions = QHBoxLayout()
-        plot_actions.addStretch(1)
-        plot_actions.addWidget(self.export_plot_image_button)
-        plot_layout.addLayout(plot_actions)
         plot_layout.addWidget(self.plot, 1)
         self._add_page("Plot", plot_page)
 

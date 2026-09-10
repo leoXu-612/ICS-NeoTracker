@@ -18,7 +18,7 @@ import sys
 
 import numpy as np
 import PySide6
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QPoint, QRect, Qt
 from PySide6.QtGui import QImage
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
@@ -159,7 +159,42 @@ def main() -> None:
         assert restored.grab().save(str(output / "restored-fit.png"))
         restored.physics_workspace.show_page("Plot")
         plot = restored.physics_workspace.plot
+        export_button = restored.physics_workspace.export_plot_image_button
         plot.set_selected_sample(len(source) - 1, source.series_id)
+        report["plot_layout"] = []
+        for width, height in ((1024, 768), (1280, 808), (1440, 900)):
+            restored.resize(width, height)
+            for stage in ("compressed", "expanded"):
+                if stage == "compressed":
+                    restored.workspace_splitter.setSizes([restored.workspace_splitter.height(), 120])
+                else:
+                    restored.physics_workspace.set_collapsed(True)
+                    QTest.qWait(50)
+                    assert restored.physics_workspace.height() <= 38
+                    assert not export_button.isVisible()
+                    restored.physics_workspace.set_collapsed(False)
+                QTest.qWait(100)
+                assert (restored.width(), restored.height()) == (width, height), (
+                    stage, restored.size(), restored.minimumSizeHint(),
+                )
+                assert plot.height() >= 180
+                assert export_button.isVisible()
+                assert export_button.height() >= export_button.minimumSizeHint().height()
+                for widget in (plot, export_button):
+                    parent = widget.parentWidget()
+                    while parent is not None:
+                        rectangle = QRect(widget.mapTo(parent, QPoint()), widget.size())
+                        assert parent.rect().contains(rectangle), (parent.objectName(), parent.rect(), rectangle)
+                        parent = parent.parentWidget()
+                report["plot_layout"].append({
+                    "window_size": [width, height],
+                    "stage": stage,
+                    "workspace_height": restored.physics_workspace.height(),
+                    "plot_size": [plot.width(), plot.height()],
+                    "fully_contained": True,
+                })
+            assert restored.grab().save(str(output / f"plot-layout-{width}x{height}.png"))
+        mark("plot stays fully inside its containers at three window sizes after compression and expansion")
         QTest.qWait(100)
         report["window_exposed"] = restored.windowHandle().isExposed()
         report["device_pixel_ratio"] = restored.devicePixelRatioF()

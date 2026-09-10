@@ -109,6 +109,52 @@ class PhysicsWorkspaceResponsiveTests(unittest.TestCase):
                     rectangle = QRect(widget.mapTo(scroll.viewport(), QPoint()), widget.size())
                     self.assertTrue(scroll.viewport().rect().contains(rectangle))
 
+    def test_plot_stays_inside_its_containers_at_small_and_restored_tray_sizes(self) -> None:
+        for stored_height in (None, 120):
+            store = PhysicsWorkspaceStateStore()
+            if stored_height is not None:
+                store.save(PhysicsWorkspaceState(True, "Plot", stored_height))
+            window = self.make_window(store)
+            window.set_physics_series((make_series(),))
+            window.show()
+            workspace = window.physics_workspace
+            workspace.show_page("Plot")
+            for width, height in ((1024, 768), (1280, 808), (1440, 900)):
+                window.resize(width, height)
+                for stage in ("opened", "compressed", "expanded"):
+                    with self.subTest(stored_height=stored_height, size=(width, height), stage=stage):
+                        if stage == "compressed":
+                            window.workspace_splitter.setSizes([window.workspace_splitter.height(), 120])
+                        elif stage == "expanded":
+                            workspace.set_collapsed(True)
+                            QCoreApplication.processEvents()
+                            self.assertLessEqual(workspace.height(), 38)
+                            self.assertFalse(workspace.export_plot_image_button.isVisible())
+                            workspace.set_collapsed(False)
+                        QCoreApplication.processEvents()
+                        self.assertEqual((window.width(), window.height()), (width, height))
+                        self.assertGreaterEqual(workspace.plot.height(), 180)
+                        self.assertTrue(workspace.export_plot_image_button.isVisible())
+                        self.assertGreaterEqual(
+                            workspace.export_plot_image_button.height(),
+                            workspace.export_plot_image_button.minimumSizeHint().height(),
+                        )
+                        for widget in (workspace.plot, workspace.export_plot_image_button):
+                            parent = widget.parentWidget()
+                            while parent is not None:
+                                rectangle = QRect(widget.mapTo(parent, QPoint()), widget.size())
+                                self.assertTrue(
+                                    parent.rect().contains(rectangle),
+                                    f"{parent.objectName()}: {parent.rect()} clips {rectangle}",
+                                )
+                                parent = parent.parentWidget()
+            for page in ("Data", "Fit", "Plot"):
+                workspace.show_page(page)
+                QCoreApplication.processEvents()
+                self.assertEqual(workspace.export_plot_image_button.isVisible(), page == "Plot")
+            workspace.export_plot_image_button.setFocus(Qt.FocusReason.TabFocusReason)
+            self.assertIs(window.focusWidget(), workspace.export_plot_image_button)
+
     def test_canvas_focus_is_reversible_and_does_not_persist_transient_collapse(self) -> None:
         store = PhysicsWorkspaceStateStore()
         window = self.make_window(store)
