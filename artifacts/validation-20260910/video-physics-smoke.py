@@ -6,6 +6,7 @@ directory argument. QT_QPA_PLATFORM selects the Qt backend normally.
 
 from __future__ import annotations
 
+import argparse
 import csv
 from datetime import datetime
 import hashlib
@@ -14,7 +15,6 @@ import math
 from pathlib import Path
 import platform
 import subprocess
-import sys
 
 import numpy as np
 import PySide6
@@ -30,10 +30,18 @@ from tests.integration_kinematics_support import pump_until
 
 
 def main() -> None:
-    source_path = Path("artifacts/experiment-videos/red-dot-tracking.mp4").resolve()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("output", type=Path)
+    parser.add_argument("--source", type=Path, default=Path("artifacts/experiment-videos/red-dot-tracking.mp4"))
+    parser.add_argument("--provenance", default="repository fixture; acquisition provenance unverified")
+    parser.add_argument("--marker-point", nargs=2, type=int, metavar=("X", "Y"))
+    parser.add_argument("--roi", nargs=4, type=float, metavar=("X", "Y", "WIDTH", "HEIGHT"))
+    parser.add_argument("--tracking-timeout-s", type=float, default=30.0)
+    args = parser.parse_args()
+    source_path = args.source.resolve()
     with source_path.open("rb") as handle:
         before = hashlib.file_digest(handle, "sha256").hexdigest()
-    output = Path(sys.argv[1]).resolve()
+    output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=False)
     exports = output / "exports"
     exports.mkdir()
@@ -68,7 +76,7 @@ def main() -> None:
         "source": {
             "path": str(source_path),
             "sha256": before,
-            "provenance": "repository fixture; acquisition provenance unverified",
+            "provenance": args.provenance,
             "stream": json.loads(subprocess.check_output([
                 "ffprobe", "-v", "error", "-select_streams", "v:0",
                 "-show_entries",
@@ -78,6 +86,7 @@ def main() -> None:
         },
         "scientific_validation": "not performed; no calibration or ground truth",
         "native_accessibility_validation": "not performed",
+        "passed": False,
         "milestones": [],
     }
 
@@ -95,18 +104,44 @@ def main() -> None:
         window.show()
         pump_until(lambda: window.isVisible())
         assert window._start_media_probe([str(source_path)])
-        pump_until(lambda: window._background_tasks.idle, timeout_s=20)
+        pump_until(lambda: window._background_tasks.idle, timeout_s=60)
         assert len(window.tasks) == 1
-        assert window.current_task.media_info.frame_count == 72
-        mark("imported 72-frame repository fixture")
+        frame_count = int(report["source"]["stream"]["nb_frames"])
+        assert frame_count > 37, "the keyboard-selection checks require at least 38 frames"
+        assert window.current_task.media_info.frame_count == frame_count
+        report["app_media"] = {
+            "width": window.current_task.media_info.width,
+            "height": window.current_task.media_info.height,
+            "fps": window.current_task.media_info.fps,
+            "frame_count": frame_count,
+        }
+        pump_until(
+            lambda: window._preview_decode_cache is not None
+            and window._preview_decode_cache.request.frame_index == 0
+            and window.preview_label.has_frame(),
+            timeout_s=30,
+        )
+        if args.marker_point is not None:
+            x, y = args.marker_point
+            frame = window._preview_decode_cache.bgr_frame
+            assert 0 <= x < frame.shape[1] and 0 <= y < frame.shape[0]
+            expected_rgb = tuple(float(value) for value in frame[y, x, ::-1])
+            window._color_sample_selected((x, y))
+            assert window._color_blob_observation().sample_rgb == expected_rgb
+            report["marker_sample"] = {"point_px": [x, y], "rgb": expected_rgb}
+        if args.roi is not None:
+            window._roi_selected(tuple(args.roi))
+            assert window.current_task.roi == window._normalize_roi_selection(tuple(args.roi))
+        report["tracking_roi"] = window.current_task.roi
+        mark(f"imported {frame_count}-frame source with decoded preview and requested marker/ROI")
 
         assert window.run_tracking_button.isEnabled()
         QTest.mouseClick(window.run_tracking_button, Qt.MouseButton.LeftButton)
-        pump_until(lambda: window._background_tasks.idle, timeout_s=30)
+        pump_until(lambda: window._background_tasks.idle, timeout_s=args.tracking_timeout_s)
         results = window.current_task.pipeline.results
-        assert len(results) == window.results_model.rowCount() == 72
+        assert len(results) == window.results_model.rowCount() == frame_count
         source = window._physics_series_by_id["state:x_px"]
-        np.testing.assert_array_equal(source.frame_indices, np.arange(72))
+        np.testing.assert_array_equal(source.frame_indices, np.arange(frame_count))
         np.testing.assert_array_equal(source.time_s, [item.time_s for item in results])
         report["tracking_status_counts"] = {
             status: sum(item.status == status for item in results)
@@ -133,7 +168,7 @@ def main() -> None:
         assert set(files) == {".csv", ".npz", ".md"}
         with files[".csv"].open(newline="", encoding="utf-8") as handle:
             rows = list(csv.DictReader(handle))
-        assert len(rows) == 72
+        assert len(rows) == frame_count
         np.testing.assert_array_equal([float(row["time_s"]) for row in rows], source.time_s)
         np.testing.assert_array_equal([float(row["value"]) for row in rows], source.values)
         with np.load(files[".npz"], allow_pickle=False) as archive:
@@ -143,7 +178,7 @@ def main() -> None:
         assert source.source_revision in files[".md"].read_text(encoding="utf-8")
         mark("CSV, NPZ and Markdown exported and read back")
 
-        project_path = output / "repository-fixture-flow.ntproj"
+        project_path = output / "video-flow.ntproj"
         window.project_path = project_path
         assert window._save_project()
         pump_until(lambda: window._background_tasks.idle, timeout_s=10)
@@ -162,6 +197,14 @@ def main() -> None:
         assert restored._physics_series_by_id[source.series_id] == source
         assert restored.analysis_workspace_controller.state.fit_result == result
         assert not restored.fit_panel.is_dirty() and not restored._project_dirty
+        pending_relink = restored.current_task.pending_media_relink
+        report["project_reopen"] = {
+            "results_and_fit_equal": True,
+            "media_available": restored.current_task.media_info.available,
+            "source_review_required": restored.current_task.media_identity_requires_review,
+            "assessment_state": pending_relink[1].state if pending_relink else None,
+            "identity_state": pending_relink[1].identity_state if pending_relink else None,
+        }
         mark("saved project reopened with equal source series and fit result")
         restored.physics_workspace.show_page("Fit")
         QTest.qWait(100)
@@ -304,6 +347,10 @@ def main() -> None:
                 ],
             }
         mark("Tab and Shift+Tab focus loops recorded under the current platform policy")
+        report["passed"] = True
+    except Exception as error:
+        report["failure"] = f"{type(error).__name__}: {error}"
+        raise
     finally:
         for window in reversed(windows):
             window._discard_unapplied_drafts(show_status=False)
@@ -313,12 +360,12 @@ def main() -> None:
                 lambda: window._background_tasks.idle and not window.isVisible(),
                 timeout_s=15,
             )
-    mark("all application windows closed and background tasks idle")
-    with source_path.open("rb") as handle:
-        report["source_unchanged"] = hashlib.file_digest(handle, "sha256").hexdigest() == before
-    assert report["source_unchanged"]
-    report["passed"] = True
-    (output / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        mark("all application windows closed and background tasks idle")
+        with source_path.open("rb") as handle:
+            report["source_unchanged"] = hashlib.file_digest(handle, "sha256").hexdigest() == before
+        report["passed"] = report["passed"] and report["source_unchanged"]
+        (output / "report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+        assert report["source_unchanged"]
     print(json.dumps(report, indent=2), flush=True)
 
 

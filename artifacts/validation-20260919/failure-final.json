@@ -1,0 +1,52 @@
+{
+  "recorded_at": "2026-09-19T10:23:52.190395+08:00",
+  "code_sha": "5b1fccec06000011d4f9f5707a1a33ed0630a9d7",
+  "source_diff_sha256": "001abd20a98fa14cb935221d1606ebf966ad5dc31bbf7206a644c610a17ff476",
+  "runtime": {
+    "os": "macOS-26.6.1-arm64-arm-64bit",
+    "python": "3.12.6",
+    "pyside6": "6.11.1",
+    "qt_platform": "offscreen",
+    "tab_focus_behavior": "TabFocusBehavior.TabFocusAllControls",
+    "screens": [
+      {
+        "name": "",
+        "geometry": [
+          0,
+          0,
+          800,
+          800
+        ],
+        "device_pixel_ratio": 1.0
+      }
+    ]
+  },
+  "source": {
+    "path": "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/artifacts/experiment-videos/red-dot-tracking.mp4",
+    "sha256": "aa5a51d2910d668bdc86eec55d443768f4b2884ea36f68b86f12f045db441353",
+    "provenance": "repository fixture; acquisition provenance unverified",
+    "stream": {
+      "codec_name": "mpeg4",
+      "width": 640,
+      "height": 360,
+      "r_frame_rate": "20/1",
+      "avg_frame_rate": "20/1",
+      "duration": "3.600000",
+      "nb_frames": "72"
+    }
+  },
+  "scientific_validation": "not performed; no calibration or ground truth",
+  "native_accessibility_validation": "not performed",
+  "passed": false,
+  "milestones": [
+    "all application windows closed and background tasks idle"
+  ],
+  "app_media": {
+    "width": 640,
+    "height": 360,
+    "fps": 20.0,
+    "frame_count": 72
+  },
+  "failure": "AssertionError: ",
+  "source_unchanged": true
+}

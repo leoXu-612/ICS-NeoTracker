@@ -1,0 +1,416 @@
+{
+  "recorded_at": "2026-09-19T10:23:00.748412+08:00",
+  "code_sha": "5b1fccec06000011d4f9f5707a1a33ed0630a9d7",
+  "source_diff_sha256": "001abd20a98fa14cb935221d1606ebf966ad5dc31bbf7206a644c610a17ff476",
+  "runtime": {
+    "os": "macOS-26.6.1-arm64-arm-64bit",
+    "python": "3.12.6",
+    "pyside6": "6.11.1",
+    "qt_platform": "offscreen",
+    "tab_focus_behavior": "TabFocusBehavior.TabFocusAllControls",
+    "screens": [
+      {
+        "name": "",
+        "geometry": [
+          0,
+          0,
+          800,
+          800
+        ],
+        "device_pixel_ratio": 1.0
+      }
+    ]
+  },
+  "source": {
+    "path": "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/artifacts/experiment-videos/red-dot-tracking.mp4",
+    "sha256": "aa5a51d2910d668bdc86eec55d443768f4b2884ea36f68b86f12f045db441353",
+    "provenance": "repository fixture; acquisition provenance unverified",
+    "stream": {
+      "codec_name": "mpeg4",
+      "width": 640,
+      "height": 360,
+      "r_frame_rate": "20/1",
+      "avg_frame_rate": "20/1",
+      "duration": "3.600000",
+      "nb_frames": "72"
+    }
+  },
+  "scientific_validation": "not performed; no calibration or ground truth",
+  "native_accessibility_validation": "not performed",
+  "passed": true,
+  "milestones": [
+    "imported 72-frame source with decoded preview and requested marker/ROI",
+    "tracking completed; result rows and true-time series agree",
+    "fit completed through the Run Fit button",
+    "CSV, NPZ and Markdown exported and read back",
+    "saved project reopened with equal source series and fit result",
+    "plot stays fully inside its containers at three window sizes after compression and expansion",
+    "last-sample cursor rendered in the window and exported PNG",
+    "Data and Plot arrow keys update one shared selection revision and aligned frame/time",
+    "Tab and Shift+Tab focus loops recorded under the current platform policy",
+    "all application windows closed and background tasks idle"
+  ],
+  "app_media": {
+    "width": 640,
+    "height": 360,
+    "fps": 20.0,
+    "frame_count": 72
+  },
+  "tracking_roi": null,
+  "tracking_status_counts": {
+    "ok": 72
+  },
+  "fit_sample_count": 72,
+  "project_reopen": {
+    "results_and_fit_equal": true,
+    "media_available": true,
+    "source_review_required": false,
+    "assessment_state": null,
+    "identity_state": null
+  },
+  "plot_layout": [
+    {
+      "window_size": [
+        1024,
+        768
+      ],
+      "stage": "compressed",
+      "workspace_height": 275,
+      "plot_size": [
+        978,
+        185
+      ],
+      "fully_contained": true
+    },
+    {
+      "window_size": [
+        1024,
+        768
+      ],
+      "stage": "expanded",
+      "workspace_height": 276,
+      "plot_size": [
+        978,
+        186
+      ],
+      "fully_contained": true
+    },
+    {
+      "window_size": [
+        1280,
+        808
+      ],
+      "stage": "compressed",
+      "workspace_height": 275,
+      "plot_size": [
+        1234,
+        185
+      ],
+      "fully_contained": true
+    },
+    {
+      "window_size": [
+        1280,
+        808
+      ],
+      "stage": "expanded",
+      "workspace_height": 280,
+      "plot_size": [
+        1234,
+        190
+      ],
+      "fully_contained": true
+    },
+    {
+      "window_size": [
+        1440,
+        900
+      ],
+      "stage": "compressed",
+      "workspace_height": 275,
+      "plot_size": [
+        1394,
+        185
+      ],
+      "fully_contained": true
+    },
+    {
+      "window_size": [
+        1440,
+        900
+      ],
+      "stage": "expanded",
+      "workspace_height": 280,
+      "plot_size": [
+        1394,
+        190
+      ],
+      "fully_contained": true
+    }
+  ],
+  "window_exposed": true,
+  "device_pixel_ratio": 1.0,
+  "plot_cursor": {
+    "sample_index": 71,
+    "time_label": "3.550000 s",
+    "export_size": [
+      1394,
+      190
+    ]
+  },
+  "keyboard_selection": [
+    {
+      "page": "Data",
+      "key": "Key_Down",
+      "sample_index": 36,
+      "frame_index": 36,
+      "time_s": 1.8,
+      "selection_revision_delta": 1,
+      "preview_loaded": true
+    },
+    {
+      "page": "Plot",
+      "key": "Key_Right",
+      "sample_index": 37,
+      "frame_index": 37,
+      "time_s": 1.85,
+      "selection_revision_delta": 1,
+      "preview_loaded": true
+    },
+    {
+      "page": "Plot",
+      "key": "Key_Left",
+      "sample_index": 36,
+      "frame_index": 36,
+      "time_s": 1.8,
+      "selection_revision_delta": 1,
+      "preview_loaded": true
+    }
+  ],
+  "keyboard_tab": {
+    "event_source": "Qt QTest; not physical OS key events",
+    "forward": {
+      "loop_closed": true,
+      "export_png_reachable": true,
+      "controls": [
+        {
+          "class": "PhysicsPlot",
+          "object_name": "",
+          "accessible_name": "Physics true-time plot"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "addMediaButton",
+          "accessible_name": "Add media"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "openProjectButton",
+          "accessible_name": "Open project"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "saveProjectButton",
+          "accessible_name": ""
+        },
+        {
+          "class": "QListWidget",
+          "object_name": "taskList",
+          "accessible_name": "Media tasks"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "removeTaskButton",
+          "accessible_name": "Remove selected project task"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "browseMediaRelinkButton",
+          "accessible_name": "Choose replacement media"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "runTrackingButton",
+          "accessible_name": "Run video tracking"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "exportTrackingButton",
+          "accessible_name": "Export current tracking results to CSV"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "",
+          "accessible_name": "Create tracking report"
+        },
+        {
+          "class": "PreviewCanvas",
+          "object_name": "previewCanvas",
+          "accessible_name": "Video preview and ROI editor"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "transportButton",
+          "accessible_name": "Previous video frame"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "transportButton",
+          "accessible_name": "Play video preview"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "transportButton",
+          "accessible_name": "Next video frame"
+        },
+        {
+          "class": "QSpinBox",
+          "object_name": "",
+          "accessible_name": "Preview frame number"
+        },
+        {
+          "class": "QSlider",
+          "object_name": "frameSlider",
+          "accessible_name": "Preview frame timeline"
+        },
+        {
+          "class": "QTabBar",
+          "object_name": "qt_tabwidget_tabbar",
+          "accessible_name": "Neo-Tracker workflow section tabs"
+        },
+        {
+          "class": "QToolButton",
+          "object_name": "canvasFocusButton",
+          "accessible_name": "Enter canvas focus mode"
+        },
+        {
+          "class": "QToolButton",
+          "object_name": "physicsCollapseButton",
+          "accessible_name": "Collapse physics analysis workspace"
+        },
+        {
+          "class": "QTabBar",
+          "object_name": "qt_tabwidget_tabbar",
+          "accessible_name": "Physics analysis page tabs"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "",
+          "accessible_name": "Export physics plot image"
+        }
+      ]
+    },
+    "reverse": {
+      "loop_closed": true,
+      "export_png_reachable": true,
+      "controls": [
+        {
+          "class": "PhysicsPlot",
+          "object_name": "",
+          "accessible_name": "Physics true-time plot"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "",
+          "accessible_name": "Export physics plot image"
+        },
+        {
+          "class": "QTabBar",
+          "object_name": "qt_tabwidget_tabbar",
+          "accessible_name": "Physics analysis page tabs"
+        },
+        {
+          "class": "QToolButton",
+          "object_name": "physicsCollapseButton",
+          "accessible_name": "Collapse physics analysis workspace"
+        },
+        {
+          "class": "QToolButton",
+          "object_name": "canvasFocusButton",
+          "accessible_name": "Enter canvas focus mode"
+        },
+        {
+          "class": "QTabBar",
+          "object_name": "qt_tabwidget_tabbar",
+          "accessible_name": "Neo-Tracker workflow section tabs"
+        },
+        {
+          "class": "QSlider",
+          "object_name": "frameSlider",
+          "accessible_name": "Preview frame timeline"
+        },
+        {
+          "class": "QSpinBox",
+          "object_name": "",
+          "accessible_name": "Preview frame number"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "transportButton",
+          "accessible_name": "Next video frame"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "transportButton",
+          "accessible_name": "Play video preview"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "transportButton",
+          "accessible_name": "Previous video frame"
+        },
+        {
+          "class": "PreviewCanvas",
+          "object_name": "previewCanvas",
+          "accessible_name": "Video preview and ROI editor"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "",
+          "accessible_name": "Create tracking report"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "exportTrackingButton",
+          "accessible_name": "Export current tracking results to CSV"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "runTrackingButton",
+          "accessible_name": "Run video tracking"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "browseMediaRelinkButton",
+          "accessible_name": "Choose replacement media"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "removeTaskButton",
+          "accessible_name": "Remove selected project task"
+        },
+        {
+          "class": "QListWidget",
+          "object_name": "taskList",
+          "accessible_name": "Media tasks"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "saveProjectButton",
+          "accessible_name": ""
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "openProjectButton",
+          "accessible_name": "Open project"
+        },
+        {
+          "class": "QPushButton",
+          "object_name": "addMediaButton",
+          "accessible_name": "Add media"
+        }
+      ]
+    }
+  },
+  "source_unchanged": true
+}
