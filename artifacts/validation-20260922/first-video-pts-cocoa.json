@@ -1,0 +1,315 @@
+{
+  "recorded_at": "2026-09-22T19:23:36.175100+08:00",
+  "code_sha": "becdb1add97168f5c8c7990097425703ec94a62f",
+  "source_diff_sha256": "2bf59babe33558b8e3664d46bd899b4a56bc615d9bb8671ac7e55e3435c405e8",
+  "runtime": {
+    "os": "macOS-27.0-arm64-arm-64bit",
+    "python": "3.12.6",
+    "pyside6": "6.11.1",
+    "qt_platform": "cocoa",
+    "tab_focus_behavior": "TabFocusBehavior.3",
+    "screens": [
+      {
+        "name": "\u5185\u5efa\u663e\u793a\u5668",
+        "geometry": [
+          0,
+          0,
+          2880,
+          1864
+        ],
+        "device_pixel_ratio": 1.0
+      }
+    ]
+  },
+  "source": {
+    "path": "/Users/leo.xu/Desktop/PHY-EE-\u5bfc\u51fa/neotracker-retest-20260919-DQ0Kol/PMR00056.mov",
+    "sha256": "811bdae83fb7c9f20d9304482c6dba4e33739382ccde6a468d5edb533fa86739",
+    "provenance": "Photos album PHY-EE\u5b9e\u9a8c\u89c6\u9891; unmodified-original export authorized by user; PMR00056.mov; 2026-03-17 22:17:47; album item 3 of 57",
+    "stream": {
+      "codec_name": "hevc",
+      "width": 1920,
+      "height": 1080,
+      "r_frame_rate": "240/1",
+      "avg_frame_rate": "11072000/46083",
+      "duration": "23.041500",
+      "nb_frames": "5536",
+      "side_data_list": [
+        {}
+      ]
+    }
+  },
+  "scientific_validation": "not performed; no calibration or ground truth",
+  "native_accessibility_validation": "not performed",
+  "passed": true,
+  "milestones": [
+    "imported 5536-frame source with decoded preview and requested marker/ROI",
+    "tracking completed; result rows and true-time series agree",
+    "fit completed through the Run Fit button",
+    "CSV, NPZ and Markdown exported and read back",
+    "saved project reopened with equal source series and fit result",
+    "tracking completed; result rows and true-time series agree",
+    "fit completed through the Run Fit button",
+    "sampled-source review preserved until explicit test-only clear and deterministic retracking",
+    "plot stays fully inside its containers at three window sizes after compression and expansion",
+    "last-sample cursor rendered in the window and exported PNG",
+    "Data and Plot arrow keys update one shared selection revision and aligned frame/time",
+    "Tab and Shift+Tab focus loops recorded under the current platform policy",
+    "all application windows closed and background tasks idle"
+  ],
+  "timestamp_reference": {
+    "source": "ffprobe packet PTS sorted in presentation order; one packet per frame",
+    "origin_s": 0.116333,
+    "minimum_interval_s": 0.00412499999999838,
+    "maximum_interval_s": 0.008333000000000368
+  },
+  "app_media": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 240.26213571165073,
+    "frame_count": 5536
+  },
+  "marker_sample": {
+    "point_px": [
+      572,
+      1249
+    ],
+    "rgb": [
+      122.0,
+      244.0,
+      132.0
+    ]
+  },
+  "tracking_roi": {
+    "type": "rectangle",
+    "x": 350.0,
+    "y": 1000.0,
+    "width": 500.0,
+    "height": 500.0
+  },
+  "tracking_runs": [
+    {
+      "status_counts": {
+        "ok": 4579,
+        "predicted": 957
+      },
+      "frames": 5536,
+      "max_pts_error_s": 6.666666703125657e-07
+    },
+    {
+      "status_counts": {
+        "ok": 4579,
+        "predicted": 957
+      },
+      "frames": 5536,
+      "max_pts_error_s": 6.666666703125657e-07
+    }
+  ],
+  "tracking_status_counts": {
+    "ok": 4579,
+    "predicted": 957
+  },
+  "fit_sample_count": 5536,
+  "project_reopen": {
+    "results_and_fit_equal": true,
+    "media_available": false,
+    "source_review_required": true,
+    "assessment_state": "match",
+    "identity_state": "sampled"
+  },
+  "source_review_recovery": "explicit clear-and-retrack button; equal values and times",
+  "plot_layout": [
+    {
+      "window_size": [
+        1024,
+        768
+      ],
+      "stage": "compressed",
+      "workspace_height": 282,
+      "plot_size": [
+        978,
+        191
+      ],
+      "fully_contained": true
+    },
+    {
+      "window_size": [
+        1024,
+        768
+      ],
+      "stage": "expanded",
+      "workspace_height": 282,
+      "plot_size": [
+        978,
+        191
+      ],
+      "fully_contained": true
+    },
+    {
+      "window_size": [
+        1280,
+        808
+      ],
+      "stage": "compressed",
+      "workspace_height": 282,
+      "plot_size": [
+        1234,
+        191
+      ],
+      "fully_contained": true
+    },
+    {
+      "window_size": [
+        1280,
+        808
+      ],
+      "stage": "expanded",
+      "workspace_height": 282,
+      "plot_size": [
+        1234,
+        191
+      ],
+      "fully_contained": true
+    },
+    {
+      "window_size": [
+        1440,
+        900
+      ],
+      "stage": "compressed",
+      "workspace_height": 282,
+      "plot_size": [
+        1394,
+        191
+      ],
+      "fully_contained": true
+    },
+    {
+      "window_size": [
+        1440,
+        900
+      ],
+      "stage": "expanded",
+      "workspace_height": 282,
+      "plot_size": [
+        1394,
+        191
+      ],
+      "fully_contained": true
+    }
+  ],
+  "window_exposed": true,
+  "device_pixel_ratio": 1.0,
+  "plot_cursor": {
+    "sample_index": 5535,
+    "time_label": "23.037375 s",
+    "export_size": [
+      1394,
+      191
+    ]
+  },
+  "keyboard_selection": [
+    {
+      "page": "Data",
+      "key": "Key_Down",
+      "sample_index": 2768,
+      "frame_index": 2768,
+      "time_s": 11.510375,
+      "selection_revision_delta": 1,
+      "preview_loaded": true
+    },
+    {
+      "page": "Plot",
+      "key": "Key_Right",
+      "sample_index": 2769,
+      "frame_index": 2769,
+      "time_s": 11.514541666666666,
+      "selection_revision_delta": 1,
+      "preview_loaded": true
+    },
+    {
+      "page": "Plot",
+      "key": "Key_Left",
+      "sample_index": 2768,
+      "frame_index": 2768,
+      "time_s": 11.510375,
+      "selection_revision_delta": 1,
+      "preview_loaded": true
+    }
+  ],
+  "keyboard_tab": {
+    "event_source": "Qt QTest; not physical OS key events",
+    "forward": {
+      "loop_closed": true,
+      "export_png_reachable": false,
+      "controls": [
+        {
+          "class": "PhysicsPlot",
+          "object_name": "",
+          "accessible_name": "Physics true-time plot"
+        },
+        {
+          "class": "QTableView",
+          "object_name": "resultsTable",
+          "accessible_name": "Tracking results"
+        },
+        {
+          "class": "ConfidencePlot",
+          "object_name": "",
+          "accessible_name": "Review diagnostic plot"
+        },
+        {
+          "class": "QListWidget",
+          "object_name": "runHistoryList",
+          "accessible_name": "Tracking run history"
+        },
+        {
+          "class": "PreviewCanvas",
+          "object_name": "previewCanvas",
+          "accessible_name": "Video preview and ROI editor"
+        },
+        {
+          "class": "QSpinBox",
+          "object_name": "",
+          "accessible_name": "Preview frame number"
+        }
+      ]
+    },
+    "reverse": {
+      "loop_closed": true,
+      "export_png_reachable": false,
+      "controls": [
+        {
+          "class": "PhysicsPlot",
+          "object_name": "",
+          "accessible_name": "Physics true-time plot"
+        },
+        {
+          "class": "QSpinBox",
+          "object_name": "",
+          "accessible_name": "Preview frame number"
+        },
+        {
+          "class": "PreviewCanvas",
+          "object_name": "previewCanvas",
+          "accessible_name": "Video preview and ROI editor"
+        },
+        {
+          "class": "QListWidget",
+          "object_name": "runHistoryList",
+          "accessible_name": "Tracking run history"
+        },
+        {
+          "class": "ConfidencePlot",
+          "object_name": "",
+          "accessible_name": "Review diagnostic plot"
+        },
+        {
+          "class": "QTableView",
+          "object_name": "resultsTable",
+          "accessible_name": "Tracking results"
+        }
+      ]
+    }
+  },
+  "source_unchanged": true
+}

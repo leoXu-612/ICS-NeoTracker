@@ -21,6 +21,18 @@ class FrameReader(Protocol):
     def read_frame(self, frame_index: int): ...
 
 
+def _read_frame_time(reader: object) -> float | None:
+    value = getattr(reader, "last_frame_time_s", None)
+    if value is None:
+        return None
+    if isinstance(value, (bool, np.bool_)):
+        raise ValueError("frame timestamp must be a finite non-negative number")
+    value = float(value)
+    if not np.isfinite(value) or value < 0.0:
+        raise ValueError("frame timestamp must be a finite non-negative number")
+    return value
+
+
 DEFAULT_TRACKING_PREFETCH_FRAMES = 1
 DEFAULT_TRACKING_PROGRESS_INTERVAL_S = 0.05
 DEFAULT_TRACKING_CANCEL_GRACE_S = 0.35
@@ -96,6 +108,7 @@ class _PrefetchedFrame:
     frame: np.ndarray | None
     input_s: float
     error: Exception | None = None
+    time_s: float | None = None
 
 
 class PrefetchedFrameStream:
@@ -121,6 +134,7 @@ class PrefetchedFrameStream:
         self._finished = ThreadEvent()
         self._thread: Thread | None = None
         self._reader_close_error: Exception | None = None
+        self.last_frame_time_s: float | None = None
 
     def start(self) -> None:
         if self._thread is not None:
@@ -152,6 +166,7 @@ class PrefetchedFrameStream:
                 raise prefetched.error
             if prefetched.frame is None:
                 raise RuntimeError(f"Input prefetch returned no data for frame {expected}")
+            self.last_frame_time_s = prefetched.time_s
             return prefetched.frame, max(0.0, float(prefetched.input_s))
         return None
 
@@ -198,6 +213,7 @@ class PrefetchedFrameStream:
                     )
                     started = perf_counter()
                     frame = read_for_processing(frame_index)
+                    time_s = _read_frame_time(reader)
                     input_s = perf_counter() - started
                 except Exception as exc:
                     self._queue.put(_PrefetchedFrame(frame_index, None, 0.0, exc))
@@ -205,7 +221,7 @@ class PrefetchedFrameStream:
                 if self._should_stop():
                     self._slots.release()
                     return
-                self._queue.put(_PrefetchedFrame(frame_index, frame, input_s))
+                self._queue.put(_PrefetchedFrame(frame_index, frame, input_s, time_s=time_s))
         finally:
             close = getattr(reader, "close", None)
             try:
@@ -481,10 +497,12 @@ def _isolated_tracking_process(
                         cancelled_early = True
                         break
                     frame, frame_input_s = prefetched
+                    frame_time_s = prefetch.last_frame_time_s
                     input_s += frame_input_s
                 else:
                     stage_started = perf_counter()
                     frame = read_for_processing(frame_index)
+                    frame_time_s = _read_frame_time(reader)
                     input_s += perf_counter() - stage_started
             except EndOfMediaError as exc:
                 ended_early = True
@@ -494,7 +512,7 @@ def _isolated_tracking_process(
             pipeline.process_frame(
                 frame,
                 frame_index,
-                frame_index / fps,
+                frame_index / fps if frame_time_s is None else frame_time_s,
                 compact_response_map=True,
             )
             processing_s += perf_counter() - stage_started
@@ -1026,25 +1044,28 @@ class TrackingWorker(QObject):
                             cancelled_early = True
                             break
                         frame, frame_input_s = prefetched
+                        frame_time_s = prefetch.last_frame_time_s
                         input_s += frame_input_s
                     else:
                         stage_started = perf_counter()
                         frame = read_for_processing(frame_index)
+                        frame_time_s = _read_frame_time(reader)
                         input_s += perf_counter() - stage_started
                 except EndOfMediaError as exc:
                     ended_early = True
                     completion_note = str(exc)
                     break
                 stage_started = perf_counter()
+                time_s = frame_index / self.fps if frame_time_s is None else frame_time_s
                 if isinstance(self.pipeline, TrackingPipeline):
                     self.pipeline.process_frame(
                         frame,
                         frame_index,
-                        frame_index / self.fps,
+                        time_s,
                         compact_response_map=True,
                     )
                 else:  # Structural test doubles and third-party pipeline adapters.
-                    self.pipeline.process_frame(frame, frame_index, frame_index / self.fps)
+                    self.pipeline.process_frame(frame, frame_index, time_s)
                 processing_s += perf_counter() - stage_started
                 usage = getattr(self.pipeline, "debug_history_usage", None)
                 if callable(usage):

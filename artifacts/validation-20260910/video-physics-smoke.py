@@ -18,7 +18,7 @@ import subprocess
 
 import numpy as np
 import PySide6
-from PySide6.QtCore import QPoint, QRect, Qt
+from PySide6.QtCore import QPoint, QRect, Qt, QTimer
 from PySide6.QtGui import QImage
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
@@ -94,6 +94,50 @@ def main() -> None:
         report["milestones"].append(name)
         print(name, flush=True)
 
+    def track_and_fit(target: NeoTrackerWindow):
+        assert target.run_tracking_button.isEnabled()
+        QTest.mouseClick(target.run_tracking_button, Qt.MouseButton.LeftButton)
+        timer = QTimer(target)
+        timer.setInterval(10000)
+        timer.timeout.connect(lambda: print(
+            f"tracking progress: {target.tracking_summary_label.text()} | active={target._background_tasks.active_kinds}",
+            flush=True,
+        ))
+        timer.start()
+        try:
+            pump_until(lambda: target._background_tasks.idle, timeout_s=args.tracking_timeout_s)
+        finally:
+            timer.stop()
+            timer.deleteLater()
+        results = target.current_task.pipeline.results
+        assert len(results) == target.results_model.rowCount() == frame_count
+        series = target._physics_series_by_id["state:x_px"]
+        np.testing.assert_array_equal(series.frame_indices, np.arange(frame_count))
+        np.testing.assert_array_equal(series.time_s, [item.time_s for item in results])
+        np.testing.assert_allclose(series.time_s, reference_times, rtol=0.0, atol=1e-6)
+        counts = {
+            status: sum(item.status == status for item in results)
+            for status in sorted({item.status for item in results})
+        }
+        report.setdefault("tracking_runs", []).append({
+            "status_counts": counts,
+            "frames": len(results),
+            "max_pts_error_s": float(np.max(np.abs(series.time_s - reference_times))),
+        })
+        mark("tracking completed; result rows and true-time series agree")
+        target.physics_workspace.show_page("Fit")
+        index = target.fit_panel.series_combo.findData(series.series_id)
+        assert index >= 0
+        target.fit_panel.series_combo.setCurrentIndex(index)
+        assert target.fit_panel.run_button.isEnabled()
+        QTest.mouseClick(target.fit_panel.run_button, Qt.MouseButton.LeftButton)
+        pump_until(lambda: target._background_tasks.idle, timeout_s=10)
+        fit = target.analysis_workspace_controller.state.fit_result
+        assert fit is not None and fit.status is FitStatus.OK
+        assert fit.series_id == series.series_id
+        mark("fit completed through the Run Fit button")
+        return series, fit
+
     try:
         window = NeoTrackerWindow(
             physics_layout_store=PhysicsWorkspaceStateStore(),
@@ -109,6 +153,21 @@ def main() -> None:
         frame_count = int(report["source"]["stream"]["nb_frames"])
         assert frame_count > 37, "the keyboard-selection checks require at least 38 frames"
         assert window.current_task.media_info.frame_count == frame_count
+        packets = json.loads(subprocess.check_output([
+            "ffprobe", "-v", "error", "-select_streams", "v:0",
+            "-show_entries", "packet=pts_time", "-of", "json", str(source_path),
+        ], text=True))["packets"]
+        presentation_times = np.asarray(sorted(float(item["pts_time"]) for item in packets))
+        assert len(presentation_times) == len(np.unique(presentation_times)) == frame_count, (
+            "the reference check requires one unique presentation timestamp per decoded frame"
+        )
+        reference_times = presentation_times - presentation_times[0]
+        report["timestamp_reference"] = {
+            "source": "ffprobe packet PTS sorted in presentation order; one packet per frame",
+            "origin_s": float(presentation_times[0]),
+            "minimum_interval_s": float(np.min(np.diff(reference_times))),
+            "maximum_interval_s": float(np.max(np.diff(reference_times))),
+        }
         report["app_media"] = {
             "width": window.current_task.media_info.width,
             "height": window.current_task.media_info.height,
@@ -135,32 +194,9 @@ def main() -> None:
         report["tracking_roi"] = window.current_task.roi
         mark(f"imported {frame_count}-frame source with decoded preview and requested marker/ROI")
 
-        assert window.run_tracking_button.isEnabled()
-        QTest.mouseClick(window.run_tracking_button, Qt.MouseButton.LeftButton)
-        pump_until(lambda: window._background_tasks.idle, timeout_s=args.tracking_timeout_s)
-        results = window.current_task.pipeline.results
-        assert len(results) == window.results_model.rowCount() == frame_count
-        source = window._physics_series_by_id["state:x_px"]
-        np.testing.assert_array_equal(source.frame_indices, np.arange(frame_count))
-        np.testing.assert_array_equal(source.time_s, [item.time_s for item in results])
-        report["tracking_status_counts"] = {
-            status: sum(item.status == status for item in results)
-            for status in sorted({item.status for item in results})
-        }
-        mark("tracking completed; result rows and true-time series agree")
-
-        window.physics_workspace.show_page("Fit")
-        index = window.fit_panel.series_combo.findData(source.series_id)
-        assert index >= 0
-        window.fit_panel.series_combo.setCurrentIndex(index)
-        assert window.fit_panel.run_button.isEnabled()
-        QTest.mouseClick(window.fit_panel.run_button, Qt.MouseButton.LeftButton)
-        pump_until(lambda: window._background_tasks.idle, timeout_s=10)
-        result = window.analysis_workspace_controller.state.fit_result
-        assert result is not None and result.status is FitStatus.OK
-        assert result.series_id == source.series_id
+        source, result = track_and_fit(window)
+        report["tracking_status_counts"] = report["tracking_runs"][0]["status_counts"]
         report["fit_sample_count"] = result.sample_count
-        mark("fit completed through the Run Fit button")
 
         QTest.mouseClick(window.fit_panel.export_button, Qt.MouseButton.LeftButton)
         pump_until(lambda: window._background_tasks.idle, timeout_s=10)
@@ -206,6 +242,38 @@ def main() -> None:
             "identity_state": pending_relink[1].identity_state if pending_relink else None,
         }
         mark("saved project reopened with equal source series and fit result")
+        if restored.current_task.media_identity_requires_review:
+            assert pending_relink is not None
+            assessment = pending_relink[1]
+            assert assessment.state == "match" and assessment.identity_state == "sampled"
+            assert assessment.clear_results and not restored.current_task.media_info.available
+            assert not restored.run_tracking_button.isEnabled()
+            assert not restored.export_tracking_csv_button.isEnabled()
+            assert not restored.export_physics_analysis_button.isEnabled()
+            assert not restored.fit_panel.export_button.isEnabled()
+            assert not restored.physics_workspace.export_plot_image_button.isEnabled()
+            assert not restored.preview_label.has_frame()
+            restored.physics_workspace.show_page("Plot")
+            restored.resize(1024, 768)
+            QTest.qWait(100)
+            assert restored.size().toTuple() == (1024, 768)
+            assert restored.grab().save(str(output / "source-review.png"))
+            with source_path.open("rb") as handle:
+                assert hashlib.file_digest(handle, "sha256").hexdigest() == before
+            # This window owns only disposable test results. Exercise the explicit
+            # destructive UI action; do not change the source-verification policy.
+            apply_button = restored.media_relink_panel.apply_button
+            assert apply_button.isEnabled() and "Clear Results/Edits" in apply_button.text()
+            QTest.mouseClick(apply_button, Qt.MouseButton.LeftButton)
+            assert not restored.current_task.media_identity_requires_review
+            assert restored.current_task.media_info.available
+            assert not restored.current_task.pipeline.results
+            replacement_source, replacement_fit = track_and_fit(restored)
+            np.testing.assert_array_equal(replacement_source.values, source.values)
+            np.testing.assert_array_equal(replacement_source.time_s, source.time_s)
+            source, result = replacement_source, replacement_fit
+            report["source_review_recovery"] = "explicit clear-and-retrack button; equal values and times"
+            mark("sampled-source review preserved until explicit test-only clear and deterministic retracking")
         restored.physics_workspace.show_page("Fit")
         QTest.qWait(100)
         assert restored.grab().save(str(output / "restored-fit.png"))
@@ -270,13 +338,14 @@ def main() -> None:
         workspace.show_page("Data")
         workspace.series_combo.setCurrentIndex(workspace.series_combo.findData(source.series_id))
         table = workspace.series_table
-        table.setCurrentIndex(workspace.series_model.index(35, 0))
+        middle = len(source) // 2
+        table.setCurrentIndex(workspace.series_model.index(middle - 1, 0))
         QTest.qWait(100)
         report["keyboard_selection"] = []
         for page, key, expected in (
-            ("Data", Qt.Key.Key_Down, 36),
-            ("Plot", Qt.Key.Key_Right, 37),
-            ("Plot", Qt.Key.Key_Left, 36),
+            ("Data", Qt.Key.Key_Down, middle),
+            ("Plot", Qt.Key.Key_Right, middle + 1),
+            ("Plot", Qt.Key.Key_Left, middle),
         ):
             workspace.show_page(page)
             target = table if page == "Data" else plot
@@ -350,6 +419,16 @@ def main() -> None:
         report["passed"] = True
     except Exception as error:
         report["failure"] = f"{type(error).__name__}: {error}"
+        report["failure_context"] = [
+            {
+                "active_kinds": item._background_tasks.active_kinds,
+                "result_count": len(item.current_task.pipeline.results),
+                "tracking_status": item.tracking_summary_label.text(),
+                "status": item.statusBar().currentMessage(),
+                "media_error": item.current_task.media_info.error if item.current_task.media_info else None,
+            }
+            for item in windows
+        ]
         raise
     finally:
         for window in reversed(windows):

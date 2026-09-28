@@ -692,6 +692,7 @@ class NeoTrackerWindow(
         self.global_project_dirty_label.setMaximumWidth(92)
         self.global_project_dirty_label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
         self.global_draft_label.setMaximumWidth(170)
+        self.global_draft_label.setMinimumWidth(92)
         self.global_draft_label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
         self.tracking_summary_label.setMinimumWidth(130)
         self.tracking_summary_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
@@ -1770,6 +1771,7 @@ class NeoTrackerWindow(
         )
         self.results_table.setModel(self.results_model)
         self.results_table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers)
+        self.results_table.setTabKeyNavigation(False)
         self.results_table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self.results_table.setSelectionMode(QTableView.SelectionMode.SingleSelection)
         self.results_table.setAlternatingRowColors(True)
@@ -3971,6 +3973,8 @@ class NeoTrackerWindow(
         )
 
     def _render_tracking_status(self, task: DesktopTask) -> None:
+        if task is self.current_task:
+            self._update_physics_actions(self.analysis_workspace_controller.state)
         has_results = bool(task.pipeline.results)
         analysis_busy = self._analysis_thread is not None
         status_labels = {
@@ -4025,12 +4029,12 @@ class NeoTrackerWindow(
         )
         self._set_action_enabled("review.jump", has_results)
         if task.media_identity_requires_review:
-            detail = (
-                "The file at the saved media path does not match the project snapshot. "
+            detail = info.error.strip() or (
+                "The media source has not been fully verified. "
                 "Review the staged source in Media before previewing, editing, rerunning, or exporting results."
             )
             self._set_tracking_status_outcome("partial")
-            self.tracking_status_label.setText("Source changed")
+            self.tracking_status_label.setText("Review source")
             self.tracking_status_label.setToolTip(detail)
             self.tracking_status_label.setAccessibleDescription(detail)
             result_text = self._tracking_summary_text(task.pipeline.results)
@@ -4404,7 +4408,7 @@ class NeoTrackerWindow(
             self.candidate_summary_label.setText("Candidates: unavailable")
             detail = f"{task.title()}\nPreview unavailable\n{info.error}"
             if task.media_identity_requires_review:
-                visible_reason = "Media differs from saved project snapshot"
+                visible_reason = "Source verification required"
                 recovery = "Review the staged source in Media before using preview or results."
             elif "does not exist" in info.error:
                 visible_reason = "Media file does not exist"

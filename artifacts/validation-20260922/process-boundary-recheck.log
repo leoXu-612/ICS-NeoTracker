@@ -1,0 +1,33 @@
+test_helper_crash_and_eof_become_bounded_error (tests.test_isolated_media.IsolatedMediaTests.test_helper_crash_and_eof_become_bounded_error) ... FAIL
+test_session_rejects_malicious_pickle_without_executing_it (tests.test_isolated_media.IsolatedMediaTests.test_session_rejects_malicious_pickle_without_executing_it) ... FAIL
+
+======================================================================
+FAIL: test_helper_crash_and_eof_become_bounded_error (tests.test_isolated_media.IsolatedMediaTests.test_helper_crash_and_eof_become_bounded_error)
+----------------------------------------------------------------------
+neo_tracker.ui.isolated_media.IsolatedMediaTimeout: Probe decoder timed out after 1.00 seconds: /var/folders/hf/vzc3ptl17dv1r73k0yw4zt180000gn/T/tmpifqwxg_2/source.mp4
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/tests/test_isolated_media.py", line 125, in test_helper_crash_and_eof_become_bounded_error
+    with self.assertRaisesRegex(IsolatedMediaError, "exited|closed IPC"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "exited|closed IPC" does not match "Probe decoder timed out after 1.00 seconds: /var/folders/hf/vzc3ptl17dv1r73k0yw4zt180000gn/T/tmpifqwxg_2/source.mp4"
+
+======================================================================
+FAIL: test_session_rejects_malicious_pickle_without_executing_it (tests.test_isolated_media.IsolatedMediaTests.test_session_rejects_malicious_pickle_without_executing_it)
+----------------------------------------------------------------------
+neo_tracker.ui.isolated_media.IsolatedMediaTimeout: Preview decoder timed out after 1.00 seconds: /var/folders/hf/vzc3ptl17dv1r73k0yw4zt180000gn/T/tmp477wxe3e/source.mp4
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/tests/test_isolated_media.py", line 340, in test_session_rejects_malicious_pickle_without_executing_it
+    with self.assertRaisesRegex(IsolatedMediaError, "IPC envelope|header length"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: "IPC envelope|header length" does not match "Preview decoder timed out after 1.00 seconds: /var/folders/hf/vzc3ptl17dv1r73k0yw4zt180000gn/T/tmp477wxe3e/source.mp4"
+
+----------------------------------------------------------------------
+Ran 2 tests in 2.070s
+
+FAILED (failures=2)

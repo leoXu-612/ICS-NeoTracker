@@ -139,7 +139,7 @@ class MediaRelinkPanel(QWidget):
         self.cancel_button.show()
 
     def show_source_review_required(self, info: MediaInfo | None) -> None:
-        """Render a quarantined source as changed, even after its staged probe is dismissed."""
+        """Keep the review gate visible after its staged probe is dismissed."""
 
         self._clear_candidate()
         detail = (
@@ -148,7 +148,7 @@ class MediaRelinkPanel(QWidget):
         )
         if info is not None and info.error.strip():
             detail += f" {info.error.strip()}"
-        self._set_status("Source changed", "mismatch", detail)
+        self._set_status("Review source", "unverified", detail)
         self.browse_button.setText("Review Source…")
         self.browse_button.setEnabled(True)
 

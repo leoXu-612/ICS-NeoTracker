@@ -1,0 +1,60 @@
+qt.qpa.fonts: Populating font family aliases took 250 ms. Replace uses of missing font family "Sans Serif" with one that exists to avoid this cost. 
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+imported 5536-frame source with decoded preview and requested marker/ROI
+This plugin does not support propagateSizeHints()
+tracking progress: Frame 330/5536 · Throughput 37.7 fps · 2m 18s left | active=('tracking',)
+tracking progress: Frame 825/5536 · Throughput 43.1 fps · 1m 49s left | active=('tracking',)
+tracking progress: Frame 1375/5536 · Throughput 47.2 fps · 1m 28s left | active=('tracking',)
+tracking progress: Frame 1925/5536 · Throughput 49.3 fps · 1m 13s left | active=('tracking',)
+tracking progress: Frame 2420/5536 · Throughput 49.0 fps · 1m 04s left | active=('tracking',)
+tracking progress: Frame 2695/5536 · Throughput 47.3 fps · 1m 00s left | active=('tracking',)
+tracking progress: Frame 2915/5536 · Throughput 42.8 fps · 1m 01s left | active=('tracking',)
+tracking progress: Frame 3025/5536 · Throughput 38.0 fps · 1m 06s left | active=('tracking',)
+tracking progress: Frame 3245/5536 · Throughput 36.3 fps · 1m 03s left | active=('tracking',)
+tracking progress: Frame 3575/5536 · Throughput 36.2 fps · 54s left | active=('tracking',)
+tracking progress: Frame 4235/5536 · Throughput 38.6 fps · 34s left | active=('tracking',)
+tracking progress: Frame 4730/5536 · Throughput 39.7 fps · 20s left | active=('tracking',)
+tracking progress: Frame 5335/5536 · Throughput 41.3 fps · 5s left | active=('tracking',)
+This plugin does not support propagateSizeHints()
+tracking completed; result rows and true-time series agree
+fit completed through the Run Fit button
+CSV, NPZ and Markdown exported and read back
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+saved project reopened with equal source series and fit result
+This plugin does not support propagateSizeHints()
+tracking progress: Frame 660/5536 · Throughput 64.4 fps · 1m 16s left | active=('tracking',)
+tracking progress: Frame 1430/5536 · Throughput 70.3 fps · 58s left | active=('tracking',)
+tracking progress: Frame 2090/5536 · Throughput 71.4 fps · 48s left | active=('tracking',)
+tracking progress: Frame 2915/5536 · Throughput 73.1 fps · 36s left | active=('tracking',)
+tracking progress: Frame 3630/5536 · Throughput 72.9 fps · 26s left | active=('tracking',)
+tracking progress: Frame 4070/5536 · Throughput 67.7 fps · 22s left | active=('tracking',)
+tracking progress: Frame 4510/5536 · Throughput 64.3 fps · 16s left | active=('tracking',)
+tracking progress: Frame 4840/5536 · Throughput 60.8 fps · 11s left | active=('tracking',)
+tracking progress: Frame 5005/5536 · Throughput 55.7 fps · 10s left | active=('tracking',)
+tracking progress: Frame 5445/5536 · Throughput 54.5 fps · 2s left | active=('tracking',)
+This plugin does not support propagateSizeHints()
+tracking completed; result rows and true-time series agree
+This plugin does not support propagateSizeHints()
+fit completed through the Run Fit button
+sampled-source review preserved until explicit test-only clear and deterministic retracking
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+plot stays fully inside its containers at three window sizes after compression and expansion
+last-sample cursor rendered in the window and exported PNG
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+Data and Plot arrow keys update one shared selection revision and aligned frame/time
+all application windows closed and background tasks idle
+Traceback (most recent call last):
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/artifacts/validation-20260910/video-physics-smoke.py", line 432, in <module>
+    main()
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/artifacts/validation-20260910/video-physics-smoke.py", line 381, in main
+    assert focused is plot
+           ^^^^^^^^^^^^^^^
+AssertionError

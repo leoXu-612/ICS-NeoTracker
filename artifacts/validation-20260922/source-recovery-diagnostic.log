@@ -1,0 +1,11 @@
+qt.qpa.fonts: Populating font family aliases took 1764 ms. Replace uses of missing font family "Sans Serif" with one that exists to avoid this cost. 
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+{"elapsed_s": 37.19, "active_kinds": [], "results": 5536, "summary": "Results: 5536 | avg confidence 0.41 | ok 4579, predicted 957 \u00b7 media unavailable", "status": "Built 6 physical series from current Results.", "tracking_job": false, "run_history": 1}
+Traceback (most recent call last):
+  File "/Users/leo.xu/Desktop/PHY-EE-导出/neotracker-retest-20260919-DQ0Kol/debug-recovery.py", line 62, in <module>
+    main()
+  File "/Users/leo.xu/Desktop/PHY-EE-导出/neotracker-retest-20260919-DQ0Kol/debug-recovery.py", line 41, in main
+    assert window.current_task.media_identity_requires_review
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

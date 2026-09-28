@@ -507,10 +507,12 @@ class ProjectTaskController:
             )
             requires_review = assessment.requires_review
             if requires_review:
-                detail = (
-                    "Media at the saved path differs from the project snapshot. "
-                    "Review the staged source before using results or preview."
+                reason = (
+                    "Media at the saved path differs from the project snapshot."
+                    if assessment.state in {"mismatch", "incompatible"}
+                    else "Media at the saved path is not fully verified against the project snapshot."
                 )
+                detail = f"{reason} Review the staged source before using results or preview."
                 task.media_info = replace(saved_media_info, available=False, error=detail)
                 task.pending_media_relink = (live_media_info, assessment)
                 task.media_identity_requires_review = True

@@ -1,0 +1,15 @@
+test_global_test_teardown_does_not_revisit_closed_windows (tests.test_source_review_ui.SourceReviewUITests.test_global_test_teardown_does_not_revisit_closed_windows) ... qt.qpa.fonts: Populating font family aliases took 497 ms. Replace uses of missing font family "Sans Serif" with one that exists to avoid this cost. 
+ok
+test_review_table_tabs_leave_table_but_arrows_still_select_rows (tests.test_source_review_ui.SourceReviewUITests.test_review_table_tabs_leave_table_but_arrows_still_select_rows) ... This plugin does not support propagateSizeHints()
+ok
+test_sampled_match_requires_review_without_claiming_content_changed (tests.test_source_review_ui.SourceReviewUITests.test_sampled_match_requires_review_without_claiming_content_changed) ... ok
+test_source_review_blocks_direct_physics_exports_before_file_pickers (tests.test_source_review_ui.SourceReviewUITests.test_source_review_blocks_direct_physics_exports_before_file_pickers) ... ok
+test_source_review_starting_in_file_picker_cancels_physics_exports (tests.test_source_review_ui.SourceReviewUITests.test_source_review_starting_in_file_picker_cancels_physics_exports) ... ok
+test_toolbar_can_shrink_after_long_source_and_draft_statuses (tests.test_source_review_ui.SourceReviewUITests.test_toolbar_can_shrink_after_long_source_and_draft_statuses) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 4.616s
+
+OK

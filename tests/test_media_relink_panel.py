@@ -55,8 +55,8 @@ class MediaRelinkPanelTests(unittest.TestCase):
             )
         )
 
-        self.assertEqual(panel.status_label.text(), "Source changed")
-        self.assertEqual(panel.status_label.property("mediaRelinkState"), "mismatch")
+        self.assertEqual(panel.status_label.text(), "Review source")
+        self.assertEqual(panel.status_label.property("mediaRelinkState"), "unverified")
         self.assertEqual(panel.browse_button.text(), "Review Source…")
         self.assertTrue(panel.browse_button.isEnabled())
         self.assertFalse(panel.apply_button.isEnabled())

@@ -1,0 +1,641 @@
+diff --git a/artifacts/validation-20260910/video-physics-smoke.py b/artifacts/validation-20260910/video-physics-smoke.py
+index 8218c6e..baa8c89 100644
+--- a/artifacts/validation-20260910/video-physics-smoke.py
++++ b/artifacts/validation-20260910/video-physics-smoke.py
+@@ -18,7 +18,7 @@ import subprocess
+ 
+ import numpy as np
+ import PySide6
+-from PySide6.QtCore import QPoint, QRect, Qt
++from PySide6.QtCore import QPoint, QRect, Qt, QTimer
+ from PySide6.QtGui import QImage
+ from PySide6.QtTest import QTest
+ from PySide6.QtWidgets import QApplication
+@@ -94,6 +94,50 @@ def main() -> None:
+         report["milestones"].append(name)
+         print(name, flush=True)
+ 
++    def track_and_fit(target: NeoTrackerWindow):
++        assert target.run_tracking_button.isEnabled()
++        QTest.mouseClick(target.run_tracking_button, Qt.MouseButton.LeftButton)
++        timer = QTimer(target)
++        timer.setInterval(10000)
++        timer.timeout.connect(lambda: print(
++            f"tracking progress: {target.tracking_summary_label.text()} | active={target._background_tasks.active_kinds}",
++            flush=True,
++        ))
++        timer.start()
++        try:
++            pump_until(lambda: target._background_tasks.idle, timeout_s=args.tracking_timeout_s)
++        finally:
++            timer.stop()
++            timer.deleteLater()
++        results = target.current_task.pipeline.results
++        assert len(results) == target.results_model.rowCount() == frame_count
++        series = target._physics_series_by_id["state:x_px"]
++        np.testing.assert_array_equal(series.frame_indices, np.arange(frame_count))
++        np.testing.assert_array_equal(series.time_s, [item.time_s for item in results])
++        np.testing.assert_allclose(series.time_s, reference_times, rtol=0.0, atol=1e-6)
++        counts = {
++            status: sum(item.status == status for item in results)
++            for status in sorted({item.status for item in results})
++        }
++        report.setdefault("tracking_runs", []).append({
++            "status_counts": counts,
++            "frames": len(results),
++            "max_pts_error_s": float(np.max(np.abs(series.time_s - reference_times))),
++        })
++        mark("tracking completed; result rows and true-time series agree")
++        target.physics_workspace.show_page("Fit")
++        index = target.fit_panel.series_combo.findData(series.series_id)
++        assert index >= 0
++        target.fit_panel.series_combo.setCurrentIndex(index)
++        assert target.fit_panel.run_button.isEnabled()
++        QTest.mouseClick(target.fit_panel.run_button, Qt.MouseButton.LeftButton)
++        pump_until(lambda: target._background_tasks.idle, timeout_s=10)
++        fit = target.analysis_workspace_controller.state.fit_result
++        assert fit is not None and fit.status is FitStatus.OK
++        assert fit.series_id == series.series_id
++        mark("fit completed through the Run Fit button")
++        return series, fit
++
+     try:
+         window = NeoTrackerWindow(
+             physics_layout_store=PhysicsWorkspaceStateStore(),
+@@ -109,6 +153,21 @@ def main() -> None:
+         frame_count = int(report["source"]["stream"]["nb_frames"])
+         assert frame_count > 37, "the keyboard-selection checks require at least 38 frames"
+         assert window.current_task.media_info.frame_count == frame_count
++        packets = json.loads(subprocess.check_output([
++            "ffprobe", "-v", "error", "-select_streams", "v:0",
++            "-show_entries", "packet=pts_time", "-of", "json", str(source_path),
++        ], text=True))["packets"]
++        presentation_times = np.asarray(sorted(float(item["pts_time"]) for item in packets))
++        assert len(presentation_times) == len(np.unique(presentation_times)) == frame_count, (
++            "the reference check requires one unique presentation timestamp per decoded frame"
++        )
++        reference_times = presentation_times - presentation_times[0]
++        report["timestamp_reference"] = {
++            "source": "ffprobe packet PTS sorted in presentation order; one packet per frame",
++            "origin_s": float(presentation_times[0]),
++            "minimum_interval_s": float(np.min(np.diff(reference_times))),
++            "maximum_interval_s": float(np.max(np.diff(reference_times))),
++        }
+         report["app_media"] = {
+             "width": window.current_task.media_info.width,
+             "height": window.current_task.media_info.height,
+@@ -135,32 +194,9 @@ def main() -> None:
+         report["tracking_roi"] = window.current_task.roi
+         mark(f"imported {frame_count}-frame source with decoded preview and requested marker/ROI")
+ 
+-        assert window.run_tracking_button.isEnabled()
+-        QTest.mouseClick(window.run_tracking_button, Qt.MouseButton.LeftButton)
+-        pump_until(lambda: window._background_tasks.idle, timeout_s=args.tracking_timeout_s)
+-        results = window.current_task.pipeline.results
+-        assert len(results) == window.results_model.rowCount() == frame_count
+-        source = window._physics_series_by_id["state:x_px"]
+-        np.testing.assert_array_equal(source.frame_indices, np.arange(frame_count))
+-        np.testing.assert_array_equal(source.time_s, [item.time_s for item in results])
+-        report["tracking_status_counts"] = {
+-            status: sum(item.status == status for item in results)
+-            for status in sorted({item.status for item in results})
+-        }
+-        mark("tracking completed; result rows and true-time series agree")
+-
+-        window.physics_workspace.show_page("Fit")
+-        index = window.fit_panel.series_combo.findData(source.series_id)
+-        assert index >= 0
+-        window.fit_panel.series_combo.setCurrentIndex(index)
+-        assert window.fit_panel.run_button.isEnabled()
+-        QTest.mouseClick(window.fit_panel.run_button, Qt.MouseButton.LeftButton)
+-        pump_until(lambda: window._background_tasks.idle, timeout_s=10)
+-        result = window.analysis_workspace_controller.state.fit_result
+-        assert result is not None and result.status is FitStatus.OK
+-        assert result.series_id == source.series_id
++        source, result = track_and_fit(window)
++        report["tracking_status_counts"] = report["tracking_runs"][0]["status_counts"]
+         report["fit_sample_count"] = result.sample_count
+-        mark("fit completed through the Run Fit button")
+ 
+         QTest.mouseClick(window.fit_panel.export_button, Qt.MouseButton.LeftButton)
+         pump_until(lambda: window._background_tasks.idle, timeout_s=10)
+@@ -206,6 +242,38 @@ def main() -> None:
+             "identity_state": pending_relink[1].identity_state if pending_relink else None,
+         }
+         mark("saved project reopened with equal source series and fit result")
++        if restored.current_task.media_identity_requires_review:
++            assert pending_relink is not None
++            assessment = pending_relink[1]
++            assert assessment.state == "match" and assessment.identity_state == "sampled"
++            assert assessment.clear_results and not restored.current_task.media_info.available
++            assert not restored.run_tracking_button.isEnabled()
++            assert not restored.export_tracking_csv_button.isEnabled()
++            assert not restored.export_physics_analysis_button.isEnabled()
++            assert not restored.fit_panel.export_button.isEnabled()
++            assert not restored.physics_workspace.export_plot_image_button.isEnabled()
++            assert not restored.preview_label.has_frame()
++            restored.physics_workspace.show_page("Plot")
++            restored.resize(1024, 768)
++            QTest.qWait(100)
++            assert restored.size().toTuple() == (1024, 768)
++            assert restored.grab().save(str(output / "source-review.png"))
++            with source_path.open("rb") as handle:
++                assert hashlib.file_digest(handle, "sha256").hexdigest() == before
++            # This window owns only disposable test results. Exercise the explicit
++            # destructive UI action; do not change the source-verification policy.
++            apply_button = restored.media_relink_panel.apply_button
++            assert apply_button.isEnabled() and "Clear Results/Edits" in apply_button.text()
++            QTest.mouseClick(apply_button, Qt.MouseButton.LeftButton)
++            assert not restored.current_task.media_identity_requires_review
++            assert restored.current_task.media_info.available
++            assert not restored.current_task.pipeline.results
++            replacement_source, replacement_fit = track_and_fit(restored)
++            np.testing.assert_array_equal(replacement_source.values, source.values)
++            np.testing.assert_array_equal(replacement_source.time_s, source.time_s)
++            source, result = replacement_source, replacement_fit
++            report["source_review_recovery"] = "explicit clear-and-retrack button; equal values and times"
++            mark("sampled-source review preserved until explicit test-only clear and deterministic retracking")
+         restored.physics_workspace.show_page("Fit")
+         QTest.qWait(100)
+         assert restored.grab().save(str(output / "restored-fit.png"))
+@@ -270,13 +338,14 @@ def main() -> None:
+         workspace.show_page("Data")
+         workspace.series_combo.setCurrentIndex(workspace.series_combo.findData(source.series_id))
+         table = workspace.series_table
+-        table.setCurrentIndex(workspace.series_model.index(35, 0))
++        middle = len(source) // 2
++        table.setCurrentIndex(workspace.series_model.index(middle - 1, 0))
+         QTest.qWait(100)
+         report["keyboard_selection"] = []
+         for page, key, expected in (
+-            ("Data", Qt.Key.Key_Down, 36),
+-            ("Plot", Qt.Key.Key_Right, 37),
+-            ("Plot", Qt.Key.Key_Left, 36),
++            ("Data", Qt.Key.Key_Down, middle),
++            ("Plot", Qt.Key.Key_Right, middle + 1),
++            ("Plot", Qt.Key.Key_Left, middle),
+         ):
+             workspace.show_page(page)
+             target = table if page == "Data" else plot
+@@ -350,6 +419,16 @@ def main() -> None:
+         report["passed"] = True
+     except Exception as error:
+         report["failure"] = f"{type(error).__name__}: {error}"
++        report["failure_context"] = [
++            {
++                "active_kinds": item._background_tasks.active_kinds,
++                "result_count": len(item.current_task.pipeline.results),
++                "tracking_status": item.tracking_summary_label.text(),
++                "status": item.statusBar().currentMessage(),
++                "media_error": item.current_task.media_info.error if item.current_task.media_info else None,
++            }
++            for item in windows
++        ]
+         raise
+     finally:
+         for window in reversed(windows):
+diff --git a/neo_tracker/media.py b/neo_tracker/media.py
+index 17043fc..645dd05 100644
+--- a/neo_tracker/media.py
++++ b/neo_tracker/media.py
+@@ -361,6 +361,7 @@ class MediaReader:
+             kind="video",
+         )
+         self._next_frame_index = int(self._capture.get(self._cv2.CAP_PROP_POS_FRAMES) or 0)
++        self.last_frame_time_s: float | None = None
+ 
+     def close(self) -> None:
+         capture = getattr(self, "_capture", None)
+@@ -368,6 +369,7 @@ class MediaReader:
+             capture.release()
+         self._capture = None
+         self._next_frame_index = 0
++        self.last_frame_time_s = None
+ 
+     def read_frame(self, frame_index: int) -> np.ndarray:
+         """Decode one RGB frame with a contiguous result for public callers."""
+@@ -421,6 +423,18 @@ class MediaReader:
+             if not ok or frame is None:
+                 raise EndOfMediaError(index, self.path)
+         self._next_frame_index = index + 1
++        time_property = getattr(self._cv2, "CAP_PROP_POS_MSEC", None)
++        time_ms = (
++            float(self._capture.get(time_property))
++            if time_property is not None else float("nan")
++        )
++        # Unsupported backends report zero for every frame. Preserve the
++        # nominal-FPS fallback there, not a timeline of repeated zeroes.
++        self.last_frame_time_s = (
++            time_ms / 1000.0
++            if isfinite(time_ms) and (time_ms > 0.0 or (index == 0 and time_ms == 0.0))
++            else None
++        )
+         if color_mode == "bgr":
+             return frame if frame.flags.c_contiguous else np.ascontiguousarray(frame)
+         if color_mode == "rgb":
+diff --git a/neo_tracker/ui/main_window.py b/neo_tracker/ui/main_window.py
+index fe2f330..5658c38 100644
+--- a/neo_tracker/ui/main_window.py
++++ b/neo_tracker/ui/main_window.py
+@@ -692,6 +692,7 @@ class NeoTrackerWindow(
+         self.global_project_dirty_label.setMaximumWidth(92)
+         self.global_project_dirty_label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
+         self.global_draft_label.setMaximumWidth(170)
++        self.global_draft_label.setMinimumWidth(92)
+         self.global_draft_label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)
+         self.tracking_summary_label.setMinimumWidth(130)
+         self.tracking_summary_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+@@ -1770,6 +1771,7 @@ class NeoTrackerWindow(
+         )
+         self.results_table.setModel(self.results_model)
+         self.results_table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers)
++        self.results_table.setTabKeyNavigation(False)
+         self.results_table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+         self.results_table.setSelectionMode(QTableView.SelectionMode.SingleSelection)
+         self.results_table.setAlternatingRowColors(True)
+@@ -3971,6 +3973,8 @@ class NeoTrackerWindow(
+         )
+ 
+     def _render_tracking_status(self, task: DesktopTask) -> None:
++        if task is self.current_task:
++            self._update_physics_actions(self.analysis_workspace_controller.state)
+         has_results = bool(task.pipeline.results)
+         analysis_busy = self._analysis_thread is not None
+         status_labels = {
+@@ -4025,12 +4029,12 @@ class NeoTrackerWindow(
+         )
+         self._set_action_enabled("review.jump", has_results)
+         if task.media_identity_requires_review:
+-            detail = (
+-                "The file at the saved media path does not match the project snapshot. "
++            detail = info.error.strip() or (
++                "The media source has not been fully verified. "
+                 "Review the staged source in Media before previewing, editing, rerunning, or exporting results."
+             )
+             self._set_tracking_status_outcome("partial")
+-            self.tracking_status_label.setText("Source changed")
++            self.tracking_status_label.setText("Review source")
+             self.tracking_status_label.setToolTip(detail)
+             self.tracking_status_label.setAccessibleDescription(detail)
+             result_text = self._tracking_summary_text(task.pipeline.results)
+@@ -4404,7 +4408,7 @@ class NeoTrackerWindow(
+             self.candidate_summary_label.setText("Candidates: unavailable")
+             detail = f"{task.title()}\nPreview unavailable\n{info.error}"
+             if task.media_identity_requires_review:
+-                visible_reason = "Media differs from saved project snapshot"
++                visible_reason = "Source verification required"
+                 recovery = "Review the staged source in Media before using preview or results."
+             elif "does not exist" in info.error:
+                 visible_reason = "Media file does not exist"
+diff --git a/neo_tracker/ui/media_relink_panel.py b/neo_tracker/ui/media_relink_panel.py
+index 4010fca..c1cd7e9 100644
+--- a/neo_tracker/ui/media_relink_panel.py
++++ b/neo_tracker/ui/media_relink_panel.py
+@@ -139,7 +139,7 @@ class MediaRelinkPanel(QWidget):
+         self.cancel_button.show()
+ 
+     def show_source_review_required(self, info: MediaInfo | None) -> None:
+-        """Render a quarantined source as changed, even after its staged probe is dismissed."""
++        """Keep the review gate visible after its staged probe is dismissed."""
+ 
+         self._clear_candidate()
+         detail = (
+@@ -148,7 +148,7 @@ class MediaRelinkPanel(QWidget):
+         )
+         if info is not None and info.error.strip():
+             detail += f" {info.error.strip()}"
+-        self._set_status("Source changed", "mismatch", detail)
++        self._set_status("Review source", "unverified", detail)
+         self.browse_button.setText("Review Source…")
+         self.browse_button.setEnabled(True)
+ 
+diff --git a/neo_tracker/ui/project_controller.py b/neo_tracker/ui/project_controller.py
+index 7fcf2c8..f75e57e 100644
+--- a/neo_tracker/ui/project_controller.py
++++ b/neo_tracker/ui/project_controller.py
+@@ -507,10 +507,12 @@ class ProjectTaskController:
+             )
+             requires_review = assessment.requires_review
+             if requires_review:
+-                detail = (
+-                    "Media at the saved path differs from the project snapshot. "
+-                    "Review the staged source before using results or preview."
++                reason = (
++                    "Media at the saved path differs from the project snapshot."
++                    if assessment.state in {"mismatch", "incompatible"}
++                    else "Media at the saved path is not fully verified against the project snapshot."
+                 )
++                detail = f"{reason} Review the staged source before using results or preview."
+                 task.media_info = replace(saved_media_info, available=False, error=detail)
+                 task.pending_media_relink = (live_media_info, assessment)
+                 task.media_identity_requires_review = True
+diff --git a/neo_tracker/ui/shell/physics_workspace_mixin.py b/neo_tracker/ui/shell/physics_workspace_mixin.py
+index 44ffcb8..68cd716 100644
+--- a/neo_tracker/ui/shell/physics_workspace_mixin.py
++++ b/neo_tracker/ui/shell/physics_workspace_mixin.py
+@@ -364,6 +364,14 @@ class PhysicsWorkspaceMixin:
+                 5000,
+             )
+ 
++    def _physics_export_blocked(self) -> bool:
++        if not self.current_task.media_identity_requires_review:
++            return False
++        self.statusBar().showMessage(
++            "Review the media source before exporting physics results.", 6000,
++        )
++        return True
++
+     def _create_physics_velocity(self) -> None:
+         self.analysis_workspace_controller.request_derivative(1)
+ 
+@@ -387,6 +395,8 @@ class PhysicsWorkspaceMixin:
+             return
+         owner = self.current_task
+         generation = owner.results_generation
++        if request.operation == "export" and self._physics_export_blocked():
++            return
+         self.physicsOperationRequested.emit(request)
+         if self._background_tasks.closing:
+             return
+@@ -438,6 +448,8 @@ class PhysicsWorkspaceMixin:
+                     return
+         if self._background_tasks.closing:
+             return
++        if request.operation == "export" and self._physics_export_blocked():
++            return
+         if (
+             self.current_task is not owner
+             or owner.results_generation != generation
+@@ -880,9 +892,12 @@ class PhysicsWorkspaceMixin:
+         )
+         self._update_action(
+             "physics.export",
+-            enabled=mutable,
++            enabled=mutable and not self.current_task.media_identity_requires_review,
+             tool_tip="Export the selected series and any current fit as CSV, safe NPZ, and Markdown.",
+         )
++        self.physics_workspace.export_plot_image_button.setEnabled(
++            has_series and not self.current_task.media_identity_requires_review
++        )
+         self._update_action(
+             "physics.residual",
+             enabled=has_fit,
+@@ -936,13 +951,15 @@ class PhysicsWorkspaceMixin:
+         )
+ 
+     def _export_physics_plot_image(self) -> None:
++        if self._physics_export_blocked():
++            return
+         path, _selected_filter = QFileDialog.getSaveFileName(
+             self,
+             "Export physics plot image",
+             "physics-plot.png",
+             "PNG images (*.png);;All files (*)",
+         )
+-        if not path:
++        if not path or self._physics_export_blocked():
+             return
+         try:
+             saved = self.physics_workspace.plot.export_image(path)
+diff --git a/neo_tracker/ui/tracking_worker.py b/neo_tracker/ui/tracking_worker.py
+index 7a5e1fa..3225dab 100644
+--- a/neo_tracker/ui/tracking_worker.py
++++ b/neo_tracker/ui/tracking_worker.py
+@@ -21,6 +21,18 @@ class FrameReader(Protocol):
+     def read_frame(self, frame_index: int): ...
+ 
+ 
++def _read_frame_time(reader: object) -> float | None:
++    value = getattr(reader, "last_frame_time_s", None)
++    if value is None:
++        return None
++    if isinstance(value, (bool, np.bool_)):
++        raise ValueError("frame timestamp must be a finite non-negative number")
++    value = float(value)
++    if not np.isfinite(value) or value < 0.0:
++        raise ValueError("frame timestamp must be a finite non-negative number")
++    return value
++
++
+ DEFAULT_TRACKING_PREFETCH_FRAMES = 1
+ DEFAULT_TRACKING_PROGRESS_INTERVAL_S = 0.05
+ DEFAULT_TRACKING_CANCEL_GRACE_S = 0.35
+@@ -96,6 +108,7 @@ class _PrefetchedFrame:
+     frame: np.ndarray | None
+     input_s: float
+     error: Exception | None = None
++    time_s: float | None = None
+ 
+ 
+ class PrefetchedFrameStream:
+@@ -121,6 +134,7 @@ class PrefetchedFrameStream:
+         self._finished = ThreadEvent()
+         self._thread: Thread | None = None
+         self._reader_close_error: Exception | None = None
++        self.last_frame_time_s: float | None = None
+ 
+     def start(self) -> None:
+         if self._thread is not None:
+@@ -152,6 +166,7 @@ class PrefetchedFrameStream:
+                 raise prefetched.error
+             if prefetched.frame is None:
+                 raise RuntimeError(f"Input prefetch returned no data for frame {expected}")
++            self.last_frame_time_s = prefetched.time_s
+             return prefetched.frame, max(0.0, float(prefetched.input_s))
+         return None
+ 
+@@ -198,6 +213,7 @@ class PrefetchedFrameStream:
+                     )
+                     started = perf_counter()
+                     frame = read_for_processing(frame_index)
++                    time_s = _read_frame_time(reader)
+                     input_s = perf_counter() - started
+                 except Exception as exc:
+                     self._queue.put(_PrefetchedFrame(frame_index, None, 0.0, exc))
+@@ -205,7 +221,7 @@ class PrefetchedFrameStream:
+                 if self._should_stop():
+                     self._slots.release()
+                     return
+-                self._queue.put(_PrefetchedFrame(frame_index, frame, input_s))
++                self._queue.put(_PrefetchedFrame(frame_index, frame, input_s, time_s=time_s))
+         finally:
+             close = getattr(reader, "close", None)
+             try:
+@@ -481,10 +497,12 @@ def _isolated_tracking_process(
+                         cancelled_early = True
+                         break
+                     frame, frame_input_s = prefetched
++                    frame_time_s = prefetch.last_frame_time_s
+                     input_s += frame_input_s
+                 else:
+                     stage_started = perf_counter()
+                     frame = read_for_processing(frame_index)
++                    frame_time_s = _read_frame_time(reader)
+                     input_s += perf_counter() - stage_started
+             except EndOfMediaError as exc:
+                 ended_early = True
+@@ -494,7 +512,7 @@ def _isolated_tracking_process(
+             pipeline.process_frame(
+                 frame,
+                 frame_index,
+-                frame_index / fps,
++                frame_index / fps if frame_time_s is None else frame_time_s,
+                 compact_response_map=True,
+             )
+             processing_s += perf_counter() - stage_started
+@@ -1026,25 +1044,28 @@ class TrackingWorker(QObject):
+                             cancelled_early = True
+                             break
+                         frame, frame_input_s = prefetched
++                        frame_time_s = prefetch.last_frame_time_s
+                         input_s += frame_input_s
+                     else:
+                         stage_started = perf_counter()
+                         frame = read_for_processing(frame_index)
++                        frame_time_s = _read_frame_time(reader)
+                         input_s += perf_counter() - stage_started
+                 except EndOfMediaError as exc:
+                     ended_early = True
+                     completion_note = str(exc)
+                     break
+                 stage_started = perf_counter()
++                time_s = frame_index / self.fps if frame_time_s is None else frame_time_s
+                 if isinstance(self.pipeline, TrackingPipeline):
+                     self.pipeline.process_frame(
+                         frame,
+                         frame_index,
+-                        frame_index / self.fps,
++                        time_s,
+                         compact_response_map=True,
+                     )
+                 else:  # Structural test doubles and third-party pipeline adapters.
+-                    self.pipeline.process_frame(frame, frame_index, frame_index / self.fps)
++                    self.pipeline.process_frame(frame, frame_index, time_s)
+                 processing_s += perf_counter() - stage_started
+                 usage = getattr(self.pipeline, "debug_history_usage", None)
+                 if callable(usage):
+diff --git a/tests/integration_kinematics_support.py b/tests/integration_kinematics_support.py
+index e4b36a0..10ae8d0 100644
+--- a/tests/integration_kinematics_support.py
++++ b/tests/integration_kinematics_support.py
+@@ -12,12 +12,15 @@ from neo_tracker.ui.main_window import NeoTrackerWindow
+ 
+ def pump_until(predicate: Callable[[], bool], *, timeout_s: float = 5.0) -> None:
+     deadline = time.monotonic() + timeout_s
+-    while not predicate() and time.monotonic() < deadline:
++    while True:
+         QCoreApplication.processEvents()
++        if predicate():
++            QCoreApplication.processEvents()
++            if predicate():
++                return
++        if time.monotonic() >= deadline:
++            raise AssertionError("integration operation did not reach the expected state")
+         time.sleep(0.001)
+-    QCoreApplication.processEvents()
+-    if not predicate():
+-        raise AssertionError("integration operation did not reach the expected state")
+ 
+ 
+ def tracker_results(
+diff --git a/tests/test_media_relink_panel.py b/tests/test_media_relink_panel.py
+index 243022a..b48de58 100644
+--- a/tests/test_media_relink_panel.py
++++ b/tests/test_media_relink_panel.py
+@@ -55,8 +55,8 @@ class MediaRelinkPanelTests(unittest.TestCase):
+             )
+         )
+ 
+-        self.assertEqual(panel.status_label.text(), "Source changed")
+-        self.assertEqual(panel.status_label.property("mediaRelinkState"), "mismatch")
++        self.assertEqual(panel.status_label.text(), "Review source")
++        self.assertEqual(panel.status_label.property("mediaRelinkState"), "unverified")
+         self.assertEqual(panel.browse_button.text(), "Review Source…")
+         self.assertTrue(panel.browse_button.isEnabled())
+         self.assertFalse(panel.apply_button.isEnabled())
+diff --git a/tests/test_ui_main_window.py b/tests/test_ui_main_window.py
+index 3de47de..0798948 100644
+--- a/tests/test_ui_main_window.py
++++ b/tests/test_ui_main_window.py
+@@ -289,11 +289,10 @@ class MainWindowStructureTests(unittest.TestCase):
+         cls.app = QApplication.instance() or QApplication([])
+ 
+     def tearDown(self) -> None:
+-        # Individual tests exercise the real close confirmation explicitly.
+-        # Cleanup-owned programmatic close calls must not leave a modal dialog
+-        # waiting after a test that intentionally leaves dirty editor state.
++        # Cleanup helpers own hidden windows. Do not re-render closed windows
++        # left by earlier tests while clearing the current visible UI.
+         for widget in QApplication.topLevelWidgets():
+-            if isinstance(widget, NeoTrackerWindow):
++            if isinstance(widget, NeoTrackerWindow) and widget.isVisible():
+                 widget._discard_unapplied_drafts(show_status=False)
+                 widget._set_project_clean()
+         QCoreApplication.processEvents()
+@@ -1378,11 +1377,11 @@ class MainWindowStructureTests(unittest.TestCase):
+         self.assertTrue(window.media_relink_panel.apply_button.isEnabled())
+         self.assertEqual(window.global_draft_label.text(), "Draft: Media replacement")
+         self.assertIn("differs from the project snapshot", task.media_info.error)
+-        self.assertEqual(window.tracking_status_label.text(), "Source changed")
++        self.assertEqual(window.tracking_status_label.text(), "Review source")
+         self.assertIn("source review required", window.tracking_summary_label.text())
+         self.assertFalse(window.export_tracking_csv_button.isEnabled())
+         self.assertFalse(window.export_report_button.isEnabled())
+-        self.assertIn("Media differs from saved project snapshot", window.preview_label.text())
++        self.assertIn("Source verification required", window.preview_label.text())
+ 
+         with patch.object(window, "_render_preview"):
+             self.assertTrue(window._apply_media_relink())
+@@ -1442,9 +1441,9 @@ class MainWindowStructureTests(unittest.TestCase):
+         self.assertEqual(window.media_relink_panel.status_label.text(), "Source differs")
+         self.assertEqual(window._media_relink_assessment.identity_state, "mismatch")
+         self.assertEqual(window._media_relink_assessment.differences, ("Source content digest differs",))
+-        self.assertEqual(window.tracking_status_label.text(), "Source changed")
++        self.assertEqual(window.tracking_status_label.text(), "Review source")
+         self.assertFalse(window.export_tracking_csv_button.isEnabled())
+-        self.assertIn("Media differs from saved project snapshot", window.preview_label.text())
++        self.assertIn("Source verification required", window.preview_label.text())
+ 
+     def test_canceling_staged_source_review_keeps_changed_source_state(self) -> None:
+         window = NeoTrackerWindow()
+@@ -1493,7 +1492,7 @@ class MainWindowStructureTests(unittest.TestCase):
+ 
+         self.assertTrue(task.media_identity_requires_review)
+         self.assertIsNone(task.pending_media_relink)
+-        self.assertEqual(window.media_relink_panel.status_label.text(), "Source changed")
++        self.assertEqual(window.media_relink_panel.status_label.text(), "Review source")
+         self.assertNotEqual(window.media_relink_panel.status_label.text(), "Media missing")
+         self.assertEqual(window.media_relink_panel.browse_button.text(), "Review Source…")
+ 
+@@ -5273,9 +5272,12 @@ class MainWindowStructureTests(unittest.TestCase):
+         self.assertIs(window.sidebar_tabs.currentWidget(), window.tracking_tab)
+         self.assertEqual(window.run_tracking_button.text(), "Cancel")
+         deadline = time.monotonic() + 0.12
+-        while len(window.current_task.pipeline.results) < 3 and time.monotonic() < deadline:
++        while (
++            len(window.current_task.pipeline.results) < 3 or len(heartbeats) < 3
++        ) and time.monotonic() < deadline:
+             QCoreApplication.processEvents()
+             time.sleep(0.001)
++        self.assertGreaterEqual(len(window.current_task.pipeline.results), 3)
+         self.assertGreater(len(heartbeats), 2)
+         self.assertIn("Throughput", window.tracking_summary_label.text())
+         self.assertIn("fps", window.tracking_summary_label.text())
+@@ -5754,7 +5756,7 @@ class MainWindowStructureTests(unittest.TestCase):
+         self.assertTrue(assessment.clear_results)
+         self.assertEqual(window._media_relink_candidate_path, task.media_path)
+         self.assertEqual(window.media_relink_panel.status_label.text(), "Source identity unverified")
+-        self.assertEqual(window.tracking_status_label.text(), "Source changed")
++        self.assertEqual(window.tracking_status_label.text(), "Review source")
+         self.assertFalse(window.run_tracking_button.isEnabled())
+         self.assertFalse(window.export_tracking_csv_button.isEnabled())
+         self.assertFalse(window.export_report_button.isEnabled())
+@@ -6337,7 +6339,7 @@ class ConfigResultProtectionTests(unittest.TestCase):
+ 
+     def tearDown(self) -> None:
+         for widget in QApplication.topLevelWidgets():
+-            if isinstance(widget, NeoTrackerWindow):
++            if isinstance(widget, NeoTrackerWindow) and widget.isVisible():
+                 widget._discard_unapplied_drafts(show_status=False)
+                 widget._set_project_clean()
+         QCoreApplication.processEvents()

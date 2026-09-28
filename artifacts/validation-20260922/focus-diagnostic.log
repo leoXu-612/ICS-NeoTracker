@@ -1,0 +1,46 @@
+qt.qpa.fonts: Populating font family aliases took 227 ms. Replace uses of missing font family "Sans Serif" with one that exists to avoid this cost. 
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+INITIAL KeyboardModifier.NoModifier True
+0 QPushButton correctPointButton 
+1 QPushButton markLostButton 
+2 QPushButton rerunAfterButton 
+3 QPushButton jumpToResultButton 
+4 QCheckBox  
+5 QCheckBox  
+6 QCheckBox  
+7 QCheckBox  
+8 QCheckBox  
+9 QTableView resultsTable Tracking results
+10 QTableView resultsTable Tracking results
+REPEAT 10 PLOT False
+INITIAL KeyboardModifier.ShiftModifier True
+0 QPushButton  Export physics plot image
+1 QTabBar qt_tabwidget_tabbar Physics analysis page tabs
+2 QToolButton physicsCollapseButton Collapse physics analysis workspace
+3 QToolButton canvasFocusButton Enter canvas focus mode
+4 QTabBar qt_tabwidget_tabbar Neo-Tracker workflow section tabs
+5 QSlider frameSlider Preview frame timeline
+6 QSpinBox  Preview frame number
+7 QPushButton transportButton Next video frame
+8 QPushButton transportButton Play video preview
+9 QPushButton transportButton Previous video frame
+10 PreviewCanvas previewCanvas Video preview and ROI editor
+11 QPushButton  Create tracking report
+12 QPushButton exportTrackingButton Export current tracking results to CSV
+13 QPushButton runTrackingButton Run video tracking
+14 QPushButton  Export Analysis
+15 QPushButton  Fit Model
+16 QPushButton  Smooth Series
+17 QPushButton  Create Acceleration
+18 QPushButton  Create Velocity
+19 QListWidget runHistoryList Tracking run history
+20 QComboBox runHistoryOutcomeFilter Filter tracking runs by outcome
+21 QTabBar qt_tabwidget_tabbar Review history tabs
+22 ConfidencePlot  Review diagnostic plot
+23 QComboBox reviewDiagnosticModeCombo Review diagnostic plot
+24 QTableView resultsTable Tracking results
+25 QTableView resultsTable Tracking results
+REPEAT 25 PLOT False

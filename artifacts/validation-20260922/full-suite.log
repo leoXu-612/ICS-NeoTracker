@@ -1,0 +1,108 @@
+qt.qpa.fonts: Populating font family aliases took 500 ms. Replace uses of missing font family "Sans Serif" with one that exists to avoid this cost. 
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+[mov,mp4,m4a,3gp,3g2,mj2 @ 0x13c4ce930] moov atom not found
+OpenCV: Couldn't read video stream from file "/var/folders/hf/vzc3ptl17dv1r73k0yw4zt180000gn/T/tmp64a8prgy/edit-history.mp4"
+This plugin does not support propagateSizeHints()
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/__main__.py", line 18, in <module>
+    main(module=None)
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/main.py", line 105, in __init__
+    self.runTests()
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/main.py", line 281, in runTests
+    self.result = testRunner.run(self.test)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/runner.py", line 240, in run
+    test(result)
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/suite.py", line 122, in run
+    test(result)
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/suite.py", line 122, in run
+    test(result)
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/suite.py", line 84, in __call__
+    return self.run(*args, **kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/suite.py", line 122, in run
+    test(result)
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/case.py", line 690, in __call__
+    return self.run(*args, **kwds)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/case.py", line 637, in run
+    self._callTearDown()
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/case.py", line 594, in _callTearDown
+    self.tearDown()
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/tests/test_ui_main_window.py", line 297, in tearDown
+    widget._discard_unapplied_drafts(show_status=False)
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/neo_tracker/ui/main_window.py", line 2776, in _discard_unapplied_drafts
+    self._render_calibration(self.current_task)
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/neo_tracker/ui/main_window.py", line 3900, in _render_calibration
+    self.scale_status_label.setText(self._format_state_unit_summary(unit))
+KeyboardInterrupt

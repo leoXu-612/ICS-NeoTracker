@@ -1,0 +1,18 @@
+test_4k_working_set_limit_rejects_oversize_before_numpy_allocation (tests.test_isolated_media.IsolatedMediaTests.test_4k_working_set_limit_rejects_oversize_before_numpy_allocation) ... ok
+test_blocked_decoder_times_out_and_is_terminated (tests.test_isolated_media.IsolatedMediaTests.test_blocked_decoder_times_out_and_is_terminated) ... ok
+test_cancel_terminates_a_blocked_decoder_in_bounded_time (tests.test_isolated_media.IsolatedMediaTests.test_cancel_terminates_a_blocked_decoder_in_bounded_time) ... ok
+test_helper_crash_and_eof_become_bounded_error (tests.test_isolated_media.IsolatedMediaTests.test_helper_crash_and_eof_become_bounded_error) ... ok
+test_metadata_limits_reject_fractional_integer_bool_and_extreme_rates (tests.test_isolated_media.IsolatedMediaTests.test_metadata_limits_reject_fractional_integer_bool_and_extreme_rates) ... ok
+test_parent_rejects_malicious_pickle_without_executing_it (tests.test_isolated_media.IsolatedMediaTests.test_parent_rejects_malicious_pickle_without_executing_it) ... ok
+test_parent_rejects_replaced_source_before_stale_frame_commit (tests.test_isolated_media.IsolatedMediaTests.test_parent_rejects_replaced_source_before_stale_frame_commit) ... ok
+test_session_cancel_terminates_blocked_decoder_and_drops_session (tests.test_isolated_media.IsolatedMediaTests.test_session_cancel_terminates_blocked_decoder_and_drops_session) ... ok
+test_session_constructor_performs_no_filesystem_io (tests.test_isolated_media.IsolatedMediaTests.test_session_constructor_performs_no_filesystem_io) ... ok
+test_session_crash_and_timeout_drop_the_helper (tests.test_isolated_media.IsolatedMediaTests.test_session_crash_and_timeout_drop_the_helper) ... ok
+test_session_rejects_malicious_pickle_without_executing_it (tests.test_isolated_media.IsolatedMediaTests.test_session_rejects_malicious_pickle_without_executing_it) ... ok
+test_session_reuses_one_process_for_sequential_and_random_exact_frames (tests.test_isolated_media.IsolatedMediaTests.test_session_reuses_one_process_for_sequential_and_random_exact_frames) ... ok
+test_synthetic_video_returns_the_exact_requested_frame (tests.test_isolated_media.IsolatedMediaTests.test_synthetic_video_returns_the_exact_requested_frame) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 1.593s
+
+OK

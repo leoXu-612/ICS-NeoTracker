@@ -1,0 +1,11 @@
+No broken requirements found.
+Python: 3.12.6
+Source: /Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/neo_tracker/__init__.py
+PySide6: 6.11.1
+Discovered tests (not run): 817
+ProductName:		macOS
+ProductVersion:		27.0
+BuildVersion:		26A428
+total 0
+drwxr-xr-x@  2 leo.xu  staff    64 Sep 28 14:47 .
+drwx------@ 35 leo.xu  staff  1120 Sep 27 00:19 ..

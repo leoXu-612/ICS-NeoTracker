@@ -1,0 +1,28 @@
+qt.qpa.fonts: Populating font family aliases took 1266 ms. Replace uses of missing font family "Sans Serif" with one that exists to avoid this cost. 
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+imported 5536-frame source with decoded preview and requested marker/ROI
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+tracking completed; result rows and true-time series agree
+fit completed through the Run Fit button
+CSV, NPZ and Markdown exported and read back
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+saved project reopened with equal source series and fit result
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+all application windows closed and background tasks idle
+Traceback (most recent call last):
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/artifacts/validation-20260910/video-physics-smoke.py", line 408, in <module>
+    main()
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/artifacts/validation-20260910/video-physics-smoke.py", line 237, in main
+    replacement_source, replacement_fit = track_and_fit(restored)
+                                          ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/artifacts/validation-20260910/video-physics-smoke.py", line 100, in track_and_fit
+    pump_until(lambda: target._background_tasks.idle, timeout_s=args.tracking_timeout_s)
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/tests/integration_kinematics_support.py", line 20, in pump_until
+    raise AssertionError("integration operation did not reach the expected state")
+AssertionError: integration operation did not reach the expected state

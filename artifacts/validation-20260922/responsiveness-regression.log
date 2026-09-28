@@ -1,0 +1,13 @@
+test_tracking_worker_keeps_ui_responsive_and_can_cancel (tests.test_ui_main_window.MainWindowStructureTests.test_tracking_worker_keeps_ui_responsive_and_can_cancel) ... qt.qpa.fonts: Populating font family aliases took 392 ms. Replace uses of missing font family "Sans Serif" with one that exists to avoid this cost. 
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_analysis_worker_keeps_ui_responsive_and_cancels_stale_results (tests.test_ui_main_window.MainWindowStructureTests.test_analysis_worker_keeps_ui_responsive_and_cancels_stale_results) ... ok
+test_review_response_worker_keeps_only_latest_frame_and_can_cancel (tests.test_ui_main_window.MainWindowStructureTests.test_review_response_worker_keeps_only_latest_frame_and_can_cancel) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 3.862s
+
+OK

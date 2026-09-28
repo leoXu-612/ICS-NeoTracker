@@ -361,6 +361,7 @@ class MediaReader:
             kind="video",
         )
         self._next_frame_index = int(self._capture.get(self._cv2.CAP_PROP_POS_FRAMES) or 0)
+        self.last_frame_time_s: float | None = None
 
     def close(self) -> None:
         capture = getattr(self, "_capture", None)
@@ -368,6 +369,7 @@ class MediaReader:
             capture.release()
         self._capture = None
         self._next_frame_index = 0
+        self.last_frame_time_s = None
 
     def read_frame(self, frame_index: int) -> np.ndarray:
         """Decode one RGB frame with a contiguous result for public callers."""
@@ -421,6 +423,18 @@ class MediaReader:
             if not ok or frame is None:
                 raise EndOfMediaError(index, self.path)
         self._next_frame_index = index + 1
+        time_property = getattr(self._cv2, "CAP_PROP_POS_MSEC", None)
+        time_ms = (
+            float(self._capture.get(time_property))
+            if time_property is not None else float("nan")
+        )
+        # Unsupported backends report zero for every frame. Preserve the
+        # nominal-FPS fallback there, not a timeline of repeated zeroes.
+        self.last_frame_time_s = (
+            time_ms / 1000.0
+            if isfinite(time_ms) and (time_ms > 0.0 or (index == 0 and time_ms == 0.0))
+            else None
+        )
         if color_mode == "bgr":
             return frame if frame.flags.c_contiguous else np.ascontiguousarray(frame)
         if color_mode == "rgb":

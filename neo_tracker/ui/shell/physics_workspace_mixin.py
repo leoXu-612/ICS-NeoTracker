@@ -364,6 +364,14 @@ class PhysicsWorkspaceMixin:
                 5000,
             )
 
+    def _physics_export_blocked(self) -> bool:
+        if not self.current_task.media_identity_requires_review:
+            return False
+        self.statusBar().showMessage(
+            "Review the media source before exporting physics results.", 6000,
+        )
+        return True
+
     def _create_physics_velocity(self) -> None:
         self.analysis_workspace_controller.request_derivative(1)
 
@@ -387,6 +395,8 @@ class PhysicsWorkspaceMixin:
             return
         owner = self.current_task
         generation = owner.results_generation
+        if request.operation == "export" and self._physics_export_blocked():
+            return
         self.physicsOperationRequested.emit(request)
         if self._background_tasks.closing:
             return
@@ -437,6 +447,8 @@ class PhysicsWorkspaceMixin:
                     )
                     return
         if self._background_tasks.closing:
+            return
+        if request.operation == "export" and self._physics_export_blocked():
             return
         if (
             self.current_task is not owner
@@ -880,8 +892,11 @@ class PhysicsWorkspaceMixin:
         )
         self._update_action(
             "physics.export",
-            enabled=mutable,
+            enabled=mutable and not self.current_task.media_identity_requires_review,
             tool_tip="Export the selected series and any current fit as CSV, safe NPZ, and Markdown.",
+        )
+        self.physics_workspace.export_plot_image_button.setEnabled(
+            has_series and not self.current_task.media_identity_requires_review
         )
         self._update_action(
             "physics.residual",
@@ -936,13 +951,15 @@ class PhysicsWorkspaceMixin:
         )
 
     def _export_physics_plot_image(self) -> None:
+        if self._physics_export_blocked():
+            return
         path, _selected_filter = QFileDialog.getSaveFileName(
             self,
             "Export physics plot image",
             "physics-plot.png",
             "PNG images (*.png);;All files (*)",
         )
-        if not path:
+        if not path or self._physics_export_blocked():
             return
         try:
             saved = self.physics_workspace.plot.export_image(path)

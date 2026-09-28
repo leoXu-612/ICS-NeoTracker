@@ -289,11 +289,10 @@ class MainWindowStructureTests(unittest.TestCase):
         cls.app = QApplication.instance() or QApplication([])
 
     def tearDown(self) -> None:
-        # Individual tests exercise the real close confirmation explicitly.
-        # Cleanup-owned programmatic close calls must not leave a modal dialog
-        # waiting after a test that intentionally leaves dirty editor state.
+        # Cleanup helpers own hidden windows. Do not re-render closed windows
+        # left by earlier tests while clearing the current visible UI.
         for widget in QApplication.topLevelWidgets():
-            if isinstance(widget, NeoTrackerWindow):
+            if isinstance(widget, NeoTrackerWindow) and widget.isVisible():
                 widget._discard_unapplied_drafts(show_status=False)
                 widget._set_project_clean()
         QCoreApplication.processEvents()
@@ -1378,11 +1377,11 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertTrue(window.media_relink_panel.apply_button.isEnabled())
         self.assertEqual(window.global_draft_label.text(), "Draft: Media replacement")
         self.assertIn("differs from the project snapshot", task.media_info.error)
-        self.assertEqual(window.tracking_status_label.text(), "Source changed")
+        self.assertEqual(window.tracking_status_label.text(), "Review source")
         self.assertIn("source review required", window.tracking_summary_label.text())
         self.assertFalse(window.export_tracking_csv_button.isEnabled())
         self.assertFalse(window.export_report_button.isEnabled())
-        self.assertIn("Media differs from saved project snapshot", window.preview_label.text())
+        self.assertIn("Source verification required", window.preview_label.text())
 
         with patch.object(window, "_render_preview"):
             self.assertTrue(window._apply_media_relink())
@@ -1442,9 +1441,9 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertEqual(window.media_relink_panel.status_label.text(), "Source differs")
         self.assertEqual(window._media_relink_assessment.identity_state, "mismatch")
         self.assertEqual(window._media_relink_assessment.differences, ("Source content digest differs",))
-        self.assertEqual(window.tracking_status_label.text(), "Source changed")
+        self.assertEqual(window.tracking_status_label.text(), "Review source")
         self.assertFalse(window.export_tracking_csv_button.isEnabled())
-        self.assertIn("Media differs from saved project snapshot", window.preview_label.text())
+        self.assertIn("Source verification required", window.preview_label.text())
 
     def test_canceling_staged_source_review_keeps_changed_source_state(self) -> None:
         window = NeoTrackerWindow()
@@ -1493,7 +1492,7 @@ class MainWindowStructureTests(unittest.TestCase):
 
         self.assertTrue(task.media_identity_requires_review)
         self.assertIsNone(task.pending_media_relink)
-        self.assertEqual(window.media_relink_panel.status_label.text(), "Source changed")
+        self.assertEqual(window.media_relink_panel.status_label.text(), "Review source")
         self.assertNotEqual(window.media_relink_panel.status_label.text(), "Media missing")
         self.assertEqual(window.media_relink_panel.browse_button.text(), "Review Source…")
 
@@ -5273,9 +5272,12 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertIs(window.sidebar_tabs.currentWidget(), window.tracking_tab)
         self.assertEqual(window.run_tracking_button.text(), "Cancel")
         deadline = time.monotonic() + 0.12
-        while len(window.current_task.pipeline.results) < 3 and time.monotonic() < deadline:
+        while (
+            len(window.current_task.pipeline.results) < 3 or len(heartbeats) < 3
+        ) and time.monotonic() < deadline:
             QCoreApplication.processEvents()
             time.sleep(0.001)
+        self.assertGreaterEqual(len(window.current_task.pipeline.results), 3)
         self.assertGreater(len(heartbeats), 2)
         self.assertIn("Throughput", window.tracking_summary_label.text())
         self.assertIn("fps", window.tracking_summary_label.text())
@@ -5754,7 +5756,7 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertTrue(assessment.clear_results)
         self.assertEqual(window._media_relink_candidate_path, task.media_path)
         self.assertEqual(window.media_relink_panel.status_label.text(), "Source identity unverified")
-        self.assertEqual(window.tracking_status_label.text(), "Source changed")
+        self.assertEqual(window.tracking_status_label.text(), "Review source")
         self.assertFalse(window.run_tracking_button.isEnabled())
         self.assertFalse(window.export_tracking_csv_button.isEnabled())
         self.assertFalse(window.export_report_button.isEnabled())
@@ -6337,7 +6339,7 @@ class ConfigResultProtectionTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         for widget in QApplication.topLevelWidgets():
-            if isinstance(widget, NeoTrackerWindow):
+            if isinstance(widget, NeoTrackerWindow) and widget.isVisible():
                 widget._discard_unapplied_drafts(show_status=False)
                 widget._set_project_clean()
         QCoreApplication.processEvents()

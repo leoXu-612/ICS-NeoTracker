@@ -12,12 +12,15 @@ from neo_tracker.ui.main_window import NeoTrackerWindow
 
 def pump_until(predicate: Callable[[], bool], *, timeout_s: float = 5.0) -> None:
     deadline = time.monotonic() + timeout_s
-    while not predicate() and time.monotonic() < deadline:
+    while True:
         QCoreApplication.processEvents()
+        if predicate():
+            QCoreApplication.processEvents()
+            if predicate():
+                return
+        if time.monotonic() >= deadline:
+            raise AssertionError("integration operation did not reach the expected state")
         time.sleep(0.001)
-    QCoreApplication.processEvents()
-    if not predicate():
-        raise AssertionError("integration operation did not reach the expected state")
 
 
 def tracker_results(
