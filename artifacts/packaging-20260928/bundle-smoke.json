@@ -1,0 +1,23 @@
+{
+  "frozen": true,
+  "executable": "/Users/leo.xu/Downloads/Neo-Tracker-local-20260928/Neo-Tracker.app/Contents/MacOS/Neo-Tracker",
+  "passed": true,
+  "checks": [
+    "Cocoa window exposed",
+    "frozen probe and preview helpers",
+    "frozen tracking helper: 24 frames, positions and times",
+    "fit and CSV/NPZ/Markdown export",
+    "frozen project-open helper and persistence",
+    "bundled SciPy signal and optimizer",
+    "all test windows closed; temporary media removed"
+  ],
+  "bundled_modules": {
+    "numpy": "/Users/leo.xu/Downloads/Neo-Tracker-local-20260928/Neo-Tracker.app/Contents/Frameworks/numpy/__init__.py",
+    "cv2": "/Users/leo.xu/Downloads/Neo-Tracker-local-20260928/Neo-Tracker.app/Contents/Frameworks/cv2/__init__.py",
+    "scipy": "/Users/leo.xu/Downloads/Neo-Tracker-local-20260928/Neo-Tracker.app/Contents/Frameworks/scipy/__init__.py",
+    "PySide6": "/Users/leo.xu/Downloads/Neo-Tracker-local-20260928/Neo-Tracker.app/Contents/Frameworks/PySide6/__init__.py",
+    "neo_tracker": "/Users/leo.xu/Downloads/Neo-Tracker-local-20260928/Neo-Tracker.app/Contents/Frameworks/neo_tracker/__init__.py"
+  },
+  "qt_platform": "cocoa",
+  "opencv": "4.13.0"
+}

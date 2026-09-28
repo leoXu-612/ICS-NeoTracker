@@ -345,12 +345,12 @@ neo-tracker
 
 ## Deployment scope
 
-当前交付范围是**源码安装的内部 Python 工具**，不是签名/notarized 的分发式 macOS App：
+当前交付范围是**内部 Python 工具及本机 macOS 封装**，不是 Developer ID 签名／公证的公开发行版本。2026-09-28 已生成独立 `.app` 并验证包内核心流程，使用和重建方式见 [本机 Desktop App](packaging/macos/README.md)：
 
 - 运行方式：`python3 -m neo_tracker` 或 `neo-tracker` 入口脚本（需要本机 Python 3.12
   环境与 pip 安装的依赖，见上）。
-- 未提供：`.app` 打包、代码签名（codesign）、notarization、自动更新或回滚通道；
-  Gatekeeper/Quarantine 未处理。
+- 本机 `.app` 已包含 Python 与依赖，并通过 ad-hoc 签名完整性检查；未提供 Developer ID
+  签名、notarization、自动更新或回滚通道。Gatekeeper 分发审查未通过，未绕过系统保护。
 - 最近的真实视频记录（2026-09-22）：macOS 27.0 arm64、Python 3.12.6、
   PySide6 6.11.1 的 Cocoa 窗口完成 HEVC 可变帧率视频的 5,536 帧追踪、拟合、
   保存重开、来源复核恢复及 CSV/NPZ/Markdown/PNG 导出；实际倍率为 1×。
