@@ -1,0 +1,203 @@
+test_100k_review_edits_use_incremental_ui_and_avoid_fingerprinting (tests.test_ui_main_window.MainWindowStructureTests.test_100k_review_edits_use_incremental_ui_and_avoid_fingerprinting) ... qt.qpa.fonts: Populating font family aliases took 67 ms. Replace uses of missing font family "Sans Serif" with one that exists to avoid this cost. 
+ok
+test_add_media_from_scratch_keep_editing_then_discard_controls_context_replacement (tests.test_ui_main_window.MainWindowStructureTests.test_add_media_from_scratch_keep_editing_then_discard_controls_context_replacement) ... ok
+test_add_media_probe_keeps_ui_responsive_and_avoids_duplicate_probe (tests.test_ui_main_window.MainWindowStructureTests.test_add_media_probe_keeps_ui_responsive_and_avoids_duplicate_probe) ... ok
+test_add_media_to_existing_project_preserves_current_task_draft (tests.test_ui_main_window.MainWindowStructureTests.test_add_media_to_existing_project_preserves_current_task_draft) ... ok
+test_analysis_terminal_signal_stays_locked_until_thread_exits (tests.test_ui_main_window.MainWindowStructureTests.test_analysis_terminal_signal_stays_locked_until_thread_exits) ... ok
+test_analysis_worker_keeps_ui_responsive_and_cancels_stale_results (tests.test_ui_main_window.MainWindowStructureTests.test_analysis_worker_keeps_ui_responsive_and_cancels_stale_results) ... ok
+test_annular_response_routes_to_angular_diagnostic_instead_of_empty_overlay (tests.test_ui_main_window.MainWindowStructureTests.test_annular_response_routes_to_angular_diagnostic_instead_of_empty_overlay) ... ok
+test_annular_retained_theta_signal_skips_review_recompute_without_a_frame (tests.test_ui_main_window.MainWindowStructureTests.test_annular_retained_theta_signal_skips_review_recompute_without_a_frame) ... ok
+test_annular_roi_selection_updates_roi_and_annular_mapping (tests.test_ui_main_window.MainWindowStructureTests.test_annular_roi_selection_updates_roi_and_annular_mapping) ... ok
+test_application_font_size_is_inherited_instead_of_forced_to_pixels (tests.test_ui_main_window.MainWindowStructureTests.test_application_font_size_is_inherited_instead_of_forced_to_pixels) ... This plugin does not support propagateSizeHints()
+ok
+test_application_level_close_all_windows_cannot_bypass_unsaved_confirmation (tests.test_ui_main_window.MainWindowStructureTests.test_application_level_close_all_windows_cannot_bypass_unsaved_confirmation) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_apply_project_defensively_cancels_active_preview_selection (tests.test_ui_main_window.MainWindowStructureTests.test_apply_project_defensively_cancels_active_preview_selection) ... ok
+test_background_project_open_reuses_prepared_clean_fingerprint (tests.test_ui_main_window.MainWindowStructureTests.test_background_project_open_reuses_prepared_clean_fingerprint) ... ok
+test_calibrated_wavefront_manual_correction_and_rerun_use_world_units (tests.test_ui_main_window.MainWindowStructureTests.test_calibrated_wavefront_manual_correction_and_rerun_use_world_units) ... ok
+test_calibration_change_clears_edit_only_result_state (tests.test_ui_main_window.MainWindowStructureTests.test_calibration_change_clears_edit_only_result_state) ... ok
+test_calibration_line_uses_editable_draft_before_length_and_unit_apply (tests.test_ui_main_window.MainWindowStructureTests.test_calibration_line_uses_editable_draft_before_length_and_unit_apply) ... ok
+test_calibration_rod_updates_and_resets_path_coordinate_scale (tests.test_ui_main_window.MainWindowStructureTests.test_calibration_rod_updates_and_resets_path_coordinate_scale) ... ok
+test_calibration_rod_updates_annular_coordinate_scale (tests.test_ui_main_window.MainWindowStructureTests.test_calibration_rod_updates_annular_coordinate_scale) ... ok
+test_calibration_rod_updates_scale_and_coordinate_mapping (tests.test_ui_main_window.MainWindowStructureTests.test_calibration_rod_updates_scale_and_coordinate_mapping) ... ok
+test_calibration_rod_updates_wavefront_scalar_state_to_world_units (tests.test_ui_main_window.MainWindowStructureTests.test_calibration_rod_updates_wavefront_scalar_state_to_world_units) ... ok
+test_cancel_media_import_keeps_selected_batch_out_of_project (tests.test_ui_main_window.MainWindowStructureTests.test_cancel_media_import_keeps_selected_batch_out_of_project) ... ok
+test_cancel_project_open_keeps_current_project_unchanged (tests.test_ui_main_window.MainWindowStructureTests.test_cancel_project_open_keeps_current_project_unchanged) ... ok
+test_canceling_scheduled_dirty_close_reopens_window_controls (tests.test_ui_main_window.MainWindowStructureTests.test_canceling_scheduled_dirty_close_reopens_window_controls) ... ok
+test_canceling_staged_source_review_keeps_changed_source_state (tests.test_ui_main_window.MainWindowStructureTests.test_canceling_staged_source_review_keeps_changed_source_state) ... ok
+test_circular_roi_selection_updates_roi_and_polar_mapping (tests.test_ui_main_window.MainWindowStructureTests.test_circular_roi_selection_updates_roi_and_polar_mapping) ... ok
+test_closing_tracking_terminal_gap_replaces_stale_success_status (tests.test_ui_main_window.MainWindowStructureTests.test_closing_tracking_terminal_gap_replaces_stale_success_status) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_closing_window_cancels_analysis_worker_safely (tests.test_ui_main_window.MainWindowStructureTests.test_closing_window_cancels_analysis_worker_safely) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_closing_window_cancels_media_import_safely (tests.test_ui_main_window.MainWindowStructureTests.test_closing_window_cancels_media_import_safely) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_closing_window_cancels_project_open_safely (tests.test_ui_main_window.MainWindowStructureTests.test_closing_window_cancels_project_open_safely) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_closing_window_cancels_review_response_worker_safely (tests.test_ui_main_window.MainWindowStructureTests.test_closing_window_cancels_review_response_worker_safely) ... This plugin does not support propagateSizeHints()
+ok
+test_closing_window_cancels_tracking_worker_and_blocks_new_jobs (tests.test_ui_main_window.MainWindowStructureTests.test_closing_window_cancels_tracking_worker_and_blocks_new_jobs) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_closing_window_terminates_active_preview_session_and_qthread (tests.test_ui_main_window.MainWindowStructureTests.test_closing_window_terminates_active_preview_session_and_qthread) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_curve_band_roi_selection_updates_path_pipeline_and_project (tests.test_ui_main_window.MainWindowStructureTests.test_curve_band_roi_selection_updates_path_pipeline_and_project) ... ok
+test_curve_node_canvas_and_table_selection_share_explicit_apply_draft (tests.test_ui_main_window.MainWindowStructureTests.test_curve_node_canvas_and_table_selection_share_explicit_apply_draft) ... ok
+test_default_tracking_job_wires_required_process_isolation (tests.test_ui_main_window.MainWindowStructureTests.test_default_tracking_job_wires_required_process_isolation) ... ok
+test_draft_transition_approval_defers_discard_until_commit (tests.test_ui_main_window.MainWindowStructureTests.test_draft_transition_approval_defers_discard_until_commit) ... ok
+test_failed_project_load_keeps_existing_tasks_usable_and_signals_unblocked (tests.test_ui_main_window.MainWindowStructureTests.test_failed_project_load_keeps_existing_tasks_usable_and_signals_unblocked) ... ok
+test_full_tracking_requires_explicit_result_replacement_and_clears_after_confirm (tests.test_ui_main_window.MainWindowStructureTests.test_full_tracking_requires_explicit_result_replacement_and_clears_after_confirm) ... ok
+test_identity_drift_after_progress_restores_complete_pre_run_state (tests.test_ui_main_window.MainWindowStructureTests.test_identity_drift_after_progress_restores_complete_pre_run_state) ... ok
+test_invalid_background_project_open_keeps_current_project (tests.test_ui_main_window.MainWindowStructureTests.test_invalid_background_project_open_keeps_current_project) ... ok
+test_isolated_ui_preview_commits_only_latest_exact_frame (tests.test_ui_main_window.MainWindowStructureTests.test_isolated_ui_preview_commits_only_latest_exact_frame) ... ok
+test_json_tab_validates_applies_and_rejects_pipeline_config (tests.test_ui_main_window.MainWindowStructureTests.test_json_tab_validates_applies_and_rejects_pipeline_config) ... ok
+test_keyboard_focus_has_a_visible_style_and_changes_rendered_pixels (tests.test_ui_main_window.MainWindowStructureTests.test_keyboard_focus_has_a_visible_style_and_changes_rendered_pixels) ... This plugin does not support propagateSizeHints()
+FAIL
+test_known_project_mutation_marks_dirty_and_revision_without_fingerprinting (tests.test_ui_main_window.MainWindowStructureTests.test_known_project_mutation_marks_dirty_and_revision_without_fingerprinting) ... ok
+test_large_replaced_project_releases_result_graph_after_gui_commit (tests.test_ui_main_window.MainWindowStructureTests.test_large_replaced_project_releases_result_graph_after_gui_commit) ... ok
+test_large_review_table_keeps_full_row_navigation_with_virtual_model (tests.test_ui_main_window.MainWindowStructureTests.test_large_review_table_keeps_full_row_navigation_with_virtual_model) ... This plugin does not support propagateSizeHints()
+ok
+test_legacy_media_relink_with_results_requires_explicit_clear (tests.test_ui_main_window.MainWindowStructureTests.test_legacy_media_relink_with_results_requires_explicit_clear) ... ok
+test_light_scroll_surfaces_and_status_bar_ignore_dark_system_background (tests.test_ui_main_window.MainWindowStructureTests.test_light_scroll_surfaces_and_status_bar_ignore_dark_system_background) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_loading_another_project_discards_task_removal_undo (tests.test_ui_main_window.MainWindowStructureTests.test_loading_another_project_discards_task_removal_undo) ... ok
+test_long_tracking_failure_is_bounded_and_still_records_terminal_run (tests.test_ui_main_window.MainWindowStructureTests.test_long_tracking_failure_is_bounded_and_still_records_terminal_run) ... ok
+test_main_window_fits_1024_with_dynamic_statuses_without_toolbar_overlap (tests.test_ui_main_window.MainWindowStructureTests.test_main_window_fits_1024_with_dynamic_statuses_without_toolbar_overlap) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_manual_correction_updates_current_result_and_overlay (tests.test_ui_main_window.MainWindowStructureTests.test_manual_correction_updates_current_result_and_overlay) ... ok
+test_marker_color_sampling_updates_observation_controls_and_json (tests.test_ui_main_window.MainWindowStructureTests.test_marker_color_sampling_updates_observation_controls_and_json) ... ok
+test_media_relink_protects_other_editor_and_preview_drafts (tests.test_ui_main_window.MainWindowStructureTests.test_media_relink_protects_other_editor_and_preview_drafts) ... ok
+test_mismatched_media_relink_clears_edit_only_result_state (tests.test_ui_main_window.MainWindowStructureTests.test_mismatched_media_relink_clears_edit_only_result_state) ... ok
+test_mismatched_media_relink_uses_explicit_destructive_apply (tests.test_ui_main_window.MainWindowStructureTests.test_mismatched_media_relink_uses_explicit_destructive_apply) ... ok
+test_open_and_tracking_wait_for_background_project_save (tests.test_ui_main_window.MainWindowStructureTests.test_open_and_tracking_wait_for_background_project_save) ... ok
+test_open_cancel_preserves_dirty_project_and_discard_loads_clean_target (tests.test_ui_main_window.MainWindowStructureTests.test_open_cancel_preserves_dirty_project_and_discard_loads_clean_target) ... ok
+test_open_project_probes_duplicate_media_path_once (tests.test_ui_main_window.MainWindowStructureTests.test_open_project_probes_duplicate_media_path_once) ... ok
+test_open_project_probes_media_in_background_and_keeps_ui_responsive (tests.test_ui_main_window.MainWindowStructureTests.test_open_project_probes_media_in_background_and_keeps_ui_responsive) ... ok
+test_open_project_waits_for_active_kinematics_jobs (tests.test_ui_main_window.MainWindowStructureTests.test_open_project_waits_for_active_kinematics_jobs) ... ok
+test_playback_controls_are_present_and_safe_without_media (tests.test_ui_main_window.MainWindowStructureTests.test_playback_controls_are_present_and_safe_without_media) ... ok
+test_playback_decode_failure_stops_with_visible_recovery_guidance (tests.test_ui_main_window.MainWindowStructureTests.test_playback_decode_failure_stops_with_visible_recovery_guidance) ... ok
+test_playback_interval_keeps_one_fps_media_at_source_rate (tests.test_ui_main_window.MainWindowStructureTests.test_playback_interval_keeps_one_fps_media_at_source_rate) ... ok
+test_playback_tracks_source_time_and_explains_preview_skips (tests.test_ui_main_window.MainWindowStructureTests.test_playback_tracks_source_time_and_explains_preview_skips) ... ok
+test_polygon_roi_selection_updates_roi_pipeline_and_project (tests.test_ui_main_window.MainWindowStructureTests.test_polygon_roi_selection_updates_roi_pipeline_and_project) ... ok
+test_preset_change_keep_editing_then_discard_uses_requested_preset (tests.test_ui_main_window.MainWindowStructureTests.test_preset_change_keep_editing_then_discard_uses_requested_preset) ... ok
+test_preset_change_reapplies_or_clears_calibration_by_coordinate_model (tests.test_ui_main_window.MainWindowStructureTests.test_preset_change_reapplies_or_clears_calibration_by_coordinate_model) ... ok
+test_preview_calibration_axis_direction_changes_rendered_side (tests.test_ui_main_window.MainWindowStructureTests.test_preview_calibration_axis_direction_changes_rendered_side) ... ok
+test_preview_canvas_accepts_frames_and_roi_overlay (tests.test_ui_main_window.MainWindowStructureTests.test_preview_canvas_accepts_frames_and_roi_overlay) ... ok
+test_preview_canvas_bgr_display_matches_rgb_pixels (tests.test_ui_main_window.MainWindowStructureTests.test_preview_canvas_bgr_display_matches_rgb_pixels) ... ok
+test_preview_canvas_finishes_curve_band_roi_selection (tests.test_ui_main_window.MainWindowStructureTests.test_preview_canvas_finishes_curve_band_roi_selection) ... ok
+test_preview_canvas_finishes_polygon_roi_selection (tests.test_ui_main_window.MainWindowStructureTests.test_preview_canvas_finishes_polygon_roi_selection) ... ok
+test_preview_canvas_nudges_selected_node_with_keyboard (tests.test_ui_main_window.MainWindowStructureTests.test_preview_canvas_nudges_selected_node_with_keyboard) ... ok
+test_preview_canvas_selects_and_drags_existing_curve_node (tests.test_ui_main_window.MainWindowStructureTests.test_preview_canvas_selects_and_drags_existing_curve_node) ... ok
+test_preview_canvas_short_drag_keeps_selection_tool_active_for_retry (tests.test_ui_main_window.MainWindowStructureTests.test_preview_canvas_short_drag_keeps_selection_tool_active_for_retry) ... ok
+test_preview_navigation_and_playback_protect_active_selection (tests.test_ui_main_window.MainWindowStructureTests.test_preview_navigation_and_playback_protect_active_selection) ... ok
+test_preview_navigation_does_not_rebuild_static_tracking_summary (tests.test_ui_main_window.MainWindowStructureTests.test_preview_navigation_does_not_rebuild_static_tracking_summary) ... ok
+test_preview_response_overlay_bilinear_sampling_matches_pixel_center_reference (tests.test_ui_main_window.MainWindowStructureTests.test_preview_response_overlay_bilinear_sampling_matches_pixel_center_reference) ... ok
+test_preview_response_overlay_cache_tracks_physical_display_size (tests.test_ui_main_window.MainWindowStructureTests.test_preview_response_overlay_cache_tracks_physical_display_size) ... ok
+test_preview_response_overlay_colorization_matches_previous_mapping (tests.test_ui_main_window.MainWindowStructureTests.test_preview_response_overlay_colorization_matches_previous_mapping) ... ok
+test_preview_response_overlay_image_is_reused_and_invalidated (tests.test_ui_main_window.MainWindowStructureTests.test_preview_response_overlay_image_is_reused_and_invalidated) ... ok
+test_preview_selection_switch_requires_explicit_draft_discard (tests.test_ui_main_window.MainWindowStructureTests.test_preview_selection_switch_requires_explicit_draft_discard) ... ok
+test_preview_transport_exposes_named_frame_controls_and_label_buddy (tests.test_ui_main_window.MainWindowStructureTests.test_preview_transport_exposes_named_frame_controls_and_label_buddy) ... ok
+test_preview_uses_bgr_display_path_but_keeps_rgb_review_frame (tests.test_ui_main_window.MainWindowStructureTests.test_preview_uses_bgr_display_path_but_keeps_rgb_review_frame) ... ok
+test_processing_tab_explains_omitted_tracking_samples_and_preparation_stage (tests.test_ui_main_window.MainWindowStructureTests.test_processing_tab_explains_omitted_tracking_samples_and_preparation_stage) ... ok
+test_processing_tab_sources_and_method_controls (tests.test_ui_main_window.MainWindowStructureTests.test_processing_tab_sources_and_method_controls) ... This plugin does not support propagateSizeHints()
+ok
+test_project_load_preserves_offline_audio_metadata_without_enabling_media_actions (tests.test_ui_main_window.MainWindowStructureTests.test_project_load_preserves_offline_audio_metadata_without_enabling_media_actions) ... ok
+test_project_load_restores_non_default_pipeline_config (tests.test_ui_main_window.MainWindowStructureTests.test_project_load_restores_non_default_pipeline_config) ... ok
+test_project_load_restores_sampled_marker_parameters (tests.test_ui_main_window.MainWindowStructureTests.test_project_load_restores_sampled_marker_parameters) ... ok
+test_project_load_stages_same_metadata_digest_drift (tests.test_ui_main_window.MainWindowStructureTests.test_project_load_stages_same_metadata_digest_drift) ... ok
+test_project_load_stages_same_path_metadata_drift_before_preview_or_results_reuse (tests.test_ui_main_window.MainWindowStructureTests.test_project_load_stages_same_path_metadata_drift_before_preview_or_results_reuse) ... ok
+test_project_open_discards_draft_only_after_successful_commit (tests.test_ui_main_window.MainWindowStructureTests.test_project_open_discards_draft_only_after_successful_commit) ... ok
+test_project_save_and_load_restores_task_results_and_calibration (tests.test_ui_main_window.MainWindowStructureTests.test_project_save_and_load_restores_task_results_and_calibration) ... ok
+test_project_save_failure_preserves_existing_file_and_dirty_state (tests.test_ui_main_window.MainWindowStructureTests.test_project_save_failure_preserves_existing_file_and_dirty_state) ... ok
+test_project_save_runs_off_gui_thread_and_newer_edits_remain_dirty (tests.test_ui_main_window.MainWindowStructureTests.test_project_save_runs_off_gui_thread_and_newer_edits_remain_dirty) ... ok
+test_project_save_state_tracks_content_but_ignores_preview_navigation (tests.test_ui_main_window.MainWindowStructureTests.test_project_save_state_tracks_content_but_ignores_preview_navigation) ... ok
+test_project_save_with_100k_results_keeps_qt_event_loop_responsive (tests.test_ui_main_window.MainWindowStructureTests.test_project_save_with_100k_results_keeps_qt_event_loop_responsive) ... ok
+test_project_snapshot_rejects_pipeline_fields_that_silently_fall_back (tests.test_ui_main_window.MainWindowStructureTests.test_project_snapshot_rejects_pipeline_fields_that_silently_fall_back) ... ok
+test_project_state_cache_skips_repeated_clean_and_task_render_fingerprints (tests.test_ui_main_window.MainWindowStructureTests.test_project_state_cache_skips_repeated_clean_and_task_render_fingerprints) ... ok
+test_refresh_sources_button_forces_in_place_metadata_rescan (tests.test_ui_main_window.MainWindowStructureTests.test_refresh_sources_button_forces_in_place_metadata_rescan) ... ok
+test_removing_last_task_saves_an_explicit_empty_project_until_undo (tests.test_ui_main_window.MainWindowStructureTests.test_removing_last_task_saves_an_explicit_empty_project_until_undo) ... ok
+test_rerun_after_current_result_preserves_manual_anchor (tests.test_ui_main_window.MainWindowStructureTests.test_rerun_after_current_result_preserves_manual_anchor) ... ok
+test_rerun_blocks_source_when_saved_digest_cannot_be_reverified (tests.test_ui_main_window.MainWindowStructureTests.test_rerun_blocks_source_when_saved_digest_cannot_be_reverified) ... ok
+test_rerun_reprobes_and_blocks_same_path_media_replacement (tests.test_ui_main_window.MainWindowStructureTests.test_rerun_reprobes_and_blocks_same_path_media_replacement) ... ok
+test_rerun_retry_compares_recovered_probe_to_saved_source_baseline (tests.test_ui_main_window.MainWindowStructureTests.test_rerun_retry_compares_recovered_probe_to_saved_source_baseline) ... ok
+test_rerun_tail_replacement_cancel_keeps_results_and_edits_unchanged (tests.test_ui_main_window.MainWindowStructureTests.test_rerun_tail_replacement_cancel_keeps_results_and_edits_unchanged) ... ok
+test_reset_calibration_restores_preset_coordinate_and_keeps_roi (tests.test_ui_main_window.MainWindowStructureTests.test_reset_calibration_restores_preset_coordinate_and_keeps_roi) ... ok
+test_reset_roi_preserves_linear_calibration_for_image_presets (tests.test_ui_main_window.MainWindowStructureTests.test_reset_roi_preserves_linear_calibration_for_image_presets) ... ok
+test_reset_roi_preserves_scaled_coordinate_calibration (tests.test_ui_main_window.MainWindowStructureTests.test_reset_roi_preserves_scaled_coordinate_calibration) ... ok
+test_reset_roi_restores_preset_geometry_and_clears_results (tests.test_ui_main_window.MainWindowStructureTests.test_reset_roi_restores_preset_geometry_and_clears_results) ... ok
+test_results_without_media_path_keep_truthful_status_and_exports (tests.test_ui_main_window.MainWindowStructureTests.test_results_without_media_path_keep_truthful_status_and_exports) ... ok
+test_retired_preview_sessions_close_for_pre_run_late_cancel_and_media_switch (tests.test_ui_main_window.MainWindowStructureTests.test_retired_preview_sessions_close_for_pre_run_late_cancel_and_media_switch) ... ok
+test_review_edit_history_records_and_persists_actions (tests.test_ui_main_window.MainWindowStructureTests.test_review_edit_history_records_and_persists_actions) ... [mov,mp4,m4a,3gp,3g2,mj2 @ 0x139e9c5d0] moov atom not found
+OpenCV: Couldn't read video stream from file "/var/folders/hf/vzc3ptl17dv1r73k0yw4zt180000gn/T/tmpxg0y9wi4/edit-history.mp4"
+ok
+test_review_recomputes_and_caches_response_for_trimmed_old_frame (tests.test_ui_main_window.MainWindowStructureTests.test_review_recomputes_and_caches_response_for_trimmed_old_frame) ... ok
+test_review_reports_multiple_color_candidates (tests.test_ui_main_window.MainWindowStructureTests.test_review_reports_multiple_color_candidates) ... ok
+test_review_response_worker_keeps_only_latest_frame_and_can_cancel (tests.test_ui_main_window.MainWindowStructureTests.test_review_response_worker_keeps_only_latest_frame_and_can_cancel) ... ok
+test_review_undo_restores_exact_result_and_respects_later_mutations (tests.test_ui_main_window.MainWindowStructureTests.test_review_undo_restores_exact_result_and_respects_later_mutations) ... ok
+test_roi_drawing_actions_follow_preview_selection_mode (tests.test_ui_main_window.MainWindowStructureTests.test_roi_drawing_actions_follow_preview_selection_mode) ... ok
+test_roi_geometry_apply_is_explicit_and_invalidates_stale_result_edits (tests.test_ui_main_window.MainWindowStructureTests.test_roi_geometry_apply_is_explicit_and_invalidates_stale_result_edits) ... ok
+test_roi_selection_updates_task_pipeline_and_debug_json (tests.test_ui_main_window.MainWindowStructureTests.test_roi_selection_updates_task_pipeline_and_debug_json) ... ok
+test_roi_summaries_use_geometry_terms_and_pixel_units (tests.test_ui_main_window.MainWindowStructureTests.test_roi_summaries_use_geometry_terms_and_pixel_units) ... ok
+test_run_history_filters_compares_and_exports_visible_records (tests.test_ui_main_window.MainWindowStructureTests.test_run_history_filters_compares_and_exports_visible_records) ... ok
+test_run_tracking_populates_review_table_and_analysis_sources (tests.test_ui_main_window.MainWindowStructureTests.test_run_tracking_populates_review_table_and_analysis_sources) ... ok
+test_run_tracking_reprobes_and_blocks_same_path_media_replacement (tests.test_ui_main_window.MainWindowStructureTests.test_run_tracking_reprobes_and_blocks_same_path_media_replacement) ... ok
+test_sidebar_tabs_replace_default_configuration_panel (tests.test_ui_main_window.MainWindowStructureTests.test_sidebar_tabs_replace_default_configuration_panel) ... This plugin does not support propagateSizeHints()
+ok
+test_stale_preview_completion_cannot_overwrite_newer_request (tests.test_ui_main_window.MainWindowStructureTests.test_stale_preview_completion_cannot_overwrite_newer_request) ... ok
+test_state_unit_summaries_hide_internal_keys (tests.test_ui_main_window.MainWindowStructureTests.test_state_unit_summaries_hide_internal_keys) ... ok
+test_switching_preset_updates_workflow_summary (tests.test_ui_main_window.MainWindowStructureTests.test_switching_preset_updates_workflow_summary) ... This plugin does not support propagateSizeHints()
+ok
+test_task_removal_requires_confirmation_and_undo_restores_exact_task (tests.test_ui_main_window.MainWindowStructureTests.test_task_removal_requires_confirmation_and_undo_restores_exact_task) ... ok
+test_task_remove_keep_editing_then_discard_controls_removal (tests.test_ui_main_window.MainWindowStructureTests.test_task_remove_keep_editing_then_discard_controls_removal) ... ok
+test_task_remove_save_then_undo_requires_saving_restored_task (tests.test_ui_main_window.MainWindowStructureTests.test_task_remove_save_then_undo_requires_saving_restored_task) ... ok
+test_task_remove_then_intervening_edit_keeps_undo_dirty (tests.test_ui_main_window.MainWindowStructureTests.test_task_remove_then_intervening_edit_keeps_undo_dirty) ... ok
+test_task_remove_then_undo_preserves_preexisting_dirty_state (tests.test_ui_main_window.MainWindowStructureTests.test_task_remove_then_undo_preserves_preexisting_dirty_state) ... ok
+test_task_remove_then_undo_returns_to_saved_content_state (tests.test_ui_main_window.MainWindowStructureTests.test_task_remove_then_undo_returns_to_saved_content_state) ... ok
+test_task_switch_discard_changes_task_and_clears_previous_draft (tests.test_ui_main_window.MainWindowStructureTests.test_task_switch_discard_changes_task_and_clears_previous_draft) ... ok
+test_task_switch_keep_editing_restores_selection_and_preserves_draft (tests.test_ui_main_window.MainWindowStructureTests.test_task_switch_keep_editing_restores_selection_and_preserves_draft) ... ok
+test_task_switch_waits_for_current_task_processing (tests.test_ui_main_window.MainWindowStructureTests.test_task_switch_waits_for_current_task_processing) ... ok
+test_tracking_early_eof_keeps_partial_results_and_reports_partial_state (tests.test_ui_main_window.MainWindowStructureTests.test_tracking_early_eof_keeps_partial_results_and_reports_partial_state) ... ok
+test_tracking_entries_block_unapplied_preview_draft_before_media_probe (tests.test_ui_main_window.MainWindowStructureTests.test_tracking_entries_block_unapplied_preview_draft_before_media_probe) ... ok
+test_tracking_failure_is_recorded_with_attempted_range_and_pipeline_snapshot (tests.test_ui_main_window.MainWindowStructureTests.test_tracking_failure_is_recorded_with_attempted_range_and_pipeline_snapshot) ... ok
+test_tracking_reader_is_worker_owned_and_not_retained_on_task (tests.test_ui_main_window.MainWindowStructureTests.test_tracking_reader_is_worker_owned_and_not_retained_on_task) ... ok
+test_tracking_tab_keeps_module_details_in_the_dedicated_flow_page (tests.test_ui_main_window.MainWindowStructureTests.test_tracking_tab_keeps_module_details_in_the_dedicated_flow_page) ... This plugin does not support propagateSizeHints()
+ok
+test_tracking_tab_reports_cached_template_backend (tests.test_ui_main_window.MainWindowStructureTests.test_tracking_tab_reports_cached_template_backend) ... ok
+test_tracking_terminal_signal_stays_locked_until_thread_exits (tests.test_ui_main_window.MainWindowStructureTests.test_tracking_terminal_signal_stays_locked_until_thread_exits) ... ok
+test_tracking_worker_keeps_ui_responsive_and_can_cancel (tests.test_ui_main_window.MainWindowStructureTests.test_tracking_worker_keeps_ui_responsive_and_can_cancel) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_ui_save_preserves_project_pipeline_library_and_notes (tests.test_ui_main_window.MainWindowStructureTests.test_ui_save_preserves_project_pipeline_library_and_notes) ... ok
+test_unapplied_editor_work_is_named_and_visible_across_tabs (tests.test_ui_main_window.MainWindowStructureTests.test_unapplied_editor_work_is_named_and_visible_across_tabs) ... ok
+test_undo_remove_keep_editing_then_discard_controls_task_restore (tests.test_ui_main_window.MainWindowStructureTests.test_undo_remove_keep_editing_then_discard_controls_task_restore) ... ok
+test_unsaved_cancel_does_not_prematurely_discard_approved_drafts (tests.test_ui_main_window.MainWindowStructureTests.test_unsaved_cancel_does_not_prematurely_discard_approved_drafts) ... ok
+test_unsaved_transition_routes_save_discard_and_cancel (tests.test_ui_main_window.MainWindowStructureTests.test_unsaved_transition_routes_save_discard_and_cancel) ... ok
+test_validated_json_remains_an_unapplied_draft_until_apply_or_reset (tests.test_ui_main_window.MainWindowStructureTests.test_validated_json_remains_an_unapplied_draft_until_apply_or_reset) ... ok
+test_verified_media_relink_preserves_results_and_reader_identity (tests.test_ui_main_window.MainWindowStructureTests.test_verified_media_relink_preserves_results_and_reader_identity) ... ok
+test_wav_media_renders_as_audio_processing_source_not_video_tracking (tests.test_ui_main_window.MainWindowStructureTests.test_wav_media_renders_as_audio_processing_source_not_video_tracking) ... ok
+test_window_state_can_generate_markdown_report (tests.test_ui_main_window.MainWindowStructureTests.test_window_state_can_generate_markdown_report) ... ok
+test_zero_frame_full_tracking_failure_restores_previous_result_state_and_analysis (tests.test_ui_main_window.MainWindowStructureTests.test_zero_frame_full_tracking_failure_restores_previous_result_state_and_analysis) ... ok
+test_zero_frame_rerun_failure_restores_tail_without_superseding_edits (tests.test_ui_main_window.MainWindowStructureTests.test_zero_frame_rerun_failure_restores_tail_without_superseding_edits) ... ok
+
+======================================================================
+FAIL: test_keyboard_focus_has_a_visible_style_and_changes_rendered_pixels (tests.test_ui_main_window.MainWindowStructureTests.test_keyboard_focus_has_a_visible_style_and_changes_rendered_pixels)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/tests/test_ui_main_window.py", line 663, in test_keyboard_focus_has_a_visible_style_and_changes_rendered_pixels
+    self.assertIn("border: 2px solid #0071e3", window.styleSheet())
+AssertionError: 'border: 2px solid #0071e3' not found in '\n        QMainWindow, QWidget#appRoot, QScrollArea, QStatusBar { background: #f5f6f8; color: #24272d; }\n        QWidget { color: #24272d; }\n        QFrame#topToolbar { background: #fbfbfc; border: none; border-bottom: 1px solid #e2e4e8; }\n        QLabel#appTitle { font-weight: 650; color: #20242c; }\n        QLabel#mediaTitle { color: #6c737f; }\n        QFrame#navigationRail { background: #edf0f4; border: none; border-radius: 12px; }\n        QListWidget#workflowNavigation { background: transparent; border: none; padding: 0; outline: none; }\n        QListWidget#workflowNavigation::item { min-height: 25px; padding: 6px 10px; margin: 2px 0; border-radius: 7px; }\n        QListWidget#workflowNavigation::item:selected { background: #dbe7f6; color: #125eae; font-weight: 600; }\n        QListWidget#workflowNavigation::item:hover:!selected { background: #e3e7ec; }\n        QLabel#navigationTitle, QLabel#sectionLabel { color: #747d89; font-weight: 600; padding: 8px 2px 4px; }\n        QLabel#inspectorHeading { font-weight: 600; padding: 5px 9px 9px; }\n        QWidget#rightSidebar { background: #fbfcfd; border-radius: 12px; }\n        QLabel#previewTitle { color: #67717f; font-weight: 500; }\n        QLabel#previewCanvas { background: #171c24; color: #bac3cf; border: 1px solid #242c37; border-radius: 12px; }\n        QFrame#transportBar { background: #ffffff; border: 1px solid #e0e5eb; border-radius: 9px; }\n        QTabWidget::pane { border: none; background: transparent; }\n        QTabBar::tab { background: transparent; color: #727b88; padding: 6px 11px; margin: 3px 1px; border: none; border-radius: 6px; }\n        QTabBar::tab:selected { background: #e4edf8; color: #155faa; font-weight: 600; }\n        QTabBar::tab:hover:!selected { background: #edf0f4; }\n        QPushButton, QToolButton { background: #ffffff; border: 1px solid #dce1e8; border-radius: 7px; padding: 5px 9px; min-height: 22px; color: #343e4c; }\n        QPushButton:hover, QToolButton:hover { background: #f0f4f9; border-color: #c5d1df; }\n        QPushButton:pressed, QToolButton:pressed { background: #dde8f5; border-color: #aac4e1; }\n        QPushButton:disabled, QToolButton:disabled { background: #f3f5f7; border-color: #e5e9ee; color: #929ba7; }\n        QPushButton#runTrackingButton, QPushButton#addMediaButton, QPushButton#applyRoiGeometryButton,\n        QPushButton#applyCalibrationButton, QPushButton#applyMediaRelinkButton, QPushButton#runPhysicsFitButton {\n            background: #2478d4; border-color: #2478d4; color: white; font-weight: 600;\n        }\n        QPushButton#runTrackingButton:hover, QPushButton#addMediaButton:hover { background: #1868c2; }\n        QPushButton#runTrackingButton:pressed, QPushButton#addMediaButton:pressed { background: #1156a4; }\n        QPushButton#runTrackingButton:disabled, QPushButton#addMediaButton:disabled,\n        QPushButton#applyRoiGeometryButton:disabled, QPushButton#applyCalibrationButton:disabled,\n        QPushButton#applyMediaRelinkButton:disabled, QPushButton#runPhysicsFitButton:disabled {\n            background: #e6eef8; border-color: #e0e9f3; color: #809ab7;\n        }\n        QPushButton[trackingBusy="true"], QPushButton[taskDestructive="true"] { background: #c8403c; border-color: #c8403c; color: white; }\n        QPushButton#transportButton { min-width: 34px; background: transparent; border-color: transparent; }\n        QPushButton#transportButton:hover { background: #eaf0f7; }\n        QLineEdit, QPlainTextEdit, QTextBrowser, QListWidget, QTableView, QComboBox, QSpinBox, QDoubleSpinBox {\n            background: #ffffff; border: 1px solid #dfe4eb; border-radius: 6px; padding: 4px; selection-background-color: #dceafb; selection-color: #1b4f8e;\n        }\n        QTextBrowser#presetDescription { background: transparent; border: none; color: #6e7886; padding: 2px; }\n        QListWidget#taskList { background: #f7f9fc; border: 1px solid #e0e5ec; }\n        QListWidget::item { padding: 6px; border-radius: 5px; }\n        QListWidget::item:selected { background: #dceafb; color: #1b4f8e; }\n        QListWidget::item:disabled { color: #7d8794; }\n        QTableView { gridline-color: #eef1f5; alternate-background-color: #f8fafc; }\n        QHeaderView::section { background: #f1f4f8; color: #647082; border: none; padding: 7px 8px; font-weight: 500; }\n        QCheckBox { spacing: 7px; }\n        QSlider::groove:horizontal { height: 4px; background: #dce3ed; border-radius: 2px; }\n        QSlider::sub-page:horizontal { background: #76a6df; border-radius: 2px; }\n        QSlider::handle:horizontal { background: #ffffff; border: 1px solid #bdc9d8; width: 13px; margin: -5px 0; border-radius: 7px; }\n        QSplitter::handle { background: transparent; }\n        QSplitter::handle:hover { background: #d7e3f2; }\n        QLabel#statusChip, QLabel#projectStateLabel { color: #637184; background: #eef2f7; border-radius: 6px; padding: 4px 7px; }\n        QLabel#summaryChip { color: #728094; background: transparent; border: none; }\n        QLabel#globalProjectDirtyLabel, QLabel#globalDraftLabel { color: #99681b; background: #fff0d4; border-radius: 6px; padding: 4px 7px; }\n        QLabel#projectNameLabel { font-weight: 600; }\n        QLabel[trackingOutcome="complete"], QLabel[calibrationState="applied"], QLabel[mediaRelinkState="match"], QLabel[analysisState="complete"] { color: #27724c; background: #eaf5ee; }\n        QLabel[trackingOutcome="failed"], QLabel[calibrationState="error"], QLabel[roiGeometryState="error"], QLabel[analysisState="failed"] { color: #ad3434; background: #fff0ee; }\n        QLabel[trackingOutcome="partial"], QLabel[mediaRelinkState="unverified"], QLabel[mediaRelinkState="mismatch"], QLabel[reviewTone="attention"] { color: #93651e; background: #fff4de; }\n        QLabel#reviewSelectionLabel, QLabel#reviewSelectionDetailLabel, QLabel#analysisStatusLabel,\n        QLabel#calibrationEditorMessage, QLabel#roiGeometryMessage, QLabel#mediaRelinkStatus,\n        QLabel#mediaRelinkDifferences { border: none; border-radius: 6px; padding: 6px 8px; }\n        QLabel#trackingBackendLabel, QLabel#trackingPerformanceLabel, QLabel#responseStatusLabel,\n        QLabel#taskActionSummary, QLabel#mediaRelinkDetail { color: #728094; }\n        QPushButton:focus, QToolButton:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus,\n        QLineEdit:focus, QPlainTextEdit:focus, QListWidget:focus, QTableView:focus { border: 2px solid #4b93e1; }\n        QStatusBar { color: #748092; border-top: 1px solid #e5e9ef; }\n    '
+
+----------------------------------------------------------------------
+Ran 157 tests in 16.556s
+
+FAILED (failures=1)

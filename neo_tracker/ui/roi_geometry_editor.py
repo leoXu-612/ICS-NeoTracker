@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from neo_tracker.ui.language import tr
+
 from copy import deepcopy
 from typing import Any
 
@@ -46,13 +48,13 @@ class ROIGeometryEditor(QWidget):
         self._roi_type = ""
         self._baseline: dict[str, object] | None = None
 
-        self.type_label = QLabel("No editable ROI")
+        self.type_label = QLabel(tr('No editable ROI'))
         self.type_label.setObjectName("roiGeometryTypeLabel")
-        self.type_label.setAccessibleName("ROI geometry type")
-        self.message_label = QLabel("Choose or draw an ROI to edit its geometry.")
+        self.type_label.setAccessibleName(tr('ROI geometry type'))
+        self.message_label = QLabel(tr('Choose or draw an ROI to edit its geometry.'))
         self.message_label.setObjectName("roiGeometryMessage")
         self.message_label.setWordWrap(True)
-        self.message_label.setAccessibleName("ROI geometry editor status")
+        self.message_label.setAccessibleName(tr('ROI geometry editor status'))
 
         self.pages = QStackedWidget()
         self.pages.setObjectName("roiGeometryPages")
@@ -106,7 +108,7 @@ class ROIGeometryEditor(QWidget):
         self.node_table = node_table
         self.node_table.setRowCount(0)
         self.node_table.setColumnCount(3)
-        self.node_table.setHorizontalHeaderLabels(["Node", "X (px)", "Y (px)"])
+        self.node_table.setHorizontalHeaderLabels([tr('Node'), tr('X (px)'), tr('Y (px)')])
         self.node_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.node_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.node_table.setAlternatingRowColors(True)
@@ -115,24 +117,23 @@ class ROIGeometryEditor(QWidget):
         self.node_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         self.node_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         self.node_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        self.node_table.setAccessibleName("ROI node coordinates")
+        self.node_table.setAccessibleName(tr('ROI node coordinates'))
         self.node_table.setAccessibleDescription(
-            "Select one node row to edit its X and Y pixel coordinates, insert a node after it, "
-            "or remove it when the ROI remains valid."
+            tr('Select one node row to edit its X and Y pixel coordinates, insert a node after it, or remove it when the ROI remains valid.')
         )
         self.node_table.itemSelectionChanged.connect(self._node_selection_changed)
 
-        self.add_node_button = QPushButton("Insert After")
+        self.add_node_button = QPushButton(tr('Insert After'))
         self.add_node_button.setObjectName("addRoiNodeButton")
         self.add_node_button.setToolTip(
-            "Insert a node after the selected node, midway along the next segment."
+            tr('Insert a node after the selected node, midway along the next segment.')
         )
-        self.add_node_button.setAccessibleName("Insert ROI node after selection")
+        self.add_node_button.setAccessibleName(tr('Insert ROI node after selection'))
         self.add_node_button.clicked.connect(self._insert_after_selected_node)
-        self.remove_node_button = QPushButton("Remove Selected")
+        self.remove_node_button = QPushButton(tr('Remove Selected'))
         self.remove_node_button.setObjectName("removeRoiNodeButton")
-        self.remove_node_button.setToolTip("Remove the selected node while preserving the minimum valid node count.")
-        self.remove_node_button.setAccessibleName("Remove selected ROI node")
+        self.remove_node_button.setToolTip(tr('Remove the selected node while preserving the minimum valid node count.'))
+        self.remove_node_button.setAccessibleName(tr('Remove selected ROI node'))
         self.remove_node_button.clicked.connect(self._remove_selected_node)
 
         node_actions = QHBoxLayout()
@@ -148,7 +149,7 @@ class ROIGeometryEditor(QWidget):
         self.curve_width_row = QWidget()
         curve_width_layout = QFormLayout(self.curve_width_row)
         curve_width_layout.setContentsMargins(0, 0, 0, 0)
-        curve_width_layout.addRow("Half-width", self.curve_band_half_width_spin)
+        curve_width_layout.addRow(tr('Half-width'), self.curve_band_half_width_spin)
 
         node_page = QWidget()
         node_layout = QVBoxLayout(node_page)
@@ -160,15 +161,15 @@ class ROIGeometryEditor(QWidget):
         self._add_page("polygon", node_page)
         self._page_by_type["curve_band"] = node_page
 
-        self.apply_button = QPushButton("Apply Geometry")
+        self.apply_button = QPushButton(tr('Apply Geometry'))
         self.apply_button.setObjectName("applyRoiGeometryButton")
-        self.apply_button.setToolTip("Validate and apply these ROI values, then invalidate stale tracking results.")
-        self.apply_button.setAccessibleName("Apply ROI geometry")
+        self.apply_button.setToolTip(tr('Validate and apply these ROI values, then invalidate stale tracking results.'))
+        self.apply_button.setAccessibleName(tr('Apply ROI geometry'))
         self.apply_button.clicked.connect(self._apply)
-        self.revert_button = QPushButton("Revert")
+        self.revert_button = QPushButton(tr('Revert'))
         self.revert_button.setObjectName("revertRoiGeometryButton")
-        self.revert_button.setToolTip("Discard unapplied geometry changes.")
-        self.revert_button.setAccessibleName("Revert ROI geometry changes")
+        self.revert_button.setToolTip(tr('Discard unapplied geometry changes.'))
+        self.revert_button.setAccessibleName(tr('Revert ROI geometry changes'))
         self.revert_button.clicked.connect(self._revert)
 
         actions = QHBoxLayout()
@@ -192,7 +193,7 @@ class ROIGeometryEditor(QWidget):
         if roi_type not in self._page_by_type:
             self._baseline = None
             self._roi_type = ""
-            self.type_label.setText("No editable ROI")
+            self.type_label.setText(tr('No editable ROI'))
             self._set_enabled(False)
             self._set_status("Choose or draw an ROI to edit its geometry.", "empty")
             self.draftChanged.emit(None)
@@ -206,7 +207,7 @@ class ROIGeometryEditor(QWidget):
             page = self._page_by_type[roi_type]
             self.pages.setCurrentWidget(page)
             self.pages.setFixedHeight(236 if roi_type in {"polygon", "curve_band"} else 82)
-            self.type_label.setText(self._TYPE_LABELS[roi_type])
+            self.type_label.setText(tr(self._TYPE_LABELS[roi_type]))
             self.curve_width_row.setVisible(roi_type == "curve_band")
             if roi_type == "rectangle":
                 self._set_spin(self.rectangle_x_spin, config["x"])
@@ -232,7 +233,7 @@ class ROIGeometryEditor(QWidget):
         except (KeyError, TypeError, ValueError, IndexError, OverflowError):
             self._baseline = None
             self._roi_type = ""
-            self.type_label.setText("Invalid ROI geometry")
+            self.type_label.setText(tr('Invalid ROI geometry'))
             self._set_enabled(False)
             self._set_status("The current ROI cannot be represented in the geometry editor.", "error")
             self.draftChanged.emit(None)
@@ -475,7 +476,7 @@ class ROIGeometryEditor(QWidget):
             for column, axis in ((1, "X"), (2, "Y")):
                 spin = self.node_table.cellWidget(row, column)
                 if isinstance(spin, QDoubleSpinBox):
-                    spin.setAccessibleName(f"Node {row + 1} {axis} coordinate")
+                    spin.setAccessibleName(tr('Node {v0} {v1} coordinate', v0=row + 1, v1=axis))
 
     def _update_node_actions_enabled(self) -> None:
         editing_nodes = self._roi_type in {"polygon", "curve_band"}
@@ -494,7 +495,7 @@ class ROIGeometryEditor(QWidget):
         self.remove_node_button.setEnabled(False)
 
     def _set_status(self, text: str, state: str) -> None:
-        self.message_label.setText(text)
+        self.message_label.setText(tr(text))
         self.message_label.setProperty("roiGeometryState", state)
         self.message_label.setToolTip(text)
         self.message_label.setAccessibleDescription(text)
@@ -513,10 +514,10 @@ class ROIGeometryEditor(QWidget):
         layout.setVerticalSpacing(5)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         for row_index, (left_label, left_spin, right_label, right_spin) in enumerate(rows):
-            layout.addWidget(QLabel(left_label), row_index, 0)
+            layout.addWidget(QLabel(tr(left_label)), row_index, 0)
             layout.addWidget(left_spin, row_index, 1)
             if right_spin is not None:
-                layout.addWidget(QLabel(right_label), row_index, 2)
+                layout.addWidget(QLabel(tr(right_label)), row_index, 2)
                 layout.addWidget(right_spin, row_index, 3)
         layout.setColumnStretch(1, 1)
         layout.setColumnStretch(3, 1)

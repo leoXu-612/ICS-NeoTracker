@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from neo_tracker.ui.language import tr
+
 from copy import deepcopy
 from math import hypot, isfinite
 
@@ -31,10 +33,10 @@ class CalibrationEditor(QWidget):
         self._baseline: dict[str, object] | None = None
         self._line: tuple[tuple[float, float], tuple[float, float]] | None = None
 
-        self.summary_label = QLabel("Not set")
+        self.summary_label = QLabel(tr('Not set'))
         self.summary_label.setObjectName("calibrationSummaryLabel")
         self.summary_label.setWordWrap(True)
-        self.summary_label.setAccessibleName("Calibration rod summary")
+        self.summary_label.setAccessibleName(tr('Calibration rod summary'))
 
         self.length_spin = QDoubleSpinBox()
         self.length_spin.setObjectName("calibrationLengthSpin")
@@ -42,7 +44,7 @@ class CalibrationEditor(QWidget):
         self.length_spin.setDecimals(6)
         self.length_spin.setValue(10.0)
         self.length_spin.setKeyboardTracking(False)
-        self.length_spin.setAccessibleName("Calibration rod real length")
+        self.length_spin.setAccessibleName(tr('Calibration rod real length'))
         self.length_spin.valueChanged.connect(self._mark_dirty)
 
         self.unit_combo = QComboBox()
@@ -50,27 +52,27 @@ class CalibrationEditor(QWidget):
         self.unit_combo.setEditable(True)
         self.unit_combo.addItems(["mm", "cm", "m", "in"])
         self.unit_combo.setCurrentText("cm")
-        self.unit_combo.setAccessibleName("Calibration length unit")
-        self.unit_combo.setToolTip("Choose a common unit or type a short custom unit.")
+        self.unit_combo.setAccessibleName(tr('Calibration length unit'))
+        self.unit_combo.setToolTip(tr('Choose a common unit or type a short custom unit.'))
         if self.unit_combo.lineEdit() is not None:
             self.unit_combo.lineEdit().setMaxLength(12)
         self.unit_combo.currentTextChanged.connect(self._mark_dirty)
 
         self.y_direction_combo = QComboBox()
         self.y_direction_combo.setObjectName("calibrationYDirectionCombo")
-        self.y_direction_combo.addItem("Left of +X", "up")
-        self.y_direction_combo.addItem("Right of +X", "down")
-        self.y_direction_combo.setAccessibleName("Positive Y direction")
+        self.y_direction_combo.addItem(tr("Left of +X"), "up")
+        self.y_direction_combo.addItem(tr("Right of +X"), "down")
+        self.y_direction_combo.setAccessibleName(tr('Positive Y direction'))
         self.y_direction_combo.setToolTip(
-            "Choose which side of the rod's positive X direction contains positive Y."
+            tr("Choose which side of the rod's positive X direction contains positive Y.")
         )
         self.y_direction_combo.currentIndexChanged.connect(self._mark_dirty)
 
-        self.reverse_x_button = QPushButton("Reverse +X")
+        self.reverse_x_button = QPushButton(tr('Reverse +X'))
         self.reverse_x_button.setObjectName("reverseCalibrationXButton")
-        self.reverse_x_button.setAccessibleName("Reverse positive X direction")
+        self.reverse_x_button.setAccessibleName(tr('Reverse positive X direction'))
         self.reverse_x_button.setToolTip(
-            "Swap the rod endpoints so positive X points in the opposite direction."
+            tr('Swap the rod endpoints so positive X points in the opposite direction.')
         )
         self.reverse_x_button.clicked.connect(self._reverse_x)
 
@@ -78,14 +80,14 @@ class CalibrationEditor(QWidget):
         form.setContentsMargins(0, 0, 0, 0)
         form.setHorizontalSpacing(8)
         form.setVerticalSpacing(5)
-        form.addRow("Rod", self.summary_label)
+        form.addRow(tr('Rod'), self.summary_label)
         value_row = QHBoxLayout()
         value_row.setContentsMargins(0, 0, 0, 0)
         value_row.setSpacing(6)
         value_row.addWidget(self.length_spin, 2)
         value_row.addWidget(self.unit_combo, 1)
-        form.addRow("Real length", value_row)
-        self.y_direction_label = QLabel("Positive Y")
+        form.addRow(tr('Real length'), value_row)
+        self.y_direction_label = QLabel(tr('Positive Y'))
         axis_row = QHBoxLayout()
         axis_row.setContentsMargins(0, 0, 0, 0)
         axis_row.setSpacing(6)
@@ -93,17 +95,17 @@ class CalibrationEditor(QWidget):
         axis_row.addWidget(self.reverse_x_button)
         form.addRow(self.y_direction_label, axis_row)
 
-        self.apply_button = QPushButton("Apply Calibration")
+        self.apply_button = QPushButton(tr('Apply Calibration'))
         self.apply_button.setObjectName("applyCalibrationButton")
-        self.apply_button.setAccessibleName("Apply calibration")
+        self.apply_button.setAccessibleName(tr('Apply calibration'))
         self.apply_button.setToolTip(
-            "Apply this calibration, then invalidate stale tracking results."
+            tr('Apply this calibration, then invalidate stale tracking results.')
         )
         self.apply_button.clicked.connect(self._apply)
-        self.revert_button = QPushButton("Revert")
+        self.revert_button = QPushButton(tr('Revert'))
         self.revert_button.setObjectName("revertCalibrationButton")
-        self.revert_button.setAccessibleName("Revert calibration draft")
-        self.revert_button.setToolTip("Discard unapplied calibration changes.")
+        self.revert_button.setAccessibleName(tr('Revert calibration draft'))
+        self.revert_button.setToolTip(tr('Discard unapplied calibration changes.'))
         self.revert_button.clicked.connect(self._revert)
 
         actions = QHBoxLayout()
@@ -114,7 +116,7 @@ class CalibrationEditor(QWidget):
         self.message_label = QLabel()
         self.message_label.setObjectName("calibrationEditorMessage")
         self.message_label.setWordWrap(True)
-        self.message_label.setAccessibleName("Calibration editor status")
+        self.message_label.setAccessibleName(tr('Calibration editor status'))
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -265,7 +267,7 @@ class CalibrationEditor(QWidget):
                 f"{pixel_length:.3f} px · "
                 f"({start[0]:.1f}, {start[1]:.1f}) → ({end[0]:.1f}, {end[1]:.1f})"
             )
-        self.summary_label.setText(text)
+        self.summary_label.setText(tr(text))
         self.summary_label.setToolTip(text)
         self.summary_label.setAccessibleDescription(text)
 
@@ -296,7 +298,7 @@ class CalibrationEditor(QWidget):
         )
 
     def _set_status(self, text: str, state: str) -> None:
-        self.message_label.setText(text)
+        self.message_label.setText(tr(text))
         self.message_label.setProperty("calibrationState", state)
         self.message_label.setToolTip(text)
         self.message_label.setAccessibleDescription(text)

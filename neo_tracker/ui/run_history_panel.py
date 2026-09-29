@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from neo_tracker.ui.language import tr
+
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -264,31 +266,31 @@ class RunHistoryPanel(QWidget):
 
         self.outcome_filter = QComboBox()
         self.outcome_filter.setObjectName("runHistoryOutcomeFilter")
-        self.outcome_filter.setAccessibleName("Filter tracking runs by outcome")
-        self.outcome_filter.setToolTip("Show all tracking runs or one outcome.")
-        self.compare_button = QPushButton("Compare 2")
+        self.outcome_filter.setAccessibleName(tr('Filter tracking runs by outcome'))
+        self.outcome_filter.setToolTip(tr('Show all tracking runs or one outcome.'))
+        self.compare_button = QPushButton(tr('Compare 2'))
         self.compare_button.setObjectName("compareTrackingRunsButton")
-        self.compare_button.setAccessibleName("Compare two selected tracking runs")
-        self.export_button = QPushButton("Export CSV")
+        self.compare_button.setAccessibleName(tr('Compare two selected tracking runs'))
+        self.export_button = QPushButton(tr('Export CSV'))
         self.export_button.setObjectName("exportTrackingRunsButton")
-        self.export_button.setAccessibleName("Export visible tracking runs to CSV")
+        self.export_button.setAccessibleName(tr('Export visible tracking runs to CSV'))
         self.list_widget = QListWidget()
         self.list_widget.setObjectName("runHistoryList")
-        self.list_widget.setAccessibleName("Tracking run history")
+        self.list_widget.setAccessibleName(tr('Tracking run history'))
         self.list_widget.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.list_widget.setTextElideMode(Qt.TextElideMode.ElideRight)
         self.performance_label = QLabel(
-            "Select one run to inspect Backend, Input, Compute, and Review cache performance"
+            tr('Select one run to inspect Backend, Input, Compute, and Review cache performance')
         )
         self.performance_label.setObjectName("runPerformanceLabel")
         self.performance_label.setProperty("performanceState", "empty")
         self.performance_label.setWordWrap(True)
         self.performance_label.setMinimumHeight(64)
-        self.performance_label.setAccessibleName("Selected tracking run performance")
-        self.status_label = QLabel("No tracking runs recorded yet")
+        self.performance_label.setAccessibleName(tr('Selected tracking run performance'))
+        self.status_label = QLabel(tr('No tracking runs recorded yet'))
         self.status_label.setObjectName("runHistoryStatusLabel")
-        self.status_label.setAccessibleName("Tracking run history status")
+        self.status_label.setAccessibleName(tr('Tracking run history status'))
 
         controls = QHBoxLayout()
         controls.setContentsMargins(0, 0, 0, 0)
@@ -391,12 +393,10 @@ class RunHistoryPanel(QWidget):
         total_count = len(self._records)
         self.compare_button.setEnabled(selected_count == 2)
         self.compare_button.setToolTip(
-            "Compare metadata and pipeline configuration for the two selected runs."
-            if selected_count == 2
-            else f"Select exactly two runs to compare; {selected_count} selected."
+            (tr('Compare metadata and pipeline configuration for the two selected runs.') if selected_count == 2 else tr('Select exactly two runs to compare; {v0} selected.', v0=selected_count))
         )
         self.export_button.setEnabled(visible_count > 0)
-        self.export_button.setToolTip(f"Export the {visible_count} visible tracking runs to CSV.")
+        self.export_button.setToolTip(tr('Export the {v0} visible tracking runs to CSV.', v0=visible_count))
         if selected_count == 1:
             selection = selections[0]
             record = selection.record
@@ -439,7 +439,7 @@ class RunHistoryPanel(QWidget):
             cache_detail = run_review_cache_detail(selections[0].record)
             if cache_detail:
                 performance_detail += f"\n{cache_detail}"
-        self.performance_label.setText(performance)
+        self.performance_label.setText(tr(performance))
         self.performance_label.setProperty("performanceState", performance_state)
         self.performance_label.setToolTip(performance_detail)
         self.performance_label.setAccessibleDescription(performance_detail)
@@ -451,7 +451,7 @@ class RunHistoryPanel(QWidget):
             status = f"Showing {visible_count} of {total_count} · {selected_count} selected"
             if selected_count != 2:
                 status += " · Select 2 to compare"
-        self.status_label.setText(status)
+        self.status_label.setText(tr(status))
         self.status_label.setToolTip(status)
         self.status_label.setAccessibleDescription(status)
 
@@ -475,14 +475,14 @@ class RunHistoryComparisonDialog(QDialog):
         older, newer = sorted(selections, key=lambda selection: selection.sequence)
         self.older = older
         self.newer = newer
-        self.setWindowTitle("Compare Tracking Runs")
+        self.setWindowTitle(tr('Compare Tracking Runs'))
         self.resize(820, 620)
 
-        title = QLabel(f"Run #{older.sequence} → Run #{newer.sequence}")
+        title = QLabel(tr('Run #{v0} → Run #{v1}', v0=older.sequence, v1=newer.sequence))
         title.setObjectName("runComparisonTitle")
-        title.setAccessibleName(f"Comparing tracking run {older.sequence} with run {newer.sequence}")
+        title.setAccessibleName(tr('Comparing tracking run {v0} with run {v1}', v0=older.sequence, v1=newer.sequence))
         detail = QLabel(
-            "Metadata and pipeline settings are compared below. Historical result arrays are not stored."
+            tr('Metadata and pipeline settings are compared below. Historical result arrays are not stored.')
         )
         detail.setWordWrap(True)
 
@@ -493,9 +493,9 @@ class RunHistoryComparisonDialog(QDialog):
             newer.sequence,
             "runSummaryComparisonTable",
         )
-        self.summary_table.setAccessibleName("Tracking run metadata comparison")
+        self.summary_table.setAccessibleName(tr('Tracking run metadata comparison'))
         self.summary_table.setAccessibleDescription(
-            "Read each metadata field across the older and newer tracking runs."
+            tr('Read each metadata field across the older and newer tracking runs.')
         )
         differences = run_config_difference_rows(older, newer)
         self.config_table = self._comparison_table(
@@ -504,14 +504,14 @@ class RunHistoryComparisonDialog(QDialog):
             newer.sequence,
             "runConfigComparisonTable",
         )
-        self.config_table.setAccessibleName("Tracking run pipeline configuration differences")
+        self.config_table.setAccessibleName(tr('Tracking run pipeline configuration differences'))
         self.config_table.setAccessibleDescription(
-            "Read each changed pipeline setting across the older and newer tracking runs."
+            tr('Read each changed pipeline setting across the older and newer tracking runs.')
         )
 
         tabs = QTabWidget()
-        tabs.addTab(self.summary_table, "Summary")
-        tabs.addTab(self.config_table, f"Config changes ({len(differences)})")
+        tabs.addTab(self.summary_table, tr('Summary'))
+        tabs.addTab(self.config_table, tr('Config changes ({v0})', v0=len(differences)))
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(self.reject)
@@ -541,7 +541,7 @@ class RunHistoryComparisonDialog(QDialog):
         table = created
         table.setRowCount(len(rows))
         table.setColumnCount(3)
-        table.setHorizontalHeaderLabels(("Field", f"Run #{older_sequence}", f"Run #{newer_sequence}"))
+        table.setHorizontalHeaderLabels((tr('Field'), tr('Run #{v0}', v0=older_sequence), tr('Run #{v0}', v0=newer_sequence)))
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         table.setAlternatingRowColors(True)

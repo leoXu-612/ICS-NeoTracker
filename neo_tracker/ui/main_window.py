@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from neo_tracker.ui.language import tr
+
 import json
 import sys
 from collections.abc import Callable
@@ -228,7 +230,7 @@ class ElidingLabel(QLabel):
         self._full_text = ""
         self._auto_tooltip = bool(auto_tooltip)
         super().__init__("")
-        self.setText(text)
+        self.setText(tr(text))
 
     def setText(self, text: str) -> None:  # noqa: N802
         self._full_text = str(text)
@@ -274,8 +276,8 @@ class NeoTrackerWindow(
         physics_export_directory_picker: Callable[[QWidget], str] | None = None,
     ) -> None:
         super().__init__()
-        self.setWindowTitle("Neo-Tracker")
-        self.resize(1280, 780)
+        self.setWindowTitle(tr('Neo-Tracker'))
+        self.resize(1440, 900)
         self._physics_layout_store = (
             physics_layout_store or PhysicsWorkspaceStateStore.application_default()
         )
@@ -347,11 +349,11 @@ class NeoTrackerWindow(
         )
 
         self.preview_label = PreviewCanvas()
-        self.preview_title_label = ElidingLabel("No media loaded", auto_tooltip=True)
-        self.playback_status_label = QLabel("Playing")
+        self.preview_title_label = ElidingLabel(tr('No media loaded'), auto_tooltip=True)
+        self.playback_status_label = QLabel(tr('Playing'))
         self.backend_label = QLabel()
-        self.tracking_status_label = QLabel("No media")
-        self.tracking_summary_label = ElidingLabel("Results: none")
+        self.tracking_status_label = QLabel(tr('No media'))
+        self.tracking_summary_label = ElidingLabel(tr('Results: none'))
         self.task_list = QListWidget()
         self.task_actions_panel = TaskActionsPanel()
         self.sidebar_tabs = QTabWidget()
@@ -362,25 +364,24 @@ class NeoTrackerWindow(
         self.preset_combo = QComboBox()
         self.preset_description = QTextBrowser()
         self.marker_swatch_label = QLabel()
-        self.marker_sample_label = QLabel("Marker controls are available for color marker presets.")
-        self.sample_marker_button = QPushButton("Sample")
+        self.marker_sample_label = QLabel(tr('Marker controls are available for color marker presets.'))
+        self.sample_marker_button = QPushButton(tr('Sample'))
         self.color_tolerance_spin = QDoubleSpinBox()
         self.color_max_candidates_spin = QSpinBox()
         self.color_min_area_spin = QSpinBox()
         for spin in (self.color_tolerance_spin, self.color_max_candidates_spin, self.color_min_area_spin):
             spin.setKeyboardTracking(False)
         self.marker_controls_widget = QWidget()
-        self.tracking_backend_label = QLabel("Detecting…")
-        self.tracking_performance_title_label = QLabel("Live performance")
-        self.tracking_performance_label = QLabel("Measuring…")
-        self.module_summary_list = QListWidget()
+        self.tracking_backend_label = QLabel(tr('Detecting…'))
+        self.tracking_performance_title_label = QLabel(tr('Live performance'))
+        self.tracking_performance_label = QLabel(tr('Measuring…'))
         self.workflow_list = QListWidget()
         self.advanced_config_view = QPlainTextEdit()
-        self.media_path_label = QLabel("No media selected")
-        self.media_path_label.setAccessibleName("Current media path")
-        self.media_fps_title_label = QLabel("Source FPS")
-        self.media_frames_title_label = QLabel("Frames")
-        self.media_resolution_title_label = QLabel("Resolution")
+        self.media_path_label = QLabel(tr('No media selected'))
+        self.media_path_label.setAccessibleName(tr('Current media path'))
+        self.media_fps_title_label = QLabel(tr('Source FPS'))
+        self.media_frames_title_label = QLabel(tr('Frames'))
+        self.media_resolution_title_label = QLabel(tr('Resolution'))
         self.media_fps_label = QLabel("-")
         self.media_frames_label = QLabel("-")
         self.media_resolution_label = QLabel("-")
@@ -388,49 +389,49 @@ class NeoTrackerWindow(
         self.project_status_panel = ProjectStatusPanel()
         self.project_name_label = self.project_status_panel.name_label
         self.project_state_label = self.project_status_panel.state_label
-        self.global_project_dirty_label = ElidingLabel("Unsaved")
+        self.global_project_dirty_label = ElidingLabel(tr('Unsaved'))
         self.global_project_dirty_label.setObjectName("globalProjectDirtyLabel")
-        self.global_project_dirty_label.setAccessibleName("Project has unsaved changes")
+        self.global_project_dirty_label.setAccessibleName(tr('Project has unsaved changes'))
         self.global_project_dirty_label.setAccessibleDescription(
-            "Project content has changed since the last save."
+            tr('Project content has changed since the last save.')
         )
         self.global_project_dirty_label.hide()
-        self.global_draft_label = ElidingLabel("Draft")
+        self.global_draft_label = ElidingLabel(tr('Draft'))
         self.global_draft_label.setObjectName("globalDraftLabel")
-        self.global_draft_label.setAccessibleName("Unapplied editor work")
+        self.global_draft_label.setAccessibleName(tr('Unapplied editor work'))
         self.global_draft_label.hide()
-        self.open_project_button = QPushButton("Open Project")
-        self.save_project_button = QPushButton("Save Project")
-        self.add_media_button = QPushButton("Add media")
-        self.media_probe_status_label = QLabel("Inspecting media…")
+        self.open_project_button = QPushButton(tr('Open Project'))
+        self.save_project_button = QPushButton(tr('Save Project'))
+        self.add_media_button = QPushButton(tr('Add media'))
+        self.media_probe_status_label = QLabel(tr('Inspecting media…'))
         self.media_probe_status_label.setObjectName("mediaProbeStatusLabel")
-        self.media_probe_status_label.setAccessibleName("Media import status")
+        self.media_probe_status_label.setAccessibleName(tr('Media import status'))
         self.media_probe_status_label.hide()
         self.media_relink_panel = MediaRelinkPanel()
-        self.media_relink_section_label = self._section_label("MEDIA SOURCE")
+        self.media_relink_section_label = self._section_label(tr('MEDIA SOURCE'))
         self._media_relink_task: DesktopTask | None = None
         self._media_relink_candidate_path: str | None = None
         self._media_relink_candidate_info: MediaInfo | None = None
         self._media_relink_assessment: MediaRelinkAssessment | None = None
         self.preview_frame_spin = QSpinBox()
-        self.play_button = QPushButton("Play")
-        self.previous_frame_button = QPushButton("Previous")
-        self.next_frame_button = QPushButton("Next")
+        self.play_button = QPushButton(tr('Play'))
+        self.previous_frame_button = QPushButton(tr('Previous'))
+        self.next_frame_button = QPushButton(tr('Next'))
         self.frame_slider = QSlider(Qt.Orientation.Horizontal)
-        self.run_tracking_button = QPushButton("Run Tracking")
-        self.export_tracking_csv_button = QPushButton("Export CSV")
-        self.export_report_button = QPushButton("Report")
-        self.roi_status_label = QLabel("Default ROI from selected preset")
-        self.scale_status_label = QLabel("Pixel units")
+        self.run_tracking_button = QPushButton(tr('Run Tracking'))
+        self.export_tracking_csv_button = QPushButton(tr('Export CSV'))
+        self.export_report_button = QPushButton(tr('Report'))
+        self.roi_status_label = QLabel(tr('Default ROI from selected preset'))
+        self.scale_status_label = QLabel(tr('Pixel units'))
         self.curve_half_width_spin = QDoubleSpinBox()
         self.roi_geometry_editor = ROIGeometryEditor()
         self.calibration_editor = CalibrationEditor()
         self.rod_status_label = self.calibration_editor.summary_label
-        self.reset_roi_button = QPushButton("Reset ROI")
-        self.reset_calibration_button = QPushButton("Reset Calibration")
-        self.mark_calibration_button = QPushButton("Mark Rod")
-        self.finish_roi_drawing_button = QPushButton("Finish Drawing")
-        self.cancel_roi_drawing_button = QPushButton("Cancel Drawing")
+        self.reset_roi_button = QPushButton(tr('Reset ROI'))
+        self.reset_calibration_button = QPushButton(tr('Reset Calibration'))
+        self.mark_calibration_button = QPushButton(tr('Mark Rod'))
+        self.finish_roi_drawing_button = QPushButton(tr('Finish Drawing'))
+        self.cancel_roi_drawing_button = QPushButton(tr('Cancel Drawing'))
         self.review_controller = ReviewController()
         # External macOS accessibility clients call into Qt from AppKit. A table
         # constructed directly through PySide uses QTableViewWrapper's Python
@@ -453,21 +454,21 @@ class NeoTrackerWindow(
         self.run_history_panel = RunHistoryPanel()
         self.run_history_list = self.run_history_panel.list_widget
         self.review_history_tabs = QTabWidget()
-        self.review_summary_label = QLabel("Run tracking to populate the review table.")
-        self.review_selection_label = QLabel("No result selected")
-        self.review_selection_detail_label = QLabel("Select a result row or move to a tracked frame.")
-        self.correct_point_button = QPushButton("Correct Point")
-        self.mark_lost_button = QPushButton("Mark Lost")
-        self.undo_review_edit_button = QPushButton("Undo Edit")
-        self.rerun_after_button = QPushButton("Rerun After…")
-        self.jump_to_result_button = QPushButton("Jump to Row")
-        self.show_response_checkbox = QCheckBox("Response")
-        self.show_observation_checkbox = QCheckBox("Observation")
-        self.show_measurement_checkbox = QCheckBox("Measured")
-        self.show_candidates_checkbox = QCheckBox("Candidates")
-        self.show_prediction_checkbox = QCheckBox("Prediction")
-        self.candidate_summary_label = QLabel("Candidates: none")
-        self.response_status_label = QLabel("Response overlay: off")
+        self.review_summary_label = QLabel(tr('Run tracking to populate the review table.'))
+        self.review_selection_label = QLabel(tr('No result selected'))
+        self.review_selection_detail_label = QLabel(tr('Select a result row or move to a tracked frame.'))
+        self.correct_point_button = QPushButton(tr('Correct Point'))
+        self.mark_lost_button = QPushButton(tr('Mark Lost'))
+        self.undo_review_edit_button = QPushButton(tr('Undo Edit'))
+        self.rerun_after_button = QPushButton(tr('Rerun After…'))
+        self.jump_to_result_button = QPushButton(tr('Jump to Row'))
+        self.show_response_checkbox = QCheckBox(tr('Response'))
+        self.show_observation_checkbox = QCheckBox(tr('Observation'))
+        self.show_measurement_checkbox = QCheckBox(tr('Measured'))
+        self.show_candidates_checkbox = QCheckBox(tr('Candidates'))
+        self.show_prediction_checkbox = QCheckBox(tr('Prediction'))
+        self.candidate_summary_label = QLabel(tr('Candidates: none'))
+        self.response_status_label = QLabel(tr('Response overlay: off'))
         self.review_diagnostics_panel = ReviewDiagnosticsPanel()
         self.confidence_plot = self.review_diagnostics_panel.plot
         self._review_render_task_token: int | None = None
@@ -482,12 +483,12 @@ class NeoTrackerWindow(
         self.analysis_stft_overlap_spin = QDoubleSpinBox()
         self.analysis_parameters_form: QFormLayout | None = None
         self.analysis_result_view = QPlainTextEdit()
-        self.analysis_source_detail_label = QLabel("No signal source available")
-        self.refresh_analysis_sources_button = QPushButton("Refresh sources")
-        self.analysis_status_label = QLabel("No source")
-        self.run_analysis_button = QPushButton("Run processing")
-        self.analysis_export_csv_button = QPushButton("Export CSV")
-        self.analysis_export_npz_button = QPushButton("Export NPZ")
+        self.analysis_source_detail_label = QLabel(tr('No signal source available'))
+        self.refresh_analysis_sources_button = QPushButton(tr('Refresh sources'))
+        self.analysis_status_label = QLabel(tr('No source'))
+        self.run_analysis_button = QPushButton(tr('Run processing'))
+        self.analysis_export_csv_button = QPushButton(tr('Export CSV'))
+        self.analysis_export_npz_button = QPushButton(tr('Export NPZ'))
         self.analysis_controller = AnalysisController()
         self.selection_session = SelectionSession()
         self._selection_unsubscribe = self.selection_session.subscribe(
@@ -524,10 +525,10 @@ class NeoTrackerWindow(
         self.fit_panel.runRequested.connect(self._run_physics_fit)
         self.fit_panel.cancelRequested.connect(self._cancel_physics_fit)
         self.fit_panel.draftChanged.connect(self._physics_fit_draft_changed)
-        self.validate_json_button = QPushButton("Validate")
-        self.apply_json_button = QPushButton("Apply JSON")
-        self.reset_json_button = QPushButton("Reset View")
-        self.json_status_label = QLabel("Synced")
+        self.validate_json_button = QPushButton(tr('Validate'))
+        self.apply_json_button = QPushButton(tr('Apply JSON'))
+        self.reset_json_button = QPushButton(tr('Reset View'))
+        self.json_status_label = QLabel(tr('Synced'))
         self.json_validation_message = QLabel()
         self._syncing_advanced_config = False
         self.project_loader = NeoTrackerProject.load
@@ -642,6 +643,8 @@ class NeoTrackerWindow(
         icon: QIcon | None = None,
     ) -> None:
         shell = getattr(self, "_application_shell", None)
+        text = tr(text) if text is not None else None
+        tool_tip = tr(tool_tip) if tool_tip is not None else None
         if shell is not None:
             shell.update_action(
                 key,
@@ -656,7 +659,7 @@ class NeoTrackerWindow(
         if enabled is not None:
             button.setEnabled(enabled)
         if text is not None:
-            button.setText(text)
+            button.setText(tr(text))
         if tool_tip is not None:
             button.setToolTip(tool_tip)
         if icon is not None:
@@ -669,7 +672,7 @@ class NeoTrackerWindow(
         root = QWidget()
         root.setObjectName("appRoot")
         root_layout = QVBoxLayout(root)
-        root_layout.setContentsMargins(14, 12, 14, 14)
+        root_layout.setContentsMargins(12, 0, 12, 12)
         root_layout.setSpacing(12)
 
         top_toolbar = QFrame()
@@ -679,7 +682,7 @@ class NeoTrackerWindow(
         app_header = QHBoxLayout(top_toolbar)
         app_header.setContentsMargins(12, 8, 12, 8)
         app_header.setSpacing(8)
-        app_title = QLabel("Neo-Tracker")
+        app_title = QLabel(tr('Neo-Tracker'))
         app_title.setObjectName("appTitle")
         app_title_font = app_title.font()
         if app_title_font.pointSizeF() > 0:
@@ -701,23 +704,23 @@ class NeoTrackerWindow(
         self.run_tracking_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
         self.export_tracking_csv_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton))
         self.export_report_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogDetailedView))
-        self.run_tracking_button.setToolTip("Run the selected video tracking pipeline.")
-        self.export_tracking_csv_button.setToolTip("Export the current tracking results as CSV.")
-        self.export_report_button.setToolTip("Create a Markdown report for the current task.")
-        self.run_tracking_button.setAccessibleName("Run video tracking")
+        self.run_tracking_button.setToolTip(tr('Run the selected video tracking pipeline.'))
+        self.export_tracking_csv_button.setToolTip(tr('Export the current tracking results as CSV.'))
+        self.export_report_button.setToolTip(tr('Create a Markdown report for the current task.'))
+        self.run_tracking_button.setAccessibleName(tr('Run video tracking'))
         self.run_tracking_button.setAccessibleDescription(
-            "Starts tracking in the background. While tracking, this button cancels the active run."
+            tr('Starts tracking in the background. While tracking, this button cancels the active run.')
         )
-        self.export_tracking_csv_button.setAccessibleName("Export current tracking results to CSV")
+        self.export_tracking_csv_button.setAccessibleName(tr('Export current tracking results to CSV'))
         self.export_tracking_csv_button.setAccessibleDescription(
-            "Save the current task's tracking results as a CSV file."
+            tr("Save the current task's tracking results as a CSV file.")
         )
-        self.export_report_button.setAccessibleName("Create tracking report")
+        self.export_report_button.setAccessibleName(tr('Create tracking report'))
         self.export_report_button.setAccessibleDescription(
-            "Create a Markdown report for the current media task and tracking history."
+            tr('Create a Markdown report for the current media task and tracking history.')
         )
-        self.tracking_status_label.setAccessibleName("Tracking status")
-        self.tracking_summary_label.setAccessibleName("Tracking progress and result summary")
+        self.tracking_status_label.setAccessibleName(tr('Tracking status'))
+        self.tracking_summary_label.setAccessibleName(tr('Tracking progress and result summary'))
         app_header.addWidget(app_title)
         app_header.addWidget(self.global_project_dirty_label)
         app_header.addWidget(self.global_draft_label)
@@ -733,7 +736,23 @@ class NeoTrackerWindow(
         self.workspace_splitter.setObjectName("workspaceSplitter")
         self.workspace_splitter.setChildrenCollapsible(False)
         self.workspace_splitter.splitterMoved.connect(self._physics_splitter_moved)
-        root_layout.addWidget(self.workspace_splitter, 1)
+        content_layout = QHBoxLayout()
+        content_layout.setSpacing(12)
+        self.navigation_rail = QFrame()
+        self.navigation_rail.setObjectName("navigationRail")
+        self.navigation_rail.setFixedWidth(174)
+        self.navigation_layout = QVBoxLayout(self.navigation_rail)
+        self.navigation_layout.setContentsMargins(10, 8, 10, 10)
+        self.navigation_layout.setSpacing(7)
+        self.navigation_layout.addWidget(self._section_label(tr("Workspace")))
+        self.workflow_navigation = QListWidget()
+        self.workflow_navigation.setObjectName("workflowNavigation")
+        self.workflow_navigation.setAccessibleName(tr("Workspace"))
+        self.workflow_navigation.setFixedHeight(298)
+        self.navigation_layout.addWidget(self.workflow_navigation)
+        content_layout.addWidget(self.navigation_rail)
+        content_layout.addWidget(self.workspace_splitter, 1)
+        root_layout.addLayout(content_layout, 1)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setObjectName("mainSplitter")
@@ -746,23 +765,23 @@ class NeoTrackerWindow(
         preview_layout.setContentsMargins(0, 0, 10, 0)
         preview_layout.setSpacing(8)
         preview_header = QHBoxLayout()
-        title = QLabel("Preview")
+        title = QLabel(tr('Preview'))
         title.setObjectName("previewTitle")
         preview_header.addWidget(title)
         preview_header.addStretch(1)
         self.playback_status_label.setObjectName("playbackStatusLabel")
         self.playback_status_label.setProperty("playbackState", "smooth")
-        self.playback_status_label.setAccessibleName("Preview status")
+        self.playback_status_label.setAccessibleName(tr('Preview status'))
         self.playback_status_label.hide()
         preview_header.addWidget(self.playback_status_label)
         preview_layout.addLayout(preview_header)
 
         self.preview_label.setObjectName("previewCanvas")
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.preview_label.setMinimumSize(480, 270)
+        self.preview_label.setMinimumSize(330, 220)
         self.preview_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.preview_label.setFrameShape(QFrame.Shape.StyledPanel)
-        self.preview_label.setText("No media loaded\nAdd a video or WAV file from the Media tab.")
+        self.preview_label.setText(tr('No media loaded\nAdd a video or WAV file from the Media tab.'))
         self.preview_label.roiSelected.connect(self._roi_selected)
         self.preview_label.calibrationRodSelected.connect(self._calibration_rod_selected)
         self.preview_label.manualPointSelected.connect(self._manual_point_selected)
@@ -783,33 +802,33 @@ class NeoTrackerWindow(
         self.previous_frame_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaSkipBackward))
         self.play_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
         self.next_frame_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaSkipForward))
-        self.previous_frame_button.setToolTip("Step to the previous video frame.")
-        self.previous_frame_button.setAccessibleName("Previous video frame")
-        self.previous_frame_button.setAccessibleDescription("Move the preview one frame backward.")
+        self.previous_frame_button.setToolTip(tr('Step to the previous video frame.'))
+        self.previous_frame_button.setAccessibleName(tr('Previous video frame'))
+        self.previous_frame_button.setAccessibleDescription(tr('Move the preview one frame backward.'))
         self.play_button.setToolTip(
-            "Play or pause the video preview. Playback stays aligned to source time and may skip preview frames if rendering falls behind."
+            tr('Play or pause the video preview. Playback stays aligned to source time and may skip preview frames if rendering falls behind.')
         )
-        self.play_button.setAccessibleName("Play video preview")
-        self.next_frame_button.setToolTip("Step to the next video frame.")
-        self.next_frame_button.setAccessibleName("Next video frame")
-        self.next_frame_button.setAccessibleDescription("Move the preview one frame forward.")
+        self.play_button.setAccessibleName(tr('Play video preview'))
+        self.next_frame_button.setToolTip(tr('Step to the next video frame.'))
+        self.next_frame_button.setAccessibleName(tr('Next video frame'))
+        self.next_frame_button.setAccessibleDescription(tr('Move the preview one frame forward.'))
         self.preview_frame_spin.setRange(0, 0)
-        self.preview_frame_spin.setAccessibleName("Preview frame number")
+        self.preview_frame_spin.setAccessibleName(tr('Preview frame number'))
         self.preview_frame_spin.setAccessibleDescription(
-            "Enter a source frame number to move the preview to that frame."
+            tr('Enter a source frame number to move the preview to that frame.')
         )
         self.preview_frame_spin.valueChanged.connect(self._preview_frame_selected_by_user)
         self.frame_slider.setObjectName("frameSlider")
         self.frame_slider.setRange(0, 0)
-        self.frame_slider.setAccessibleName("Preview frame timeline")
+        self.frame_slider.setAccessibleName(tr('Preview frame timeline'))
         self.frame_slider.setAccessibleDescription(
-            "Move along the source timeline to select a video frame for preview and review."
+            tr('Move along the source timeline to select a video frame for preview and review.')
         )
         self.frame_slider.valueChanged.connect(self._preview_frame_selected_by_user)
         preview_controls.addWidget(self.previous_frame_button)
         preview_controls.addWidget(self.play_button)
         preview_controls.addWidget(self.next_frame_button)
-        frame_label = QLabel("Frame")
+        frame_label = QLabel(tr('Frame'))
         frame_label.setObjectName("previewFrameLabel")
         frame_label.setBuddy(self.preview_frame_spin)
         preview_controls.addWidget(frame_label)
@@ -821,15 +840,19 @@ class NeoTrackerWindow(
         sidebar = QWidget()
         sidebar.setObjectName("rightSidebar")
         self.right_sidebar = sidebar
-        sidebar.setMinimumWidth(450)
+        sidebar.setMinimumWidth(320)
         sidebar_layout = QVBoxLayout(sidebar)
-        sidebar_layout.setContentsMargins(8, 0, 0, 0)
+        sidebar_layout.setContentsMargins(4, 8, 4, 4)
         sidebar_layout.setSpacing(8)
         self.sidebar_tabs.setObjectName("sidebarTabs")
         self.sidebar_tabs.setMinimumHeight(300)
+        self.inspector_heading = QLabel(tr("Inspector"))
+        self.inspector_heading.setObjectName("inspectorHeading")
+        sidebar_layout.addWidget(self.inspector_heading)
+        self.sidebar_tabs.tabBar().hide()
         sidebar_layout.addWidget(self.sidebar_tabs)
         splitter.addWidget(sidebar)
-        splitter.setSizes([820, 500])
+        splitter.setSizes([790, 360])
         self.workspace_splitter.addWidget(self.physics_workspace)
         self.workspace_splitter.setStretchFactor(0, 1)
         self.workspace_splitter.setStretchFactor(1, 0)
@@ -842,691 +865,43 @@ class NeoTrackerWindow(
         self._build_calibration_tab()
         self._build_workflow_tab()
         self._build_advanced_tab()
-        self.sidebar_tabs.setAccessibleName("Neo-Tracker workflow sections")
+        for index in range(self.sidebar_tabs.count()):
+            self.workflow_navigation.addItem(self.sidebar_tabs.tabText(index))
+        self.workflow_navigation.currentRowChanged.connect(self._workflow_selected)
+        self.workflow_navigation.setCurrentRow(0)
+        self.navigation_layout.addWidget(self._section_label(tr("Media library")))
+        self.navigation_layout.addWidget(self.add_media_button)
+        self.navigation_layout.addWidget(self.task_list, 1)
+        project_actions = QVBoxLayout()
+        project_actions.addWidget(self.open_project_button)
+        project_actions.addWidget(self.save_project_button)
+        self.navigation_layout.addLayout(project_actions)
+        self.sidebar_tabs.setAccessibleName(tr('Neo-Tracker workflow sections'))
         self.sidebar_tabs.setAccessibleDescription(
-            "Choose Media, Tracking, Review, Signal, Calibration, Flow, or Pipeline JSON. Review also exposes physics inspection."
+            tr('Choose Media, Tracking, Review, Signal, Calibration, Flow, or Pipeline JSON. Review also exposes physics inspection.')
         )
-        self.sidebar_tabs.tabBar().setAccessibleName("Neo-Tracker workflow section tabs")
+        self.sidebar_tabs.tabBar().setAccessibleName(tr('Neo-Tracker workflow section tabs'))
         self.sidebar_tabs.currentChanged.connect(self._sidebar_tab_changed)
 
         self.setCentralWidget(root)
-        self.task_list.setAccessibleName("Media tasks")
+        self.task_list.setAccessibleName(tr('Media tasks'))
         self.task_list.setAccessibleDescription(
-            "Choose the video or audio task to preview, track, review, or process."
+            tr('Choose the video or audio task to preview, track, review, or process.')
         )
         self.add_media_button.setFocus(Qt.FocusReason.OtherFocusReason)
 
+    def _workflow_selected(self, index: int) -> None:
+        if self.sidebar_tabs.isEnabled() and self.sidebar_tabs.isTabEnabled(index):
+            self.sidebar_tabs.setCurrentIndex(index)
+        else:
+            with QSignalBlocker(self.workflow_navigation):
+                self.workflow_navigation.setCurrentRow(self.sidebar_tabs.currentIndex())
+        self.inspector_heading.setText(self.sidebar_tabs.tabText(self.sidebar_tabs.currentIndex()))
+
     def _apply_style(self) -> None:
-        self.setStyleSheet(
-            """
-            QMainWindow, QScrollArea, QStatusBar {
-                background: #f5f5f7;
-            }
-            QWidget {
-                color: #1d1d1f;
-                font-family: "Helvetica Neue", "Arial", sans-serif;
-            }
-            QLabel {
-                background: transparent;
-            }
-            QWidget#appRoot {
-                background: #f5f5f7;
-            }
-            QFrame#topToolbar {
-                background: #fbfbfd;
-                border: 1px solid #d8d8de;
-                border-radius: 12px;
-            }
-            QLabel#appTitle {
-                font-weight: 700;
-                color: #111113;
-                padding-right: 10px;
-            }
-            QLabel#mediaTitle {
-                color: #66666c;
-                padding: 4px 0;
-            }
-            QLabel#projectStateLabel {
-                background: #f5f5f7;
-                border: 1px solid #dedee3;
-                border-radius: 9px;
-                color: #6e6e73;
-                font-weight: 650;
-                padding: 3px 8px;
-            }
-            QLabel#projectStateLabel[projectState="saved"] {
-                background: #edf9f1;
-                border-color: #ccebd6;
-                color: #216e39;
-            }
-            QLabel#projectStateLabel[projectState="dirty"] {
-                background: #fff8e8;
-                border-color: #ead7a1;
-                color: #805b12;
-            }
-            QLabel#globalProjectDirtyLabel {
-                background: #fff8e8;
-                border: 1px solid #ead7a1;
-                border-radius: 9px;
-                color: #805b12;
-                font-weight: 650;
-                padding: 3px 8px;
-            }
-            QLabel#globalDraftLabel {
-                background: #eef5ff;
-                border: 1px solid #d5e5f8;
-                border-radius: 9px;
-                color: #245b92;
-                font-weight: 650;
-                padding: 3px 8px;
-            }
-            QPushButton#saveProjectButton[projectDirty="true"] {
-                background: #0071e3;
-                border-color: #0071e3;
-                color: #ffffff;
-                font-weight: 650;
-            }
-            QPushButton#saveProjectButton[projectDirty="true"]:hover {
-                background: #0067d1;
-            }
-            QPushButton#saveProjectButton:disabled {
-                background: #f1f1f4;
-                border-color: #d8d8de;
-                color: #99999f;
-                font-weight: 600;
-            }
-            QLabel#statusChip, QLabel#summaryChip {
-                background: #ffffff;
-                border: 1px solid #d6d6dc;
-                border-radius: 11px;
-                padding: 5px 10px;
-                color: #303034;
-            }
-            QLabel#statusChip[trackingOutcome="complete"] {
-                background: #edf9f1;
-                border-color: #ccebd6;
-                color: #216e39;
-            }
-            QLabel#statusChip[trackingOutcome="partial"] {
-                background: #fff6df;
-                border-color: #f0d59a;
-                color: #8a5a00;
-            }
-            QLabel#statusChip[trackingOutcome="failed"] {
-                background: #fff0f0;
-                border-color: #f2c4c4;
-                color: #a12622;
-            }
-            QLabel#statusChip[trackingOutcome="canceled"] {
-                background: #f5f5f7;
-                border-color: #d8d8de;
-                color: #5f6368;
-            }
-            QLabel#statusChip[trackingOutcome="running"] {
-                background: #eef5ff;
-                border-color: #d5e5f8;
-                color: #245b92;
-            }
-            QLabel#jsonStatusLabel, QLabel#mediaProbeStatusLabel {
-                color: #6e6e73;
-                background: #f5f5f7;
-                border: 1px solid #dedee3;
-                border-radius: 7px;
-                padding: 4px 8px;
-            }
-            QLabel#jsonStatusLabel[jsonState="valid"] {
-                color: #216e39;
-                background: #edf9f1;
-                border-color: #ccebd6;
-            }
-            QLabel#jsonStatusLabel[jsonState="edited"] {
-                color: #6a4d00;
-                background: #fff8e6;
-                border-color: #ead8a4;
-            }
-            QLabel#jsonStatusLabel[jsonState="invalid"] {
-                color: #a12622;
-                background: #fff0f0;
-                border-color: #f2c4c4;
-            }
-            QLabel#jsonValidationMessage {
-                color: #8f1d1a;
-                background: #fff4f4;
-                border: 1px solid #efcaca;
-                border-radius: 8px;
-                padding: 7px 9px;
-            }
-            QLabel#analysisSourceDetailLabel {
-                color: #6e6e73;
-                padding: 2px 1px 5px 1px;
-            }
-            QLabel#reviewSelectionLabel {
-                color: #245b92;
-                background: #eef5ff;
-                border: 1px solid #d5e5f8;
-                border-radius: 8px;
-                font-weight: 650;
-                padding: 7px 9px 3px 9px;
-                border-bottom-left-radius: 0;
-                border-bottom-right-radius: 0;
-            }
-            QLabel#reviewSelectionDetailLabel {
-                color: #35516f;
-                background: #eef5ff;
-                border: 1px solid #d5e5f8;
-                border-top: 0;
-                border-radius: 8px;
-                padding: 2px 9px 7px 9px;
-                border-top-left-radius: 0;
-                border-top-right-radius: 0;
-            }
-            QLabel#reviewSelectionLabel[reviewTone="manual"],
-            QLabel#reviewSelectionDetailLabel[reviewTone="manual"] {
-                color: #216e39;
-                background: #edf9f1;
-                border-color: #ccebd6;
-            }
-            QLabel#reviewSelectionLabel[reviewTone="attention"],
-            QLabel#reviewSelectionDetailLabel[reviewTone="attention"] {
-                color: #7a5100;
-                background: #fff8e6;
-                border-color: #ead8a4;
-            }
-            QLabel#reviewSelectionLabel[reviewTone="lost"],
-            QLabel#reviewSelectionDetailLabel[reviewTone="lost"] {
-                color: #a12622;
-                background: #fff0f0;
-                border-color: #f2c4c4;
-            }
-            QLabel#reviewSelectionLabel[reviewTone="empty"],
-            QLabel#reviewSelectionDetailLabel[reviewTone="empty"] {
-                color: #6e6e73;
-                background: #f5f5f7;
-                border-color: #dedee3;
-            }
-            QLabel#analysisStatusLabel {
-                color: #5f6368;
-                background: #f5f5f7;
-                border: 1px solid #dedee3;
-                border-radius: 7px;
-                padding: 5px 8px;
-            }
-            QLabel#analysisStatusLabel[analysisState="ready"] {
-                color: #245b92;
-                background: #eef5ff;
-                border-color: #d5e5f8;
-            }
-            QLabel#analysisStatusLabel[analysisState="running"] {
-                color: #245b92;
-                background: #eef5ff;
-                border-color: #9fc5ee;
-            }
-            QLabel#analysisStatusLabel[analysisState="dirty"] {
-                color: #6a4d00;
-                background: #fff8e6;
-                border-color: #ead8a4;
-            }
-            QLabel#analysisStatusLabel[analysisState="complete"] {
-                color: #216e39;
-                background: #edf9f1;
-                border-color: #ccebd6;
-            }
-            QLabel#analysisStatusLabel[analysisState="failed"] {
-                color: #a12622;
-                background: #fff0f0;
-                border-color: #f2c4c4;
-            }
-            QLabel#analysisStatusLabel[analysisState="canceled"] {
-                color: #5f6368;
-                background: #f5f5f7;
-                border-color: #d8d8de;
-            }
-            QLabel#candidateSummaryLabel {
-                background: #eef5ff;
-                border: 1px solid #d5e5f8;
-                border-radius: 7px;
-                color: #35516f;
-                padding: 5px 8px;
-            }
-            QLabel#trackingBackendLabel,
-            QLabel#trackingPerformanceLabel,
-            QLabel#runPerformanceLabel {
-                background: #f5f5f7;
-                border: 1px solid #dedee3;
-                border-radius: 7px;
-                color: #5f6368;
-                padding: 4px 7px;
-            }
-            QLabel#trackingBackendLabel[backendState="accelerated"] {
-                background: #edf9f1;
-                border-color: #ccebd6;
-                color: #216e39;
-            }
-            QLabel#trackingBackendLabel[backendState="optimized"],
-            QLabel#trackingBackendLabel[backendState="native"] {
-                background: #eef5ff;
-                border-color: #d5e5f8;
-                color: #245b92;
-            }
-            QLabel#trackingBackendLabel[backendState="fallback"] {
-                background: #fff8e8;
-                border-color: #f0d89c;
-                color: #805b12;
-            }
-            QLabel#trackingPerformanceLabel[performanceState="running"],
-            QLabel#trackingPerformanceLabel[performanceState="finishing"],
-            QLabel#runPerformanceLabel[performanceState="ready"],
-            QLabel#runPerformanceLabel[performanceState="selected"] {
-                background: #eef5ff;
-                border-color: #d5e5f8;
-                color: #245b92;
-            }
-            QLabel#trackingPerformanceLabel[performanceState="cancelling"] {
-                background: #fff8e8;
-                border-color: #f0d89c;
-                color: #805b12;
-            }
-            QLabel#runPerformanceLabel[performanceState="unavailable"] {
-                background: #fff8e8;
-                border-color: #f0d89c;
-                color: #805b12;
-            }
-            QLabel#responseStatusLabel {
-                background: #f5f5f7;
-                border: 1px solid #dedee3;
-                border-radius: 7px;
-                color: #6e6e73;
-                padding: 5px 8px;
-            }
-            QLabel#responseStatusLabel[responseState="stored"] {
-                background: #edf9f1;
-                border-color: #ccebd6;
-                color: #216e39;
-            }
-            QLabel#responseStatusLabel[responseState="cached"] {
-                background: #eef5ff;
-                border-color: #d5e5f8;
-                color: #245b92;
-            }
-            QLabel#responseStatusLabel[responseState="recomputed"] {
-                background: #f4efff;
-                border-color: #ded2f5;
-                color: #6941a5;
-            }
-            QLabel#responseStatusLabel[responseState="loading"] {
-                background: #eef5ff;
-                border-color: #9fc5ee;
-                color: #245b92;
-            }
-            QLabel#responseStatusLabel[responseState="diagnostic"] {
-                background: #eef5ff;
-                border-color: #d5e5f8;
-                color: #245b92;
-            }
-            QLabel#reviewDiagnosticStatusLabel {
-                color: #526071;
-                padding: 3px 2px;
-            }
-            QLabel#runComparisonTitle {
-                color: #202124;
-                font-weight: 700;
-                padding: 2px 0 3px 0;
-            }
-            QLabel#roiGeometryTypeLabel {
-                color: #303034;
-                font-weight: 650;
-                padding: 0 1px 1px 1px;
-            }
-            QLabel#roiGeometryMessage {
-                background: #f5f5f7;
-                border: 1px solid #dedee3;
-                border-radius: 7px;
-                color: #6e6e73;
-                padding: 5px 8px;
-            }
-            QLabel#roiGeometryMessage[roiGeometryState="dirty"] {
-                background: #fff8e8;
-                border-color: #ead7a1;
-                color: #805b12;
-            }
-            QLabel#roiGeometryMessage[roiGeometryState="error"] {
-                background: #fff0f0;
-                border-color: #efcaca;
-                color: #a12622;
-            }
-            QLabel#roiGeometryMessage[roiGeometryState="applied"] {
-                background: #edf9f1;
-                border-color: #ccebd6;
-                color: #216e39;
-            }
-            QLabel#roiGeometryMessage[roiGeometryState="drawing"] {
-                background: #eef5ff;
-                border-color: #b7d3f1;
-                color: #245b92;
-            }
-            QLabel#roiGeometryMessage[roiGeometryState="selected"] {
-                background: #eef5ff;
-                border-color: #b7d3f1;
-                color: #245b92;
-            }
-            QLabel#calibrationSummaryLabel {
-                color: #303034;
-            }
-            QLabel#calibrationEditorMessage {
-                background: #f5f5f7;
-                border: 1px solid #dedee3;
-                border-radius: 7px;
-                color: #6e6e73;
-                padding: 5px 8px;
-            }
-            QLabel#calibrationEditorMessage[calibrationState="dirty"] {
-                background: #fff8e8;
-                border-color: #ead7a1;
-                color: #805b12;
-            }
-            QLabel#calibrationEditorMessage[calibrationState="error"] {
-                background: #fff0f0;
-                border-color: #efcaca;
-                color: #a12622;
-            }
-            QLabel#calibrationEditorMessage[calibrationState="applied"] {
-                background: #edf9f1;
-                border-color: #ccebd6;
-                color: #216e39;
-            }
-            QLabel#calibrationEditorMessage[calibrationState="drawing"] {
-                background: #eef5ff;
-                border-color: #b7d3f1;
-                color: #245b92;
-            }
-            QLabel#mediaRelinkStatus {
-                background: #f5f5f7;
-                border: 1px solid #dedee3;
-                border-radius: 7px;
-                color: #6e6e73;
-                font-weight: 650;
-                padding: 4px 8px;
-            }
-            QLabel#mediaRelinkStatus[mediaRelinkState="ready"],
-            QLabel#mediaRelinkStatus[mediaRelinkState="match"],
-            QLabel#mediaRelinkStatus[mediaRelinkState="applied"] {
-                background: #edf9f1;
-                border-color: #ccebd6;
-                color: #216e39;
-            }
-            QLabel#mediaRelinkStatus[mediaRelinkState="missing"],
-            QLabel#mediaRelinkStatus[mediaRelinkState="mismatch"],
-            QLabel#mediaRelinkStatus[mediaRelinkState="unverified"] {
-                background: #fff8e8;
-                border-color: #ead7a1;
-                color: #805b12;
-            }
-            QLabel#mediaRelinkStatus[mediaRelinkState="incompatible"],
-            QLabel#mediaRelinkStatus[mediaRelinkState="unavailable"] {
-                background: #fff0f0;
-                border-color: #efcaca;
-                color: #a12622;
-            }
-            QLabel#mediaRelinkDetail,
-            QLabel#mediaRelinkCandidate {
-                color: #52525a;
-                padding: 1px 2px;
-            }
-            QLabel#mediaRelinkDifferences {
-                background: #fff8e8;
-                border: 1px solid #ead7a1;
-                border-radius: 7px;
-                color: #805b12;
-                padding: 4px 8px;
-            }
-            QLabel#taskActionSummary {
-                color: #52525a;
-                padding: 1px 2px;
-            }
-            QLabel#taskActionMessage {
-                background: #f5f5f7;
-                border: 1px solid #dedee3;
-                border-radius: 7px;
-                color: #6e6e73;
-                padding: 4px 8px;
-            }
-            QLabel#taskActionMessage[taskActionState="warning"] {
-                background: #fff8e8;
-                border-color: #ead7a1;
-                color: #805b12;
-            }
-            QLabel#taskActionMessage[taskActionState="removed"] {
-                background: #edf9f1;
-                border-color: #ccebd6;
-                color: #216e39;
-            }
-            QPushButton#removeTaskButton[taskDestructive="true"] {
-                background: #c9342b;
-                border-color: #c9342b;
-                color: #ffffff;
-                font-weight: 650;
-            }
-            QPushButton#removeTaskButton[taskDestructive="true"]:hover {
-                background: #b52a23;
-                border-color: #b52a23;
-            }
-            QPushButton#applyRoiGeometryButton {
-                background: #0071e3;
-                border-color: #0071e3;
-                color: #ffffff;
-                font-weight: 650;
-            }
-            QPushButton#applyRoiGeometryButton:hover {
-                background: #0067d1;
-            }
-            QPushButton#applyRoiGeometryButton:disabled {
-                background: #f0f0f3;
-                border-color: #dedee3;
-                color: #9a9aa1;
-            }
-            QPushButton#applyCalibrationButton {
-                background: #0071e3;
-                border-color: #0071e3;
-                color: #ffffff;
-                font-weight: 650;
-            }
-            QPushButton#applyCalibrationButton:hover {
-                background: #0067d1;
-            }
-            QPushButton#applyCalibrationButton:disabled {
-                background: #f0f0f3;
-                border-color: #dedee3;
-                color: #9a9aa1;
-            }
-            QPushButton#applyMediaRelinkButton {
-                background: #0071e3;
-                border-color: #0071e3;
-                color: #ffffff;
-                font-weight: 650;
-            }
-            QPushButton#applyMediaRelinkButton:hover {
-                background: #0067d1;
-            }
-            QPushButton#applyMediaRelinkButton:disabled {
-                background: #f0f0f3;
-                border-color: #dedee3;
-                color: #9a9aa1;
-            }
-            QLabel#sectionLabel {
-                color: #6e6e73;
-                font-weight: 700;
-                letter-spacing: 0px;
-                padding: 8px 0 2px 1px;
-            }
-            QLabel#previewTitle {
-                color: #303034;
-                font-weight: 700;
-            }
-            QLabel#playbackStatusLabel {
-                background: #eef5ff;
-                border: 1px solid #d5e5f8;
-                border-radius: 9px;
-                color: #245b92;
-                font-weight: 650;
-                padding: 3px 8px;
-            }
-            QLabel#playbackStatusLabel[playbackState="catchup"] {
-                background: #fff8e8;
-                border-color: #f0d89c;
-                color: #805b12;
-            }
-            QLabel#playbackStatusLabel[playbackState="error"] {
-                background: #fff0f1;
-                border-color: #f4c2c7;
-                color: #a61b2b;
-            }
-            QLabel#previewCanvas {
-                background: #111114;
-                border: 1px solid #202025;
-                border-radius: 12px;
-                color: #b8b8bf;
-            }
-            QFrame#transportBar {
-                background: #fbfbfd;
-                border: 1px solid #d8d8de;
-                border-radius: 12px;
-            }
-            QWidget#rightSidebar {
-                background: #f5f5f7;
-            }
-            QTabWidget::pane {
-                border: none;
-                background: transparent;
-                top: -1px;
-            }
-            QTabBar::tab {
-                background: transparent;
-                border: 1px solid transparent;
-                border-radius: 8px;
-                padding: 6px 10px;
-                margin-right: 2px;
-                color: #3c3c43;
-            }
-            QTabBar::tab:selected {
-                background: #ffffff;
-                border: 1px solid #d6d6dc;
-                color: #0071e3;
-                font-weight: 600;
-            }
-            QTabBar::tab:hover {
-                background: #ececf1;
-            }
-            QPushButton {
-                background: #ffffff;
-                border: 1px solid #d2d2d7;
-                border-radius: 8px;
-                min-height: 24px;
-                padding: 5px 10px;
-                color: #1d1d1f;
-            }
-            QPushButton:hover {
-                background: #f0f0f4;
-                border-color: #c4c4cc;
-            }
-            QPushButton:focus,
-            QComboBox:focus,
-            QSpinBox:focus,
-            QDoubleSpinBox:focus,
-            QPlainTextEdit:focus,
-            QTextBrowser:focus,
-            QListWidget:focus,
-            QTableView:focus {
-                border: 2px solid #0071e3;
-            }
-            QCheckBox:focus {
-                background: #e5f1ff;
-                border: 1px solid #0071e3;
-                border-radius: 5px;
-            }
-            QTabBar:focus {
-                border: 2px solid #0071e3;
-                border-radius: 9px;
-            }
-            QPushButton:disabled {
-                background: #f0f0f3;
-                border-color: #dedee3;
-                color: #9a9aa1;
-            }
-            QPushButton#runTrackingButton {
-                background: #0071e3;
-                border-color: #0071e3;
-                color: #ffffff;
-                font-weight: 700;
-            }
-            QPushButton#runTrackingButton:hover {
-                background: #0067d1;
-            }
-            QPushButton#runTrackingButton:disabled {
-                background: #dcecff;
-                border-color: #d2e5fb;
-                color: #7898bd;
-            }
-            QPushButton#runTrackingButton[trackingBusy="true"] {
-                background: #c9342b;
-                border-color: #c9342b;
-                color: #ffffff;
-            }
-            QPushButton#runTrackingButton[trackingBusy="true"]:hover {
-                background: #b52a23;
-                border-color: #b52a23;
-            }
-            QPushButton#transportButton {
-                min-width: 78px;
-            }
-            QPlainTextEdit, QTextBrowser, QListWidget, QTableView, QComboBox, QSpinBox, QDoubleSpinBox {
-                background: #ffffff;
-                border: 1px solid #d6d6dc;
-                border-radius: 8px;
-                padding: 3px;
-                selection-background-color: #cce4ff;
-            }
-            QTableView {
-                gridline-color: #ebebef;
-                alternate-background-color: #fafafa;
-                border-radius: 9px;
-            }
-            QListWidget#taskList::item:disabled {
-                color: #9a9aa1;
-                padding: 10px;
-            }
-            QListWidget::item {
-                padding: 6px 8px;
-                border-radius: 6px;
-            }
-            QListWidget::item:selected {
-                background: #dbeafe;
-                color: #0b4f9c;
-            }
-            QHeaderView::section {
-                background: #f3f3f6;
-                border: none;
-                border-right: 1px solid #dedee3;
-                padding: 6px 7px;
-                font-weight: 600;
-                color: #303034;
-            }
-            QCheckBox {
-                spacing: 6px;
-                color: #303034;
-            }
-            QSlider::groove:horizontal {
-                height: 5px;
-                background: #d6d6dc;
-                border-radius: 2px;
-            }
-            QSlider::handle:horizontal {
-                background: #0071e3;
-                width: 14px;
-                margin: -5px 0;
-                border-radius: 7px;
-            }
-            """
-        )
+        from neo_tracker.ui.desktop_theme import apply_desktop_theme
+
+        apply_desktop_theme(self)
 
     @staticmethod
     def _section_label(text: str) -> QLabel:
@@ -1546,13 +921,16 @@ class NeoTrackerWindow(
         page.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         page.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         page.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        page.setAccessibleName(f"{label} workflow")
+        page.setAccessibleName(tr('{v0} workflow', v0=label))
         page.setWidget(content)
         content.setAutoFillBackground(False)
         self.sidebar_tabs.addTab(page, label)
         return page
 
     def _sidebar_tab_changed(self, _index: int) -> None:
+        with QSignalBlocker(self.workflow_navigation):
+            self.workflow_navigation.setCurrentRow(_index)
+        self.inspector_heading.setText(self.sidebar_tabs.tabText(_index))
         self._sync_roi_node_editing()
         current = self.sidebar_tabs.currentWidget()
         if current is self.review_tab:
@@ -1564,25 +942,19 @@ class NeoTrackerWindow(
         tab = QWidget()
         layout = QVBoxLayout(tab)
         self.add_media_button.setObjectName("addMediaButton")
-        self.add_media_button.setToolTip("Add video or WAV files to the current project.")
-        self.open_project_button.setToolTip("Open a saved Neo-Tracker project.")
-        self.save_project_button.setToolTip("Save media paths, settings, calibration, and results.")
+        self.add_media_button.setToolTip(tr('Add video or WAV files to the current project.'))
+        self.open_project_button.setToolTip(tr('Open a saved Neo-Tracker project.'))
+        self.save_project_button.setToolTip(tr('Save media paths, settings, calibration, and results.'))
         self.open_project_button.setObjectName("openProjectButton")
         self.save_project_button.setObjectName("saveProjectButton")
         self.open_project_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogOpenButton))
         self.save_project_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton))
-        project_row = QHBoxLayout()
-        project_row.addWidget(self.add_media_button)
-        project_row.addWidget(self.open_project_button)
-        project_row.addWidget(self.save_project_button)
-        layout.addLayout(project_row)
         layout.addWidget(self.media_probe_status_label)
         layout.addWidget(self.project_status_panel)
 
-        layout.addWidget(self._section_label("TASKS"))
+        layout.addWidget(self._section_label(tr('TASKS')))
         self.task_list.setObjectName("taskList")
         self.task_list.currentItemChanged.connect(self._task_changed)
-        layout.addWidget(self.task_list, 1)
         self._show_empty_task_list_placeholder()
         self.task_actions_panel.removeConfirmed.connect(self._remove_current_task)
         self.task_actions_panel.undoRequested.connect(self._undo_removed_task)
@@ -1595,24 +967,24 @@ class NeoTrackerWindow(
         layout.addWidget(self.media_relink_panel)
 
         info_form = QFormLayout()
-        info_form.addRow("Media backend", self.backend_label)
-        info_form.addRow("Path", self.media_path_label)
+        info_form.addRow(tr('Media backend'), self.backend_label)
+        info_form.addRow(tr('Path'), self.media_path_label)
         info_form.addRow(self.media_fps_title_label, self.media_fps_label)
         info_form.addRow(self.media_frames_title_label, self.media_frames_label)
         info_form.addRow(self.media_resolution_title_label, self.media_resolution_label)
-        info_form.addRow("Duration", self.media_duration_label)
+        info_form.addRow(tr('Duration'), self.media_duration_label)
         layout.addLayout(info_form)
 
         layout.addStretch(1)
-        self.media_tab = self._add_sidebar_page(tab, "Media", "mediaTab")
+        self.media_tab = self._add_sidebar_page(tab, tr('Media'), "mediaTab")
 
     def _build_tracking_tab(self) -> None:
         tab = QWidget()
         layout = QVBoxLayout(tab)
         self.preset_combo.setObjectName("presetCombo")
-        self.preset_combo.setToolTip("Choose the tracking pipeline preset for this task.")
+        self.preset_combo.setToolTip(tr('Choose the tracking pipeline preset for this task.'))
         self.preset_combo.currentIndexChanged.connect(self._preset_changed)
-        layout.addWidget(self._section_label("PRESET"))
+        layout.addWidget(self._section_label(tr('PRESET')))
         layout.addWidget(self.preset_combo)
 
         self.preset_description.setObjectName("presetDescription")
@@ -1621,15 +993,15 @@ class NeoTrackerWindow(
         layout.addWidget(self.preset_description)
 
         self.tracking_backend_label.setObjectName("trackingBackendLabel")
-        self.tracking_backend_label.setAccessibleName("Observation compute backend")
+        self.tracking_backend_label.setAccessibleName(tr('Observation compute backend'))
         self.tracking_performance_label.setObjectName("trackingPerformanceLabel")
         self.tracking_performance_label.setProperty("performanceState", "running")
-        self.tracking_performance_label.setAccessibleName("Live tracking performance")
+        self.tracking_performance_label.setAccessibleName(tr('Live tracking performance'))
         self.tracking_performance_label.setWordWrap(False)
         self.tracking_performance_label.setMinimumHeight(64)
         self.tracking_performance_label.hide()
         backend_form = QFormLayout()
-        backend_form.addRow("Compute backend", self.tracking_backend_label)
+        backend_form.addRow(tr('Compute backend'), self.tracking_backend_label)
         backend_form.addRow(self.tracking_performance_title_label, self.tracking_performance_label)
         self.tracking_performance_title_label.hide()
         layout.addLayout(backend_form)
@@ -1644,41 +1016,42 @@ class NeoTrackerWindow(
         self.marker_sample_label.setWordWrap(True)
         self.sample_marker_button.setObjectName("sampleMarkerButton")
         self.sample_marker_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogYesButton))
-        self.sample_marker_button.setToolTip("Click a marker in the preview to sample its color.")
+        self.sample_marker_button.setToolTip(tr('Click a marker in the preview to sample its color.'))
         self.sample_marker_button.clicked.connect(self._start_color_sampling)
         marker_row.addWidget(self.marker_swatch_label)
         marker_row.addWidget(self.marker_sample_label, 1)
         marker_row.addWidget(self.sample_marker_button)
-        marker_form.addRow("Marker color", marker_row)
+        marker_form.addRow(tr('Marker color'), marker_row)
 
         self.color_tolerance_spin.setObjectName("colorToleranceSpin")
         self.color_tolerance_spin.setRange(0.001, 1.0)
         self.color_tolerance_spin.setDecimals(3)
         self.color_tolerance_spin.setSingleStep(0.01)
-        self.color_tolerance_spin.setToolTip("Adjust how much color variation the marker detector accepts.")
+        self.color_tolerance_spin.setToolTip(tr('Adjust how much color variation the marker detector accepts.'))
         self.color_tolerance_spin.valueChanged.connect(self._color_tolerance_changed)
-        marker_form.addRow("Tolerance", self.color_tolerance_spin)
+        marker_form.addRow(tr('Tolerance'), self.color_tolerance_spin)
         self.color_max_candidates_spin.setObjectName("colorMaxCandidatesSpin")
         self.color_max_candidates_spin.setRange(1, 12)
         self.color_max_candidates_spin.setToolTip(
-            "Keep separate color regions so the motion model can choose the most consistent target."
+            tr('Keep separate color regions so the motion model can choose the most consistent target.')
         )
-        self.color_max_candidates_spin.setAccessibleName("Maximum marker candidates")
+        self.color_max_candidates_spin.setAccessibleName(tr('Maximum marker candidates'))
         self.color_max_candidates_spin.valueChanged.connect(self._color_candidate_settings_changed)
-        marker_form.addRow("Max candidates", self.color_max_candidates_spin)
+        marker_form.addRow(tr('Max candidates'), self.color_max_candidates_spin)
         self.color_min_area_spin.setObjectName("colorMinAreaSpin")
         self.color_min_area_spin.setRange(1, 100000)
         self.color_min_area_spin.setSuffix(" px")
-        self.color_min_area_spin.setToolTip("Ignore color regions smaller than this pixel area.")
-        self.color_min_area_spin.setAccessibleName("Minimum marker region area")
+        self.color_min_area_spin.setToolTip(tr('Ignore color regions smaller than this pixel area.'))
+        self.color_min_area_spin.setAccessibleName(tr('Minimum marker region area'))
         self.color_min_area_spin.valueChanged.connect(self._color_candidate_settings_changed)
-        marker_form.addRow("Minimum area", self.color_min_area_spin)
+        marker_form.addRow(tr('Minimum area'), self.color_min_area_spin)
         layout.addWidget(self.marker_controls_widget)
 
-        layout.addWidget(self._section_label("CURRENT MODULES"))
-        self.module_summary_list.setObjectName("moduleSummaryList")
-        layout.addWidget(self.module_summary_list, 1)
-        self.tracking_tab = self._add_sidebar_page(tab, "Tracking", "trackingTab")
+        flow_button = QPushButton(tr("View processing flow →"))
+        flow_button.clicked.connect(lambda: self.sidebar_tabs.setCurrentWidget(self.workflow_tab))
+        layout.addWidget(flow_button)
+        layout.addStretch(1)
+        self.tracking_tab = self._add_sidebar_page(tab, tr('Tracking'), "trackingTab")
 
     def _build_review_tab(self) -> None:
         tab = QWidget()
@@ -1688,11 +1061,11 @@ class NeoTrackerWindow(
         layout.addWidget(self.review_summary_label)
         self.review_selection_label.setObjectName("reviewSelectionLabel")
         self.review_selection_label.setProperty("reviewTone", "empty")
-        self.review_selection_label.setAccessibleName("Selected tracking result")
+        self.review_selection_label.setAccessibleName(tr('Selected tracking result'))
         self.review_selection_detail_label.setObjectName("reviewSelectionDetailLabel")
         self.review_selection_detail_label.setProperty("reviewTone", "empty")
         self.review_selection_detail_label.setWordWrap(True)
-        self.review_selection_detail_label.setAccessibleName("Selected result state values")
+        self.review_selection_detail_label.setAccessibleName(tr('Selected result state values'))
         layout.addWidget(self.review_selection_label)
         layout.addWidget(self.review_selection_detail_label)
 
@@ -1707,21 +1080,20 @@ class NeoTrackerWindow(
         self.undo_review_edit_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowBack))
         self.rerun_after_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload))
         self.jump_to_result_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowDown))
-        self.correct_point_button.setToolTip("Replace the selected result with a point clicked in the preview.")
-        self.mark_lost_button.setToolTip("Mark the selected frame as lost and exclude it from trusted review.")
-        self.undo_review_edit_button.setToolTip("Undo the most recent point correction or Mark Lost action.")
+        self.correct_point_button.setToolTip(tr('Replace the selected result with a point clicked in the preview.'))
+        self.mark_lost_button.setToolTip(tr('Mark the selected frame as lost and exclude it from trusted review.'))
+        self.undo_review_edit_button.setToolTip(tr('Undo the most recent point correction or Mark Lost action.'))
         self.rerun_after_button.setToolTip(
-            "Review the affected later Results/Edits, then rerun tracking after the selected result."
+            tr('Review the affected later Results/Edits, then rerun tracking after the selected result.')
         )
-        self.jump_to_result_button.setToolTip("Move the preview to the selected result frame.")
+        self.jump_to_result_button.setToolTip(tr('Move the preview to the selected result frame.'))
         self.show_response_checkbox.setToolTip(
-            "Show an image-space heatmap, or use the retained angular profile for polar detectors without "
-            "recomputing the source frame."
+            tr('Show an image-space heatmap, or use the retained angular profile for polar detectors without recomputing the source frame.')
         )
-        self.show_observation_checkbox.setToolTip("Show the raw observation point.")
-        self.show_measurement_checkbox.setToolTip("Show measured trajectory points before filtering.")
-        self.show_candidates_checkbox.setToolTip("Show candidate points considered by the optimizer.")
-        self.show_prediction_checkbox.setToolTip("Show the motion model prediction.")
+        self.show_observation_checkbox.setToolTip(tr('Show the raw observation point.'))
+        self.show_measurement_checkbox.setToolTip(tr('Show measured trajectory points before filtering.'))
+        self.show_candidates_checkbox.setToolTip(tr('Show candidate points considered by the optimizer.'))
+        self.show_prediction_checkbox.setToolTip(tr('Show the motion model prediction.'))
         self.show_response_checkbox.stateChanged.connect(self._response_overlay_changed)
         self.show_observation_checkbox.setChecked(True)
         self.show_observation_checkbox.stateChanged.connect(lambda _state: self._render_preview())
@@ -1740,7 +1112,7 @@ class NeoTrackerWindow(
         action_grid.setColumnStretch(1, 1)
         layout.addLayout(action_grid)
         overlay_grid = QGridLayout()
-        overlay_grid.addWidget(self._section_label("OVERLAYS"), 0, 0, 1, 2)
+        overlay_grid.addWidget(self._section_label(tr('OVERLAYS')), 0, 0, 1, 2)
         overlay_grid.addWidget(self.show_response_checkbox, 1, 0)
         overlay_grid.addWidget(self.show_observation_checkbox, 1, 1)
         overlay_grid.addWidget(self.show_measurement_checkbox, 2, 0)
@@ -1751,23 +1123,22 @@ class NeoTrackerWindow(
         layout.addLayout(overlay_grid)
         self.candidate_summary_label.setObjectName("candidateSummaryLabel")
         self.candidate_summary_label.setToolTip(
-            "Candidate count for the selected frame and the score chosen by the motion model."
+            tr('Candidate count for the selected frame and the score chosen by the motion model.')
         )
-        self.candidate_summary_label.setAccessibleName("Current frame candidate summary")
+        self.candidate_summary_label.setAccessibleName(tr('Current frame candidate summary'))
         layout.addWidget(self.candidate_summary_label)
         self.response_status_label.setObjectName("responseStatusLabel")
         self.response_status_label.setProperty("responseState", "off")
-        self.response_status_label.setAccessibleName("Current frame response evidence status")
+        self.response_status_label.setAccessibleName(tr('Current frame response evidence status'))
         self.response_status_label.setToolTip(
-            "Turn on Response to inspect a retained angular profile or an image-space heatmap."
+            tr('Turn on Response to inspect a retained angular profile or an image-space heatmap.')
         )
         layout.addWidget(self.response_status_label)
 
         self.results_table.setObjectName("resultsTable")
-        self.results_table.setAccessibleName("Tracking results")
+        self.results_table.setAccessibleName(tr('Tracking results'))
         self.results_table.setAccessibleDescription(
-            "Complete tracking result table. Rows are formatted as they become visible; "
-            "all results remain selectable."
+            tr('Complete tracking result table. Rows are formatted as they become visible; all results remain selectable.')
         )
         self.results_table.setModel(self.results_model)
         self.results_table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers)
@@ -1783,50 +1154,50 @@ class NeoTrackerWindow(
         layout.addWidget(self.results_table, 1)
         self.review_diagnostics_panel.frameActivated.connect(self._jump_to_diagnostic_frame)
         layout.addWidget(self.review_diagnostics_panel)
-        layout.addWidget(self._section_label("HISTORY"))
+        layout.addWidget(self._section_label(tr('HISTORY')))
         self.review_history_tabs.setObjectName("reviewHistoryTabs")
         self.review_history_tabs.setMaximumHeight(220)
-        self.review_history_tabs.setAccessibleName("Review history")
+        self.review_history_tabs.setAccessibleName(tr('Review history'))
         self.review_history_tabs.setAccessibleDescription(
-            "Switch between tracking run history and manual edit history."
+            tr('Switch between tracking run history and manual edit history.')
         )
-        self.review_history_tabs.tabBar().setAccessibleName("Review history tabs")
+        self.review_history_tabs.tabBar().setAccessibleName(tr('Review history tabs'))
         self.run_history_panel.compareRequested.connect(self._show_run_history_comparison)
         self.run_history_panel.exportRequested.connect(self._export_visible_run_history)
         self.edit_history_panel.jumpRequested.connect(self._jump_to_edit_frame)
         self.edit_history_panel.exportRequested.connect(self._export_visible_edit_history)
-        self.review_history_tabs.addTab(self.run_history_panel, "Runs")
-        self.review_history_tabs.addTab(self.edit_history_panel, "Edits")
+        self.review_history_tabs.addTab(self.run_history_panel, tr('Runs'))
+        self.review_history_tabs.addTab(self.edit_history_panel, tr('Edits'))
         layout.addWidget(self.review_history_tabs)
-        layout.addWidget(self._section_label("PHYSICS INSPECTOR"))
+        layout.addWidget(self._section_label(tr('PHYSICS INSPECTOR')))
         layout.addWidget(self.physics_inspector)
-        self.review_tab = self._add_sidebar_page(tab, "Review", "reviewTab")
+        self.review_tab = self._add_sidebar_page(tab, tr('Review'), "reviewTab")
 
     def _build_processing_tab(self) -> None:
         tab = QWidget()
         layout = QVBoxLayout(tab)
 
         self.analysis_source_combo.setObjectName("analysisSourceCombo")
-        self.analysis_source_combo.setToolTip("Choose a tracking or WAV signal to process.")
+        self.analysis_source_combo.setToolTip(tr('Choose a tracking or WAV signal to process.'))
         self.analysis_source_combo.currentIndexChanged.connect(lambda _index: self._analysis_source_changed())
         self.refresh_analysis_sources_button.setObjectName("refreshAnalysisSourcesButton")
-        self.refresh_analysis_sources_button.setToolTip("Refresh available tracking and WAV signal sources.")
-        self.refresh_analysis_sources_button.setAccessibleName("Refresh signal sources")
+        self.refresh_analysis_sources_button.setToolTip(tr('Refresh available tracking and WAV signal sources.'))
+        self.refresh_analysis_sources_button.setAccessibleName(tr('Refresh signal sources'))
         self.refresh_analysis_sources_button.clicked.connect(
             lambda: self._refresh_analysis_sources(force=True)
         )
         source_row = QHBoxLayout()
         source_row.addWidget(self.analysis_source_combo, 1)
         source_row.addWidget(self.refresh_analysis_sources_button)
-        layout.addWidget(self._section_label("DATA SOURCE"))
+        layout.addWidget(self._section_label(tr('DATA SOURCE')))
         layout.addLayout(source_row)
         self.analysis_source_detail_label.setObjectName("analysisSourceDetailLabel")
         self.analysis_source_detail_label.setWordWrap(True)
-        self.analysis_source_detail_label.setAccessibleName("Selected signal source details")
+        self.analysis_source_detail_label.setAccessibleName(tr('Selected signal source details'))
         layout.addWidget(self.analysis_source_detail_label)
 
         self.analysis_method_combo.setObjectName("analysisMethodCombo")
-        self.analysis_method_combo.setToolTip("Choose FFT for a spectrum or STFT for a time-frequency view.")
+        self.analysis_method_combo.setToolTip(tr('Choose FFT for a spectrum or STFT for a time-frequency view.'))
         self.analysis_method_combo.addItems(["FFT", "STFT"])
         self.analysis_method_combo.currentTextChanged.connect(self._analysis_method_changed)
         self.analysis_method_combo.currentTextChanged.connect(lambda _text: self._mark_analysis_dirty())
@@ -1838,19 +1209,19 @@ class NeoTrackerWindow(
         self.analysis_window_combo.currentTextChanged.connect(lambda _text: self._mark_analysis_dirty())
 
         self.analysis_sample_rate_spin.setRange(0.0, 1_000_000.0)
-        self.analysis_sample_rate_spin.setToolTip("Override the source sample rate, or leave at infer.")
+        self.analysis_sample_rate_spin.setToolTip(tr('Override the source sample rate, or leave at infer.'))
         self.analysis_sample_rate_spin.setDecimals(3)
         self.analysis_sample_rate_spin.setSuffix(" Hz")
         self.analysis_sample_rate_spin.setSpecialValueText("infer")
         self.analysis_sample_rate_spin.valueChanged.connect(lambda _value: self._mark_analysis_dirty())
         self.analysis_freq_min_spin.setRange(0.0, 1_000_000.0)
-        self.analysis_freq_min_spin.setToolTip("Optional lower frequency bound for exported and displayed results.")
+        self.analysis_freq_min_spin.setToolTip(tr('Optional lower frequency bound for exported and displayed results.'))
         self.analysis_freq_min_spin.setDecimals(3)
         self.analysis_freq_min_spin.setSuffix(" Hz")
         self.analysis_freq_min_spin.setSpecialValueText("auto")
         self.analysis_freq_min_spin.valueChanged.connect(lambda _value: self._mark_analysis_dirty())
         self.analysis_freq_max_spin.setRange(0.0, 1_000_000.0)
-        self.analysis_freq_max_spin.setToolTip("Optional upper frequency bound for exported and displayed results.")
+        self.analysis_freq_max_spin.setToolTip(tr('Optional upper frequency bound for exported and displayed results.'))
         self.analysis_freq_max_spin.setDecimals(3)
         self.analysis_freq_max_spin.setSuffix(" Hz")
         self.analysis_freq_max_spin.setSpecialValueText("auto")
@@ -1866,27 +1237,27 @@ class NeoTrackerWindow(
 
         form = QFormLayout()
         self.analysis_parameters_form = form
-        form.addRow("Method", self.analysis_method_combo)
-        form.addRow("Detrend", self.analysis_detrend_combo)
-        form.addRow("Window", self.analysis_window_combo)
-        form.addRow("Sample rate", self.analysis_sample_rate_spin)
-        form.addRow("Frequency min", self.analysis_freq_min_spin)
-        form.addRow("Frequency max", self.analysis_freq_max_spin)
-        form.addRow("STFT window", self.analysis_stft_window_spin)
-        form.addRow("STFT overlap", self.analysis_stft_overlap_spin)
+        form.addRow(tr('Method'), self.analysis_method_combo)
+        form.addRow(tr('Detrend'), self.analysis_detrend_combo)
+        form.addRow(tr('Window'), self.analysis_window_combo)
+        form.addRow(tr('Sample rate'), self.analysis_sample_rate_spin)
+        form.addRow(tr('Frequency min'), self.analysis_freq_min_spin)
+        form.addRow(tr('Frequency max'), self.analysis_freq_max_spin)
+        form.addRow(tr('STFT window'), self.analysis_stft_window_spin)
+        form.addRow(tr('STFT overlap'), self.analysis_stft_overlap_spin)
         layout.addLayout(form)
 
         self.run_analysis_button.setObjectName("runAnalysisButton")
         self.run_analysis_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
-        self.run_analysis_button.setToolTip("Run FFT or STFT on the selected signal source.")
+        self.run_analysis_button.setToolTip(tr('Run FFT or STFT on the selected signal source.'))
         self.analysis_status_label.setObjectName("analysisStatusLabel")
-        self.analysis_status_label.setAccessibleName("Signal processing status")
+        self.analysis_status_label.setAccessibleName(tr('Signal processing status'))
         action_row = QHBoxLayout()
         action_row.addWidget(self.run_analysis_button, 1)
         action_row.addWidget(self.analysis_status_label)
         export_row = QHBoxLayout()
-        self.analysis_export_csv_button.setToolTip("Export the latest processing result as CSV.")
-        self.analysis_export_npz_button.setToolTip("Export the latest processing result as NPZ.")
+        self.analysis_export_csv_button.setToolTip(tr('Export the latest processing result as CSV.'))
+        self.analysis_export_npz_button.setToolTip(tr('Export the latest processing result as NPZ.'))
         self._set_analysis_export_enabled(False)
         export_row.addWidget(self.analysis_export_csv_button)
         export_row.addWidget(self.analysis_export_npz_button)
@@ -1897,7 +1268,7 @@ class NeoTrackerWindow(
         self.analysis_result_view.setReadOnly(True)
         self.analysis_result_view.setPlainText("Choose a signal source, then run FFT or STFT.")
         layout.addWidget(self.analysis_result_view, 1)
-        self._add_sidebar_page(tab, "Signal", "signalTab")
+        self._add_sidebar_page(tab, tr('Signal'), "signalTab")
         self._analysis_method_changed(self.analysis_method_combo.currentText())
         self._set_analysis_status("No source", "empty", "Run tracking or add a WAV file first.")
 
@@ -1909,30 +1280,30 @@ class NeoTrackerWindow(
         self.curve_half_width_spin.setDecimals(1)
         self.curve_half_width_spin.setSuffix(" px")
         self.curve_half_width_spin.setValue(24.0)
-        self.curve_half_width_spin.setToolTip("Half-width used the next time a curve band is drawn.")
-        self.curve_half_width_spin.setAccessibleName("New curve band half-width")
-        form.addRow("ROI", self.roi_status_label)
-        form.addRow("Scale", self.scale_status_label)
+        self.curve_half_width_spin.setToolTip(tr('Half-width used the next time a curve band is drawn.'))
+        self.curve_half_width_spin.setAccessibleName(tr('New curve band half-width'))
+        form.addRow(tr('ROI'), self.roi_status_label)
+        form.addRow(tr('Scale'), self.scale_status_label)
         layout.addLayout(form)
 
         self.roi_geometry_editor.configApplied.connect(self._roi_geometry_applied)
         self.roi_geometry_editor.draftChanged.connect(self._roi_geometry_draft_changed)
         self.roi_geometry_editor.nodeSelectionChanged.connect(self._roi_node_selection_changed)
-        layout.addWidget(self._section_label("ROI GEOMETRY"))
+        layout.addWidget(self._section_label(tr('ROI GEOMETRY')))
         layout.addWidget(self.roi_geometry_editor)
 
         roi_grid = QGridLayout()
-        roi_button = QPushButton("Rectangle")
-        circle_button = QPushButton("Circle")
-        annulus_button = QPushButton("Annulus")
-        polygon_button = QPushButton("Polygon")
-        curve_button = QPushButton("Curve Band")
-        roi_button.setToolTip("Draw a rectangular ROI on the current video frame.")
-        circle_button.setToolTip("Draw a circular ROI on the current video frame.")
-        annulus_button.setToolTip("Draw an annular ROI for circular fronts or rings.")
-        polygon_button.setToolTip("Draw a polygon ROI; finish it with Finish Drawing.")
-        curve_button.setToolTip("Draw a curve band ROI for path-following motion.")
-        self.reset_roi_button.setToolTip("Restore the ROI from the selected preset.")
+        roi_button = QPushButton(tr('Rectangle'))
+        circle_button = QPushButton(tr('Circle'))
+        annulus_button = QPushButton(tr('Annulus'))
+        polygon_button = QPushButton(tr('Polygon'))
+        curve_button = QPushButton(tr('Curve Band'))
+        roi_button.setToolTip(tr('Draw a rectangular ROI on the current video frame.'))
+        circle_button.setToolTip(tr('Draw a circular ROI on the current video frame.'))
+        annulus_button.setToolTip(tr('Draw an annular ROI for circular fronts or rings.'))
+        polygon_button.setToolTip(tr('Draw a polygon ROI; finish it with Finish Drawing.'))
+        curve_button.setToolTip(tr('Draw a curve band ROI for path-following motion.'))
+        self.reset_roi_button.setToolTip(tr('Restore the ROI from the selected preset.'))
         roi_button.clicked.connect(self._start_roi_selection)
         circle_button.clicked.connect(self._start_circular_roi_selection)
         annulus_button.clicked.connect(self._start_annular_roi_selection)
@@ -1948,10 +1319,10 @@ class NeoTrackerWindow(
         roi_grid.setColumnStretch(0, 1)
         roi_grid.setColumnStretch(1, 1)
         polygon_action_row = QHBoxLayout()
-        self.finish_roi_drawing_button.setToolTip("Complete the active polygon or curve-band drawing.")
-        self.cancel_roi_drawing_button.setToolTip("Cancel the active ROI or calibration drawing.")
-        self.finish_roi_drawing_button.setAccessibleName("Finish ROI drawing")
-        self.cancel_roi_drawing_button.setAccessibleName("Cancel preview drawing")
+        self.finish_roi_drawing_button.setToolTip(tr('Complete the active polygon or curve-band drawing.'))
+        self.cancel_roi_drawing_button.setToolTip(tr('Cancel the active ROI or calibration drawing.'))
+        self.finish_roi_drawing_button.setAccessibleName(tr('Finish ROI drawing'))
+        self.cancel_roi_drawing_button.setAccessibleName(tr('Cancel preview drawing'))
         self.finish_roi_drawing_button.clicked.connect(self._finish_roi_drawing_selection)
         self.cancel_roi_drawing_button.clicked.connect(self._cancel_preview_selection)
         self.finish_roi_drawing_button.setEnabled(False)
@@ -1960,46 +1331,46 @@ class NeoTrackerWindow(
         polygon_action_row.addWidget(self.cancel_roi_drawing_button)
         self.calibration_editor.calibrationApplied.connect(self._calibration_editor_applied)
         self.calibration_editor.draftChanged.connect(self._calibration_draft_changed)
-        self.mark_calibration_button.setToolTip("Draw a two-point calibration rod on the video frame.")
-        self.mark_calibration_button.setAccessibleName("Mark calibration rod in preview")
-        self.reset_calibration_button.setToolTip("Clear the current calibration rod and return to pixel units.")
+        self.mark_calibration_button.setToolTip(tr('Draw a two-point calibration rod on the video frame.'))
+        self.mark_calibration_button.setAccessibleName(tr('Mark calibration rod in preview'))
+        self.reset_calibration_button.setToolTip(tr('Clear the current calibration rod and return to pixel units.'))
         self.mark_calibration_button.clicked.connect(self._start_calibration_selection)
         self.reset_calibration_button.clicked.connect(self._reset_calibration)
         calibration_action_row = QHBoxLayout()
         calibration_action_row.addWidget(self.mark_calibration_button)
         calibration_action_row.addWidget(self.reset_calibration_button)
-        layout.addWidget(self._section_label("ROI TOOLS"))
+        layout.addWidget(self._section_label(tr('ROI TOOLS')))
         layout.addLayout(roi_grid)
         curve_width_form = QFormLayout()
-        curve_width_form.addRow("New curve half-width", self.curve_half_width_spin)
+        curve_width_form.addRow(tr('New curve half-width'), self.curve_half_width_spin)
         layout.addLayout(curve_width_form)
         layout.addLayout(polygon_action_row)
-        layout.addWidget(self._section_label("CALIBRATION"))
+        layout.addWidget(self._section_label(tr('CALIBRATION')))
         layout.addWidget(self.calibration_editor)
         layout.addLayout(calibration_action_row)
         layout.addStretch(1)
-        self.calibration_tab = self._add_sidebar_page(tab, "Calib", "calibrationTab")
+        self.calibration_tab = self._add_sidebar_page(tab, tr('Calib'), "calibrationTab")
 
     def _build_workflow_tab(self) -> None:
         tab = QWidget()
         layout = QVBoxLayout(tab)
-        layout.addWidget(self._section_label("TRACKING FLOW"))
+        layout.addWidget(self._section_label(tr('TRACKING FLOW')))
         self.workflow_list.setObjectName("workflowList")
         layout.addWidget(self.workflow_list, 1)
-        self._add_sidebar_page(tab, "Flow", "workflowTab")
+        self.workflow_tab = self._add_sidebar_page(tab, tr('Flow'), "workflowTab")
 
     def _build_advanced_tab(self) -> None:
         tab = QWidget()
         layout = QVBoxLayout(tab)
         header = QHBoxLayout()
-        header.addWidget(self._section_label("PIPELINE JSON"))
+        header.addWidget(self._section_label(tr('PIPELINE JSON')))
         header.addWidget(self.json_status_label, 1)
         self.validate_json_button.setObjectName("validateJsonButton")
         self.apply_json_button.setObjectName("applyJsonButton")
         self.reset_json_button.setObjectName("resetJsonButton")
-        self.validate_json_button.setToolTip("Validate the pipeline JSON without changing the current task.")
-        self.apply_json_button.setToolTip("Apply the edited pipeline JSON to the current task.")
-        self.reset_json_button.setToolTip("Reload the JSON editor from the current pipeline.")
+        self.validate_json_button.setToolTip(tr('Validate the pipeline JSON without changing the current task.'))
+        self.apply_json_button.setToolTip(tr('Apply the edited pipeline JSON to the current task.'))
+        self.reset_json_button.setToolTip(tr('Reload the JSON editor from the current pipeline.'))
         self.validate_json_button.clicked.connect(self._validate_advanced_config)
         self.apply_json_button.clicked.connect(self._apply_advanced_config)
         self.reset_json_button.clicked.connect(self._sync_advanced_config_view)
@@ -2013,9 +1384,9 @@ class NeoTrackerWindow(
         actions.setColumnStretch(2, 1)
         layout.addLayout(actions)
         self.json_status_label.setObjectName("jsonStatusLabel")
-        self.json_status_label.setAccessibleName("Pipeline JSON status")
+        self.json_status_label.setAccessibleName(tr('Pipeline JSON status'))
         self.json_validation_message.setObjectName("jsonValidationMessage")
-        self.json_validation_message.setAccessibleName("Pipeline JSON validation error")
+        self.json_validation_message.setAccessibleName(tr('Pipeline JSON validation error'))
         self.json_validation_message.setWordWrap(True)
         self.json_validation_message.hide()
         layout.addWidget(self.json_validation_message)
@@ -2023,13 +1394,13 @@ class NeoTrackerWindow(
         self.advanced_config_view.setReadOnly(False)
         self.advanced_config_view.textChanged.connect(self._advanced_config_text_changed)
         layout.addWidget(self.advanced_config_view, 1)
-        self._add_sidebar_page(tab, "JSON", "advancedTab")
+        self._add_sidebar_page(tab, tr('JSON'), "advancedTab")
 
     def _load_presets(self) -> None:
         self.preset_combo.blockSignals(True)
         self.preset_combo.clear()
         for key, descriptor in self.registry.items():
-            self.preset_combo.addItem(descriptor.title, key)
+            self.preset_combo.addItem(tr(descriptor.title), key)
         self.preset_combo.blockSignals(False)
 
     def _new_task(
@@ -2051,13 +1422,13 @@ class NeoTrackerWindow(
             return
         if not self._background_tasks.idle:
             self.statusBar().showMessage(
-                "Finish or cancel background processing before adding media.",
+                tr('Finish or cancel background processing before adding media.'),
                 6000,
             )
             return
         paths, _ = QFileDialog.getOpenFileNames(
             self,
-            "Add media",
+            tr('Add media'),
             "",
             "Media files (*.mp4 *.mov *.avi *.mkv *.wav);;Video files (*.mp4 *.mov *.avi *.mkv);;WAV audio (*.wav);;All files (*)",
         )
@@ -2093,7 +1464,7 @@ class NeoTrackerWindow(
         if job is None or not self._background_tasks.is_current(job.token):
             return
         detail = f"Inspecting media {int(completed)}/{int(total)} · {filename}"
-        self.media_probe_status_label.setText(detail)
+        self.media_probe_status_label.setText(tr(detail))
         self.media_probe_status_label.setAccessibleDescription(detail)
         self.statusBar().showMessage(detail)
 
@@ -2109,7 +1480,7 @@ class NeoTrackerWindow(
             "adding media to this project"
         ):
             self.statusBar().showMessage(
-                "Add media canceled. Current editor work is still available.",
+                tr('Add media canceled. Current editor work is still available.'),
                 6000,
             )
             return
@@ -2149,8 +1520,8 @@ class NeoTrackerWindow(
         self._set_media_probe_busy(False)
         QMessageBox.warning(
             self,
-            "Add media",
-            f"Could not inspect the selected media:\n{message}",
+            tr('Add media'),
+            tr('Could not inspect the selected media:\n{v0}', v0=message),
         )
 
     def _media_import_canceled(self, _job: MediaProbeJob) -> None:
@@ -2158,7 +1529,7 @@ class NeoTrackerWindow(
             return
         self._set_media_probe_busy(False)
         self.statusBar().showMessage(
-            "Media import canceled. No selected files were added.",
+            tr('Media import canceled. No selected files were added.'),
             6000,
         )
 
@@ -2171,11 +1542,11 @@ class NeoTrackerWindow(
         if worker is None or job is None:
             return
         self._media_import_coordinator.cancel("user")
-        self._update_action("media.add", enabled=False, text="Cancelling…")
+        self._update_action("media.add", enabled=False, text=tr('Cancelling…'))
         self._set_action_enabled("project.open", False)
-        self.media_probe_status_label.setText("Cancelling media import…")
+        self.media_probe_status_label.setText(tr('Cancelling media import…'))
         self.media_probe_status_label.setAccessibleDescription(
-            "Cancel requested. Waiting for the current media file inspection to finish safely."
+            tr('Cancel requested. Waiting for the current media file inspection to finish safely.')
         )
 
     def _set_media_probe_busy(
@@ -2205,27 +1576,27 @@ class NeoTrackerWindow(
                 self._update_action(
                     "project.open",
                     enabled=True,
-                    text="Cancel Open",
+                    text=tr('Cancel Open'),
                     icon=self.style().standardIcon(
                         QStyle.StandardPixmap.SP_DialogCancelButton
                     ),
                     tool_tip=(
-                        "Cancel opening this project after the current media inspection finishes."
+                        tr('Cancel opening this project after the current media inspection finishes.')
                     ),
                 )
-                self.open_project_button.setAccessibleName("Cancel project open")
+                self.open_project_button.setAccessibleName(tr('Cancel project open'))
             else:
                 detail = f"Inspecting 0/{max(0, int(total))} media files…"
                 self._update_action(
                     "media.add",
                     enabled=True,
-                    text="Cancel Import",
+                    text=tr('Cancel Import'),
                     tool_tip=(
-                        "Cancel this media import after the current file inspection finishes."
+                        tr('Cancel this media import after the current file inspection finishes.')
                     ),
                 )
-                self.add_media_button.setAccessibleName("Cancel media import")
-            self.media_probe_status_label.setText(detail)
+                self.add_media_button.setAccessibleName(tr('Cancel media import'))
+            self.media_probe_status_label.setText(tr(detail))
             accessible_detail = (
                 "Target project media files are being inspected in the background. The current project "
                 "remains visible, but editing is paused until the open completes or is canceled."
@@ -2238,17 +1609,17 @@ class NeoTrackerWindow(
             return
         self._update_action(
             "media.add",
-            text="Add media",
-            tool_tip="Add video or WAV files to the current project.",
+            text=tr('Add media'),
+            tool_tip=tr('Add video or WAV files to the current project.'),
         )
-        self.add_media_button.setAccessibleName("Add media")
+        self.add_media_button.setAccessibleName(tr('Add media'))
         self._update_action(
             "project.open",
-            text="Open Project",
+            text=tr('Open Project'),
             icon=self.style().standardIcon(QStyle.StandardPixmap.SP_DialogOpenButton),
-            tool_tip="Open a saved Neo-Tracker project.",
+            tool_tip=tr('Open a saved Neo-Tracker project.'),
         )
-        self.open_project_button.setAccessibleName("Open project")
+        self.open_project_button.setAccessibleName(tr('Open project'))
         self.media_probe_status_label.hide()
 
     def _start_project_open(self, path: str | Path) -> bool:
@@ -2297,7 +1668,7 @@ class NeoTrackerWindow(
                 detail += f" · {filename}"
         else:
             detail = f"Opening project · preparing {int(completed)}/{int(total)} tasks…"
-        self.media_probe_status_label.setText(detail)
+        self.media_probe_status_label.setText(tr(detail))
         self.media_probe_status_label.setAccessibleDescription(
             detail
             + " The current project remains visible, but editing is paused until the open completes or is canceled."
@@ -2315,7 +1686,7 @@ class NeoTrackerWindow(
             >= _PROJECT_OPEN_DEFERRED_RESULTS_THRESHOLD
         )
         detail = "Opening project · applying the prepared workspace…"
-        self.media_probe_status_label.setText(detail)
+        self.media_probe_status_label.setText(tr(detail))
         self.media_probe_status_label.setAccessibleDescription(
             detail
             + " The validated project is replacing the current workspace; editing remains paused until this commit finishes."
@@ -2360,12 +1731,12 @@ class NeoTrackerWindow(
         if job.failure_detail:
             QMessageBox.warning(
                 self,
-                "Open project",
-                f"Could not open project:\n{job.failure_detail}",
+                tr('Open project'),
+                tr('Could not open project:\n{v0}', v0=job.failure_detail),
             )
         elif job.cancelled:
             self.statusBar().showMessage(
-                "Project open canceled. The current project is unchanged.",
+                tr('Project open canceled. The current project is unchanged.'),
                 6000,
             )
 
@@ -2378,11 +1749,11 @@ class NeoTrackerWindow(
         if worker is None or job is None:
             return
         self._project_io_coordinator.cancel_open("user")
-        self._update_action("project.open", enabled=False, text="Cancelling…")
+        self._update_action("project.open", enabled=False, text=tr('Cancelling…'))
         self._set_action_enabled("media.add", False)
-        self.media_probe_status_label.setText("Cancelling project open…")
+        self.media_probe_status_label.setText(tr('Cancelling project open…'))
         self.media_probe_status_label.setAccessibleDescription(
-            "Cancel requested. Waiting for the current project-read or media-inspection step to finish safely."
+            tr('Cancel requested. Waiting for the current project-read or media-inspection step to finish safely.')
         )
 
     def _choose_media_relink(self) -> None:
@@ -2393,7 +1764,7 @@ class NeoTrackerWindow(
         initial_directory = str(current_parent) if current_parent.exists() else ""
         path, _ = QFileDialog.getOpenFileName(
             self,
-            "Choose replacement media",
+            tr('Choose replacement media'),
             initial_directory,
             "Media files (*.mp4 *.mov *.avi *.mkv *.wav);;Video files (*.mp4 *.mov *.avi *.mkv);;WAV audio (*.wav);;All files (*)",
         )
@@ -2519,35 +1890,35 @@ class NeoTrackerWindow(
         active_kinds = set(self._background_tasks.active_kinds)
         if active_kinds.intersection(_PROJECT_OPEN_BLOCKING_KINDS):
             self.statusBar().showMessage(
-                "Wait for background processing or project saving to finish before opening another project.",
+                tr('Wait for background processing or project saving to finish before opening another project.'),
                 6000,
             )
             return
         path, _ = QFileDialog.getOpenFileName(
             self,
-            "Open project",
+            tr('Open project'),
             "",
             "Neo-Tracker projects (*.ntproj *.json);;All files (*)",
         )
         if not path:
             return
         if not self._confirm_project_transition("opening another project"):
-            self.statusBar().showMessage("Open canceled. Current project and editor work are still available.", 6000)
+            self.statusBar().showMessage(tr('Open canceled. Current project and editor work are still available.'), 6000)
             return
         if "review-response" in active_kinds:
             self._cancel_review_response_requests(clear_pending=True)
         if not self._start_project_open(path):
             QMessageBox.warning(
                 self,
-                "Open project",
-                "Could not start project loading.",
+                tr('Open project'),
+                tr('Could not start project loading.'),
             )
 
     def _save_project(self) -> bool:
         active_kinds = set(self._background_tasks.active_kinds)
         if active_kinds.intersection({"tracking", "media-probe", "project-open", "project-save"}):
             self.statusBar().showMessage(
-                "Finish tracking, media import, or the current save before saving the project.",
+                tr('Finish tracking, media import, or the current save before saving the project.'),
                 6000,
             )
             return False
@@ -2555,7 +1926,7 @@ class NeoTrackerWindow(
         if path is None:
             selected, _ = QFileDialog.getSaveFileName(
                 self,
-                "Save project",
+                tr('Save project'),
                 "",
                 "Neo-Tracker projects (*.ntproj);;JSON files (*.json);;All files (*)",
             )
@@ -2569,7 +1940,7 @@ class NeoTrackerWindow(
             # GUI-thread deep copy.
             project = self._project_from_window(path)
         except Exception as exc:
-            QMessageBox.warning(self, "Save project", f"Could not save project:\n{exc}")
+            QMessageBox.warning(self, tr('Save project'), tr('Could not save project:\n{v0}', v0=exc))
             return False
         accepted = self._project_io_coordinator.start_save(
             ProjectSaveRequest(
@@ -2590,13 +1961,13 @@ class NeoTrackerWindow(
         if busy:
             self._update_action(
                 "project.save",
-                text="Saving…",
-                tool_tip="Saving a stable project snapshot in the background.",
+                text=tr('Saving…'),
+                tool_tip=tr('Saving a stable project snapshot in the background.'),
             )
             self.save_project_button.setAccessibleDescription(
-                "A stable project snapshot is being saved. You can continue editing."
+                tr('A stable project snapshot is being saved. You can continue editing.')
             )
-            self.statusBar().showMessage("Saving project… You can continue editing.")
+            self.statusBar().showMessage(tr('Saving project… You can continue editing.'))
         else:
             self._apply_project_state(self._project_dirty)
 
@@ -2620,11 +1991,11 @@ class NeoTrackerWindow(
         self._set_project_save_busy(False)
         if self._project_dirty:
             self.statusBar().showMessage(
-                f"Saved snapshot: {job.path}. Newer edits still need saving.",
+                tr('Saved snapshot: {v0}. Newer edits still need saving.', v0=job.path),
                 8000,
             )
         else:
-            self.statusBar().showMessage(f"Saved project: {job.path}", 6000)
+            self.statusBar().showMessage(tr('Saved project: {v0}', v0=job.path), 6000)
 
     def _project_io_save_failed(self, _job: ProjectSaveJob, message: str) -> None:
         if self._background_tasks.closing:
@@ -2632,8 +2003,8 @@ class NeoTrackerWindow(
         self._set_project_save_busy(False)
         QMessageBox.warning(
             self,
-            "Save project",
-            f"Could not save project:\n{message}",
+            tr('Save project'),
+            tr('Could not save project:\n{v0}', v0=message),
         )
 
     def _project_transition_dialog(self, action: str) -> QMessageBox:
@@ -2734,9 +2105,9 @@ class NeoTrackerWindow(
     def _refresh_draft_state(self) -> tuple[str, ...]:
         draft_names = self._unapplied_draft_names()
         if len(draft_names) == 1:
-            self.global_draft_label.setText(f"Draft: {draft_names[0]}")
+            self.global_draft_label.setText(tr('Draft: {v0}', v0=draft_names[0]))
         else:
-            self.global_draft_label.setText(f"Drafts: {len(draft_names)}")
+            self.global_draft_label.setText(tr('Drafts: {v0}', v0=len(draft_names)))
         detail = (
             "Unapplied editor work: "
             + ", ".join(draft_names)
@@ -2781,7 +2152,7 @@ class NeoTrackerWindow(
         self._sync_roi_node_editing()
         self._refresh_draft_state()
         if show_status:
-            self.statusBar().showMessage("Unapplied editor work discarded.", 4000)
+            self.statusBar().showMessage(tr('Unapplied editor work discarded.'), 4000)
 
     def _confirm_project_transition(self, action: str) -> bool:
         self._refresh_project_state()
@@ -2796,7 +2167,7 @@ class NeoTrackerWindow(
                     return False
                 if self._project_save_thread is not None:
                     self.statusBar().showMessage(
-                        "Project save started. Retry the transition after saving finishes.",
+                        tr('Project save started. Retry the transition after saving finishes.'),
                         6000,
                     )
                     return False
@@ -2878,7 +2249,7 @@ class NeoTrackerWindow(
                 prepared_diagnostics=prepared_diagnostics,
                 prepared_analysis_sources=prepared_analysis_sources,
             )
-        self.statusBar().showMessage(f"Opened project: {path}", 6000)
+        self.statusBar().showMessage(tr('Opened project: {v0}', v0=path), 6000)
 
     def _apply_project(
         self,
@@ -3216,7 +2587,7 @@ class NeoTrackerWindow(
     def _show_empty_task_list_placeholder(self) -> None:
         self.task_list.blockSignals(True)
         self.task_list.clear()
-        item = QListWidgetItem("No media tasks yet")
+        item = QListWidgetItem(tr("No media tasks yet"))
         item.setData(Qt.ItemDataRole.UserRole, None)
         item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEnabled & ~Qt.ItemFlag.ItemIsSelectable)
         self.task_list.addItem(item)
@@ -3251,7 +2622,7 @@ class NeoTrackerWindow(
 
     def _remove_current_task(self) -> bool:
         if not self._background_tasks.idle:
-            self.statusBar().showMessage("Wait for background processing to finish before removing a task.", 6000)
+            self.statusBar().showMessage(tr('Wait for background processing to finish before removing a task.'), 6000)
             return False
         current_item = self.task_list.currentItem()
         task_index = current_item.data(Qt.ItemDataRole.UserRole) if current_item is not None else None
@@ -3265,7 +2636,7 @@ class NeoTrackerWindow(
         task = self.current_task
         if not self._confirm_editor_context_transition(f"removing {task.title()}"):
             self.statusBar().showMessage(
-                f"Task removal canceled. Drafts for {task.title()} are still available.",
+                tr('Task removal canceled. Drafts for {v0} are still available.', v0=task.title()),
                 6000,
             )
             return False
@@ -3292,14 +2663,14 @@ class NeoTrackerWindow(
         )
         self.task_actions_panel.show_removed(task.title())
         self.statusBar().showMessage(
-            f"Removed {task.title()} from this project; media remains on disk. Save Project to persist or undo now.",
+            tr('Removed {v0} from this project; media remains on disk. Save Project to persist or undo now.', v0=task.title()),
             10000,
         )
         return True
 
     def _undo_removed_task(self) -> bool:
         if not self._background_tasks.idle:
-            self.statusBar().showMessage("Wait for background processing to finish before restoring a task.", 6000)
+            self.statusBar().showMessage(tr('Wait for background processing to finish before restoring a task.'), 6000)
             return False
         removed = self._last_removed_task
         if removed is None:
@@ -3317,7 +2688,7 @@ class NeoTrackerWindow(
             return False
         if not self._confirm_editor_context_transition(f"restoring {task.title()}"):
             self.statusBar().showMessage(
-                f"Restore canceled. Drafts for {self.current_task.title()} are still available.",
+                tr('Restore canceled. Drafts for {v0} are still available.', v0=self.current_task.title()),
                 6000,
             )
             return False
@@ -3346,7 +2717,7 @@ class NeoTrackerWindow(
             else "The saved project content is unchanged."
         )
         self.statusBar().showMessage(
-            f"Restored {task.title()} with its results and history. {persistence_detail}",
+            tr('Restored {v0} with its results and history. {v1}', v0=task.title(), v1=persistence_detail),
             8000,
         )
         return True
@@ -3367,7 +2738,7 @@ class NeoTrackerWindow(
         if _TASK_SWITCH_BLOCKING_KINDS.intersection(self._background_tasks.active_kinds):
             self._set_current_task_item_silently(previous)
             self.statusBar().showMessage(
-                "Wait for current task processing to finish before switching tasks.",
+                tr('Wait for current task processing to finish before switching tasks.'),
                 6000,
             )
             return
@@ -3378,7 +2749,7 @@ class NeoTrackerWindow(
             target_title = current.text() if current is not None else "another task"
             if not self._ask_unapplied_drafts(f"switching to {target_title}", draft_names):
                 self.statusBar().showMessage(
-                    f"Task switch canceled. Drafts for {previous_title} are still available.",
+                    tr('Task switch canceled. Drafts for {v0} are still available.', v0=previous_title),
                     6000,
                 )
                 return
@@ -3399,7 +2770,7 @@ class NeoTrackerWindow(
         self._render_task(refresh_project_state=False)
         if draft_names:
             self.statusBar().showMessage(
-                f"Switched to {self.current_task.title()}; discarded drafts from {previous_title}.",
+                tr('Switched to {v0}; discarded drafts from {v1}.', v0=self.current_task.title(), v1=previous_title),
                 6000,
             )
 
@@ -3418,7 +2789,7 @@ class NeoTrackerWindow(
         if draft_names and not self._ask_unapplied_drafts(
             f"changing the preset to {descriptor.title}", draft_names
         ):
-            self.statusBar().showMessage("Preset change canceled. Current editor work is still available.", 6000)
+            self.statusBar().showMessage(tr('Preset change canceled. Current editor work is still available.'), 6000)
             return
         if not self._confirm_config_result_replacement(self.current_task):
             return
@@ -3448,7 +2819,7 @@ class NeoTrackerWindow(
         self._mark_project_changed()
         if draft_names:
             self.statusBar().showMessage(
-                f"Preset changed to {descriptor.title}; previous editor drafts were discarded.", 6000
+                tr('Preset changed to {v0}; previous editor drafts were discarded.', v0=descriptor.title), 6000
             )
 
     def _preview_frame_changed(
@@ -3527,7 +2898,7 @@ class NeoTrackerWindow(
             )
             self.analysis_source_combo.blockSignals(False)
             self.analysis_source_detail_label.setText(
-                f"Preparing signal sources for {len(task.pipeline.results):,} tracking results."
+                tr('Preparing signal sources for {v0:,} tracking results.', v0=len(task.pipeline.results))
             )
             self._set_analysis_export_enabled(False)
             self.analysis_result_view.setPlainText(
@@ -3572,7 +2943,7 @@ class NeoTrackerWindow(
             self._refresh_draft_state()
 
     def _set_json_status(self, text: str, state: str, detail: str = "") -> None:
-        self.json_status_label.setText(text)
+        self.json_status_label.setText(tr(text))
         self.json_status_label.setProperty("jsonState", state)
         self.json_status_label.setToolTip(detail)
         self.json_status_label.setAccessibleDescription(detail)
@@ -3601,12 +2972,12 @@ class NeoTrackerWindow(
             pipeline_key, pipeline = self._strict_pipeline_from_config(config)
         except Exception as exc:
             self._set_json_status("Invalid", "invalid", str(exc))
-            QMessageBox.warning(self, "Pipeline JSON", f"Could not apply pipeline JSON:\n{exc}")
+            QMessageBox.warning(self, tr('Pipeline JSON'), tr('Could not apply pipeline JSON:\n{v0}', v0=exc))
             return False
 
         if pipeline_key == task.pipeline_key and config == task.pipeline.to_config():
             self._sync_advanced_config_view()
-            self.statusBar().showMessage("Pipeline JSON is unchanged.", 4000)
+            self.statusBar().showMessage(tr('Pipeline JSON is unchanged.'), 4000)
             return True
         if not self._confirm_draft_replacement(
             "applying Pipeline JSON", ("ROI geometry", "Calibration", "Physics fit")
@@ -3634,7 +3005,7 @@ class NeoTrackerWindow(
         self._render_task(refresh_project_state=False)
         self._mark_project_changed()
         self._set_json_status("JSON applied", "valid", "Pipeline JSON was applied to the current task.")
-        self.statusBar().showMessage("Pipeline JSON applied. Run tracking again.", 6000)
+        self.statusBar().showMessage(tr('Pipeline JSON applied. Run tracking again.'), 6000)
         return True
 
     def _advanced_config_from_text(self) -> dict[str, object]:
@@ -3674,16 +3045,16 @@ class NeoTrackerWindow(
 
     def _render_media_info(self, task: DesktopTask) -> None:
         backend_text = "OpenCV available" if has_media_backend() else "OpenCV not installed"
-        self.backend_label.setText(backend_text)
-        self.preview_title_label.setText(task.title())
+        self.backend_label.setText(tr(backend_text))
+        self.preview_title_label.setText(task.title() if task.media_path else tr("Video analysis"))
         if task.media_path is None:
             self._render_media_relink(task)
-            self.media_fps_title_label.setText("Source FPS")
-            self.media_frames_title_label.setText("Frames")
-            self.media_resolution_title_label.setText("Resolution")
-            self.media_path_label.setText("No media selected")
+            self.media_fps_title_label.setText(tr('Source FPS'))
+            self.media_frames_title_label.setText(tr('Frames'))
+            self.media_resolution_title_label.setText(tr('Resolution'))
+            self.media_path_label.setText(tr('No media selected'))
             self.media_path_label.setToolTip("")
-            self.media_path_label.setAccessibleDescription("No media selected")
+            self.media_path_label.setAccessibleDescription(tr('No media selected'))
             self.media_fps_label.setText("-")
             self.media_frames_label.setText("-")
             self.media_resolution_label.setText("-")
@@ -3704,14 +3075,14 @@ class NeoTrackerWindow(
         info = task.media_info
         self._render_media_relink(task)
         if info.kind == "audio":
-            self.backend_label.setText("WAV audio")
-            self.media_fps_title_label.setText("Sample rate")
-            self.media_frames_title_label.setText("Samples")
-            self.media_resolution_title_label.setText("Channels")
+            self.backend_label.setText(tr('WAV audio'))
+            self.media_fps_title_label.setText(tr('Sample rate'))
+            self.media_frames_title_label.setText(tr('Samples'))
+            self.media_resolution_title_label.setText(tr('Channels'))
         else:
-            self.media_fps_title_label.setText("Source FPS")
-            self.media_frames_title_label.setText("Frames")
-            self.media_resolution_title_label.setText("Resolution")
+            self.media_fps_title_label.setText(tr('Source FPS'))
+            self.media_frames_title_label.setText(tr('Frames'))
+            self.media_resolution_title_label.setText(tr('Resolution'))
         self.media_path_label.setText(self._compact_media_path(task.media_path))
         self.media_path_label.setToolTip(task.media_path)
         self.media_path_label.setAccessibleDescription(task.media_path)
@@ -3751,7 +3122,7 @@ class NeoTrackerWindow(
         self._set_playback_enabled(info.kind == "video" and info.frame_count > 0)
 
     def _render_preset(self, descriptor: PresetDescriptor, pipeline: TrackingPipeline) -> None:
-        description = descriptor.description
+        description = tr(descriptor.description)
         default_observation = descriptor.factory().observation_model.to_config().get("type")
         active_observation = pipeline.observation_model.to_config().get("type")
         if active_observation != default_observation:
@@ -3766,18 +3137,13 @@ class NeoTrackerWindow(
                 f"\n\nCustom observation active · {observation_label}. "
                 "The preset selector above identifies the base pipeline."
             )
-        self.preset_description.setPlainText(description)
+        self.preset_description.setPlainText(tr(description))
         self._render_observation_backend(pipeline)
         self._render_marker_controls(pipeline)
-        self.module_summary_list.clear()
-        for step in self._pipeline_steps(pipeline):
-            item = QListWidgetItem(f"{step.title}: {step.module}")
-            item.setToolTip(step.purpose)
-            self.module_summary_list.addItem(item)
 
     def _render_observation_backend(self, pipeline: TrackingPipeline) -> None:
         backend = observation_backend_info(pipeline.observation_model)
-        self.tracking_backend_label.setText(backend.label)
+        self.tracking_backend_label.setText(tr(backend.label))
         self.tracking_backend_label.setToolTip(backend.detail)
         self.tracking_backend_label.setAccessibleDescription(backend.detail)
         if self.tracking_backend_label.property("backendState") == backend.state:
@@ -3808,7 +3174,7 @@ class NeoTrackerWindow(
             self.color_tolerance_spin.setValue(0.2)
             self.color_max_candidates_spin.setValue(4)
             self.color_min_area_spin.setValue(1)
-            self.marker_sample_label.setText("Not used by this preset")
+            self.marker_sample_label.setText(tr('Not used by this preset'))
             self._set_marker_swatch(None)
         self.color_tolerance_spin.blockSignals(False)
         self.color_max_candidates_spin.blockSignals(False)
@@ -3894,10 +3260,10 @@ class NeoTrackerWindow(
             if has_axis:
                 y_side = "left of +X" if rod.y_positive == "up" else "right of +X"
                 text += f" · +Y {y_side}"
-            self.scale_status_label.setText(text)
+            self.scale_status_label.setText(tr(text))
         else:
             unit = task.pipeline.state_model.units()
-            self.scale_status_label.setText(self._format_state_unit_summary(unit))
+            self.scale_status_label.setText(tr(self._format_state_unit_summary(unit)))
 
     def _render_curve_half_width(self, task: DesktopTask) -> None:
         value = 24.0
@@ -3990,14 +3356,14 @@ class NeoTrackerWindow(
         self.tracking_status_label.setAccessibleDescription(tracking_note)
         if task.media_path is None:
             if has_results:
-                self.tracking_status_label.setText(status_labels.get(task.tracking_outcome, "Tracked"))
+                self.tracking_status_label.setText(tr(status_labels.get(task.tracking_outcome, "Tracked")))
                 summary = self._tracking_summary_text(task.pipeline.results)
                 if task.tracking_outcome == "partial":
                     summary += " · source ended early"
                 self.tracking_summary_label.setText(summary + " · media unavailable")
             else:
-                self.tracking_status_label.setText("No media")
-                self.tracking_summary_label.setText("Results: none")
+                self.tracking_status_label.setText(tr('No media'))
+                self.tracking_summary_label.setText(tr('Results: none'))
             self._set_action_enabled("tracking.run", False)
             self._set_action_enabled("tracking.export_csv", has_results)
             self._set_action_enabled("tracking.export_report", has_results)
@@ -4034,11 +3400,11 @@ class NeoTrackerWindow(
                 "Review the staged source in Media before previewing, editing, rerunning, or exporting results."
             )
             self._set_tracking_status_outcome("partial")
-            self.tracking_status_label.setText("Review source")
+            self.tracking_status_label.setText(tr('Review source'))
             self.tracking_status_label.setToolTip(detail)
             self.tracking_status_label.setAccessibleDescription(detail)
             result_text = self._tracking_summary_text(task.pipeline.results)
-            self.tracking_summary_label.setText(f"{result_text} · source review required")
+            self.tracking_summary_label.setText(tr('{v0} · source review required', v0=result_text))
             self.tracking_summary_label.setToolTip(detail)
             self._set_action_enabled("tracking.run", False)
             self._set_action_enabled("tracking.export_csv", False)
@@ -4051,34 +3417,34 @@ class NeoTrackerWindow(
             return
         if is_audio:
             if not info.available:
-                self.tracking_status_label.setText("Audio unavailable")
-                self.tracking_summary_label.setText("Saved audio metadata only; reconnect the WAV file for processing.")
+                self.tracking_status_label.setText(tr('Audio unavailable'))
+                self.tracking_summary_label.setText(tr('Saved audio metadata only; reconnect the WAV file for processing.'))
                 return
-            self.tracking_status_label.setText("Audio ready")
-            self.tracking_summary_label.setText("Audio source available")
+            self.tracking_status_label.setText(tr('Audio ready'))
+            self.tracking_summary_label.setText(tr('Audio source available'))
             return
         if has_results:
-            self.tracking_status_label.setText(status_labels.get(task.tracking_outcome, "Tracked"))
+            self.tracking_status_label.setText(tr(status_labels.get(task.tracking_outcome, "Tracked")))
             summary = self._tracking_summary_text(task.pipeline.results)
             if task.tracking_outcome == "partial":
                 summary += " · source ended early"
             if not can_track:
                 summary += " · media unavailable"
         elif task.tracking_outcome in status_labels:
-            self.tracking_status_label.setText(status_labels[task.tracking_outcome])
+            self.tracking_status_label.setText(tr(status_labels[task.tracking_outcome]))
             summary = self._tracking_summary_text(task.pipeline.results)
             if task.tracking_outcome == "partial":
                 summary += " · source ended early"
         elif not can_track:
-            self.tracking_status_label.setText("Preview unavailable")
+            self.tracking_status_label.setText(tr('Preview unavailable'))
             if not info.available and self._media_info_has_saved_metrics(info):
                 summary = "Saved video metadata only; reconnect the media file to preview or track."
             else:
                 summary = self._tracking_summary_text(task.pipeline.results)
         else:
-            self.tracking_status_label.setText("Ready")
+            self.tracking_status_label.setText(tr('Ready'))
             summary = self._tracking_summary_text(task.pipeline.results)
-        self.tracking_summary_label.setText(summary)
+        self.tracking_summary_label.setText(tr(summary))
 
     def _set_tracking_status_outcome(self, outcome: str) -> None:
         self.tracking_status_label.setProperty("trackingOutcome", str(outcome))
@@ -4151,7 +3517,7 @@ class NeoTrackerWindow(
             )
         selection_model.blockSignals(False)
         self._review_render_task_token = task_token
-        self.review_summary_label.setText(self.results_model.summary)
+        self.review_summary_label.setText(tr(self.results_model.summary))
         self.review_summary_label.setToolTip(self.results_model.summary_tooltip)
         selected_frame = (
             results[preferred_index].frame_index
@@ -4161,7 +3527,7 @@ class NeoTrackerWindow(
         if defer_diagnostics:
             self.review_diagnostics_panel.set_results([], state_units, None)
             detail = f"Indexing diagnostics for {len(results):,} tracking results."
-            self.review_diagnostics_panel.status_label.setText("Preparing diagnostics…")
+            self.review_diagnostics_panel.status_label.setText(tr('Preparing diagnostics…'))
             self.review_diagnostics_panel.status_label.setToolTip(detail)
             self.review_diagnostics_panel.status_label.setAccessibleDescription(detail)
         else:
@@ -4195,7 +3561,7 @@ class NeoTrackerWindow(
                 task.pipeline.state_model.units(),
                 result.frame_index,
             )
-        self.review_summary_label.setText(self.results_model.summary)
+        self.review_summary_label.setText(tr(self.results_model.summary))
         self.review_summary_label.setToolTip(self.results_model.summary_tooltip)
         self._render_review_selection(index)
         self._render_tracking_summary_after_result_edit(task)
@@ -4212,7 +3578,7 @@ class NeoTrackerWindow(
             not task.media_info.available or task.media_info.kind != "video"
         ):
             summary += " · media unavailable"
-        self.tracking_summary_label.setText(summary)
+        self.tracking_summary_label.setText(tr(summary))
 
     def _render_review_selection(self, result_index: int | None = None) -> None:
         if result_index is None:
@@ -4223,8 +3589,8 @@ class NeoTrackerWindow(
             self.current_task.pipeline.state_model.units(),
         )
         if selection is None:
-            self.review_selection_label.setText("No result selected")
-            self.review_selection_detail_label.setText("Select a result row or move to a tracked frame.")
+            self.review_selection_label.setText(tr('No result selected'))
+            self.review_selection_detail_label.setText(tr('Select a result row or move to a tracked frame.'))
             tone = "empty"
             detail = "No tracking result is selected."
         else:
@@ -4248,11 +3614,11 @@ class NeoTrackerWindow(
         self.review_diagnostics_panel.set_selected_frame(selected_frame)
 
     def _render_edit_history(self, task: DesktopTask) -> None:
-        self.review_history_tabs.setTabText(1, f"Edits ({len(task.edit_history)})")
+        self.review_history_tabs.setTabText(1, tr('Edits ({v0})', v0=len(task.edit_history)))
         self.edit_history_panel.set_records(task.edit_history)
 
     def _render_run_history(self, task: DesktopTask) -> None:
-        self.review_history_tabs.setTabText(0, f"Runs ({len(task.run_history)})")
+        self.review_history_tabs.setTabText(0, tr('Runs ({v0})', v0=len(task.run_history)))
         self.run_history_panel.set_records(task.run_history)
 
     def _show_run_history_comparison(self, selections_object: object) -> None:
@@ -4278,8 +3644,8 @@ class NeoTrackerWindow(
         stem = Path(task.media_path).stem if task.media_path else "tracking"
         path, _ = QFileDialog.getSaveFileName(
             self,
-            "Export tracking run history",
-            f"{stem}-run-history.csv",
+            tr('Export tracking run history'),
+            tr('{v0}-run-history.csv', v0=stem),
             "CSV files (*.csv);;All files (*)",
         )
         if not path:
@@ -4289,7 +3655,7 @@ class NeoTrackerWindow(
             [selection.record for selection in selections],
             sequence_numbers=[selection.sequence for selection in selections],
         )
-        self.statusBar().showMessage(f"Exported {len(selections)} tracking runs: {path}", 6000)
+        self.statusBar().showMessage(tr('Exported {v0} tracking runs: {v1}', v0=len(selections), v1=path), 6000)
 
     def _jump_to_edit_frame(self, frame_index: int) -> None:
         frame_index = self._clamped_preview_frame(self.current_task, int(frame_index))
@@ -4298,7 +3664,7 @@ class NeoTrackerWindow(
             return
         if self.review_tab is not None:
             self.sidebar_tabs.setCurrentWidget(self.review_tab)
-        self.statusBar().showMessage(f"Jumped to edit frame {frame_index}.", 4000)
+        self.statusBar().showMessage(tr('Jumped to edit frame {v0}.', v0=frame_index), 4000)
 
     def _jump_to_diagnostic_frame(self, frame_index: int) -> None:
         frame_index = self._clamped_preview_frame(self.current_task, int(frame_index))
@@ -4307,7 +3673,7 @@ class NeoTrackerWindow(
             return
         if self.review_tab is not None:
             self.sidebar_tabs.setCurrentWidget(self.review_tab)
-        self.statusBar().showMessage(f"Selected diagnostic frame {frame_index}.", 4000)
+        self.statusBar().showMessage(tr('Selected diagnostic frame {v0}.', v0=frame_index), 4000)
 
     def _export_visible_edit_history(self, selections_object: object) -> None:
         if not isinstance(selections_object, (list, tuple)):
@@ -4321,8 +3687,8 @@ class NeoTrackerWindow(
         stem = Path(task.media_path).stem if task.media_path else "tracking"
         path, _ = QFileDialog.getSaveFileName(
             self,
-            "Export manual edit history",
-            f"{stem}-edit-history.csv",
+            tr('Export manual edit history'),
+            tr('{v0}-edit-history.csv', v0=stem),
             "CSV files (*.csv);;All files (*)",
         )
         if not path:
@@ -4332,7 +3698,7 @@ class NeoTrackerWindow(
             [selection.entry for selection in selections],
             sequence_numbers=[selection.sequence for selection in selections],
         )
-        self.statusBar().showMessage(f"Exported {len(selections)} manual edits: {path}", 6000)
+        self.statusBar().showMessage(tr('Exported {v0} manual edits: {v1}', v0=len(selections), v1=path), 6000)
 
     def _record_edit_event(
         self,
@@ -4359,8 +3725,8 @@ class NeoTrackerWindow(
     def _render_workflow(self, pipeline: TrackingPipeline) -> None:
         self.workflow_list.clear()
         for index, step in enumerate(self._pipeline_steps(pipeline), start=1):
-            item = QListWidgetItem(f"{index}. {step.title} -> {step.module}")
-            item.setToolTip(step.purpose)
+            item = QListWidgetItem(f"{index}. {tr(step.title)} → {tr(step.module)}")
+            item.setToolTip(tr(step.purpose))
             self.workflow_list.addItem(item)
 
     def _response_overlay_changed(self, _state: int) -> None:
@@ -4396,7 +3762,7 @@ class NeoTrackerWindow(
         if task.media_path is None:
             self._preview_coordinator.invalidate()
             self._cancel_review_response_requests(clear_pending=True)
-            self.candidate_summary_label.setText("Candidates: none")
+            self.candidate_summary_label.setText(tr('Candidates: none'))
             self.preview_label.clear_message("No media loaded\nAdd a video or WAV file from the Media tab.")
             self._sync_preview_dependent_actions(task)
             return
@@ -4405,7 +3771,7 @@ class NeoTrackerWindow(
         if not info.available:
             self._preview_coordinator.invalidate()
             self._cancel_review_response_requests(clear_pending=True)
-            self.candidate_summary_label.setText("Candidates: unavailable")
+            self.candidate_summary_label.setText(tr('Candidates: unavailable'))
             detail = f"{task.title()}\nPreview unavailable\n{info.error}"
             if task.media_identity_requires_review:
                 visible_reason = "Source verification required"
@@ -4428,7 +3794,7 @@ class NeoTrackerWindow(
         if info.kind == "audio":
             self._preview_coordinator.invalidate()
             self._cancel_review_response_requests(clear_pending=True)
-            self.candidate_summary_label.setText("Candidates: not used for audio")
+            self.candidate_summary_label.setText(tr('Candidates: not used for audio'))
             self.preview_label.clear_message(f"{task.title()}\nAudio file loaded\nReady for signal processing.")
             self._render_tracking_status(task)
             return
@@ -4615,7 +3981,7 @@ class NeoTrackerWindow(
         )
 
     def _set_response_status(self, text: str, state: str, detail: str) -> None:
-        self.response_status_label.setText(text)
+        self.response_status_label.setText(tr(text))
         self.response_status_label.setToolTip(detail)
         self.response_status_label.setAccessibleDescription(detail)
         if self.response_status_label.property("responseState") == state:
@@ -4729,11 +4095,11 @@ class NeoTrackerWindow(
         current_frame = int(task.preview_frame_index)
         result = self.review_controller.result_for_frame(task.pipeline.results, current_frame)
         if result is None:
-            self.candidate_summary_label.setText("Candidates: no result on this frame")
+            self.candidate_summary_label.setText(tr('Candidates: no result on this frame'))
             return
         candidates = result.debug.get("candidates")
         if not isinstance(candidates, list) or not candidates:
-            self.candidate_summary_label.setText("Candidates: none detected")
+            self.candidate_summary_label.setText(tr('Candidates: none detected'))
             return
         selected = next(
             (candidate for candidate in candidates if isinstance(candidate, dict) and candidate.get("selected")),
@@ -4749,7 +4115,7 @@ class NeoTrackerWindow(
         if result.status.startswith("manual"):
             selected_text += " · pre-edit detector evidence"
         self.candidate_summary_label.setText(
-            f"Candidates on frame {current_frame}: {len(candidates)}{selected_text}"
+            tr('Candidates on frame {v0}: {v1}{v2}', v0=current_frame, v1=len(candidates), v2=selected_text)
         )
 
     def _reader_for_task(self, task: DesktopTask) -> MediaReader:
@@ -4814,10 +4180,10 @@ class NeoTrackerWindow(
             return
         self._update_action(
             "playback.toggle",
-            text="Pause",
+            text=tr('Pause'),
             icon=self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPause),
         )
-        self.play_button.setAccessibleName("Pause video preview")
+        self.play_button.setAccessibleName(tr('Pause video preview'))
         self._set_playback_status(
             f"Playing · Source {self._format_source_fps(self._playback_coordinator.fps)} fps",
             state="smooth",
@@ -4830,10 +4196,10 @@ class NeoTrackerWindow(
         self._playback_coordinator.stop()
         self._update_action(
             "playback.toggle",
-            text="Play",
+            text=tr('Play'),
             icon=self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay),
         )
-        self.play_button.setAccessibleName("Play video preview")
+        self.play_button.setAccessibleName(tr('Play video preview'))
         if failure_detail:
             self._set_playback_error(int(self.current_task.preview_frame_index), failure_detail, skipped_total)
             return
@@ -4911,13 +4277,12 @@ class NeoTrackerWindow(
             "error",
         )
         self.statusBar().showMessage(
-            f"Playback stopped at frame {frame_index}. This frame could not be decoded; "
-            "choose another frame or relink media. Tracking data is unchanged.",
+            tr('Playback stopped at frame {v0}. This frame could not be decoded; choose another frame or relink media. Tracking data is unchanged.', v0=frame_index),
             10000,
         )
 
     def _show_playback_status(self, text: str, detail: str, state: str) -> None:
-        self.playback_status_label.setText(text)
+        self.playback_status_label.setText(tr(text))
         self.playback_status_label.setToolTip(detail)
         self.playback_status_label.setAccessibleDescription(detail)
         if self.playback_status_label.property("playbackState") != state:
@@ -5012,17 +4377,17 @@ class NeoTrackerWindow(
 
     def _finish_roi_drawing_selection(self) -> None:
         if self.preview_label.finish_polygon_roi_selection() or self.preview_label.finish_curve_band_roi_selection():
-            self.statusBar().showMessage("ROI updated. Run tracking again.", 6000)
+            self.statusBar().showMessage(tr('ROI updated. Run tracking again.'), 6000)
             return
         QMessageBox.information(
             self,
-            "ROI selection",
-            "Add at least three polygon points or two curve points in the preview before finishing.",
+            tr('ROI selection'),
+            tr('Add at least three polygon points or two curve points in the preview before finishing.'),
         )
 
     def _cancel_preview_selection(self) -> None:
         self.preview_label.cancel_selection()
-        self.statusBar().showMessage("Preview drawing cancelled.", 3000)
+        self.statusBar().showMessage(tr('Preview drawing cancelled.'), 3000)
 
     def _color_sample_selected(self, point: object) -> None:
         observation = self._color_blob_observation()
@@ -5037,7 +4402,7 @@ class NeoTrackerWindow(
             try:
                 frame = self._reader_for_task(task).read_frame(task.preview_frame_index)
             except Exception as exc:
-                QMessageBox.warning(self, "Marker color", f"Could not read the current frame:\n{exc}")
+                QMessageBox.warning(self, tr('Marker color'), tr('Could not read the current frame:\n{v0}', v0=exc))
                 return
         else:
             cached = self._preview_decode_cache
@@ -5049,13 +4414,13 @@ class NeoTrackerWindow(
             ):
                 QMessageBox.information(
                     self,
-                    "Marker color",
-                    "Wait for the current isolated preview frame to finish loading, then sample again.",
+                    tr('Marker color'),
+                    tr('Wait for the current isolated preview frame to finish loading, then sample again.'),
                 )
                 return
             frame = cached.bgr_frame[:, :, ::-1]
         if frame.ndim != 3 or frame.shape[2] < 3:
-            QMessageBox.warning(self, "Marker color", "Marker color sampling requires an RGB video frame.")
+            QMessageBox.warning(self, tr('Marker color'), tr('Marker color sampling requires an RGB video frame.'))
             return
         height, width = frame.shape[:2]
         x = max(0, min(width - 1, int(round(point_px[0]))))
@@ -5072,7 +4437,7 @@ class NeoTrackerWindow(
         self._render_workflow(task.pipeline)
         self._sync_advanced_config_view()
         self.statusBar().showMessage(
-            f"Sampled marker color at frame {task.preview_frame_index}: {self._format_marker_sample(rgb)}.",
+            tr('Sampled marker color at frame {v0}: {v1}.', v0=task.preview_frame_index, v1=self._format_marker_sample(rgb)),
             6000,
         )
 
@@ -5092,7 +4457,7 @@ class NeoTrackerWindow(
         self._clear_tracking_results("Marker tolerance updated. Run tracking again.")
         self._render_workflow(self.current_task.pipeline)
         self._sync_advanced_config_view()
-        self.statusBar().showMessage(f"Marker tolerance set to {float(value):.3f}.", 6000)
+        self.statusBar().showMessage(tr('Marker tolerance set to {v0:.3f}.', v0=float(value)), 6000)
 
     def _color_candidate_settings_changed(self, _value: int) -> None:
         observation = self._color_blob_observation()
@@ -5113,8 +4478,7 @@ class NeoTrackerWindow(
         self._render_workflow(self.current_task.pipeline)
         self._sync_advanced_config_view()
         self.statusBar().showMessage(
-            f"Marker detector keeps up to {observation.max_candidates} regions "
-            f"with area ≥ {observation.min_component_area} px.",
+            tr('Marker detector keeps up to {v0} regions with area ≥ {v1} px.', v0=observation.max_candidates, v1=observation.min_component_area),
             6000,
         )
 
@@ -5151,7 +4515,7 @@ class NeoTrackerWindow(
         self._render_workflow(task.pipeline)
         self._sync_advanced_config_view()
         self._render_preview()
-        self.statusBar().showMessage("ROI reset to the selected preset defaults.", 6000)
+        self.statusBar().showMessage(tr('ROI reset to the selected preset defaults.'), 6000)
 
     def _roi_selected(self, rect: object) -> None:
         task = self.current_task
@@ -5278,7 +4642,7 @@ class NeoTrackerWindow(
         if not self.calibration_editor.set_line(start_px, end_px):
             return
         self.preview_label.set_calibration_line((start_px, end_px))
-        self.statusBar().showMessage("Calibration rod marked. Enter its real length and unit, then apply.", 8000)
+        self.statusBar().showMessage(tr('Calibration rod marked. Enter its real length and unit, then apply.'), 8000)
 
     def _calibration_draft_changed(self, config: object) -> None:
         line: tuple[tuple[float, float], tuple[float, float]] | None = None
@@ -5302,9 +4666,9 @@ class NeoTrackerWindow(
                 str(config.get("y_positive", "up")),
             )
         if self.calibration_editor.is_dirty():
-            self.statusBar().showMessage("Calibration draft changed. Apply or revert before tracking.", 8000)
+            self.statusBar().showMessage(tr('Calibration draft changed. Apply or revert before tracking.'), 8000)
         else:
-            self.statusBar().showMessage("Calibration draft reverted.", 4000)
+            self.statusBar().showMessage(tr('Calibration draft reverted.'), 4000)
         self._refresh_draft_state()
 
     def _calibration_editor_applied(self, config: object) -> None:
@@ -5337,13 +4701,13 @@ class NeoTrackerWindow(
             y_positive=str(y_positive),
         )
         if rod.pixel_length() <= 1e-12:
-            QMessageBox.warning(self, "Calibration rod", "Calibration rod endpoints must be distinct.")
+            QMessageBox.warning(self, tr('Calibration rod'), tr('Calibration rod endpoints must be distinct.'))
             return False
         if rod.unit_per_pixel() is None or not rod.unit or rod.y_positive not in {"up", "down"}:
             QMessageBox.warning(
                 self,
-                "Calibration rod",
-                "Calibration length, unit, and axis direction must be valid.",
+                tr('Calibration rod'),
+                tr('Calibration length, unit, and axis direction must be valid.'),
             )
             return False
         if self._calibration_rod_to_dict(task.calibration_rod) == self._calibration_rod_to_dict(rod):
@@ -5361,7 +4725,7 @@ class NeoTrackerWindow(
         self.calibration_editor.show_applied()
         self._render_workflow(task.pipeline)
         self._sync_advanced_config_view()
-        self.statusBar().showMessage("Calibration applied. Run tracking again.", 6000)
+        self.statusBar().showMessage(tr('Calibration applied. Run tracking again.'), 6000)
         return True
 
     def _reset_calibration(self) -> None:
@@ -5424,7 +4788,7 @@ class NeoTrackerWindow(
         self._render_workflow(task.pipeline)
         self._sync_advanced_config_view()
         self._render_preview()
-        self.statusBar().showMessage("Calibration reset to the selected preset defaults.", 6000)
+        self.statusBar().showMessage(tr('Calibration reset to the selected preset defaults.'), 6000)
 
     @staticmethod
     def _roi_config_for_task(task: DesktopTask) -> dict[str, object] | None:
@@ -5486,8 +4850,7 @@ class NeoTrackerWindow(
             if self.media_tab is not None:
                 self.sidebar_tabs.setCurrentWidget(self.media_tab)
             self.statusBar().showMessage(
-                f"{action} paused: the media source changed or could not be verified. "
-                "Review the staged source in Media.",
+                tr('{v0} paused: the media source changed or could not be verified. Review the staged source in Media.', v0=action),
                 8000,
             )
             return None
@@ -5503,13 +4866,13 @@ class NeoTrackerWindow(
             self._background_tasks.active_kinds
         ):
             self.statusBar().showMessage(
-                "Finish project/media loading or project saving before starting tracking.",
+                tr('Finish project/media loading or project saving before starting tracking.'),
                 6000,
             )
             return
         if self._analysis_thread is not None:
             self.statusBar().showMessage(
-                "Cancel or finish Signal processing before replacing tracking results.",
+                tr('Cancel or finish Signal processing before replacing tracking results.'),
                 6000,
             )
             return
@@ -5518,7 +4881,7 @@ class NeoTrackerWindow(
             return
         task = self.current_task
         if task.media_path is None:
-            QMessageBox.information(self, "Run tracking", "Add a video file before running tracking.")
+            QMessageBox.information(self, tr('Run tracking'), tr('Add a video file before running tracking.'))
             return
         if self._block_tracking_for_unapplied_drafts("Full tracking"):
             return
@@ -5526,14 +4889,14 @@ class NeoTrackerWindow(
         if info is None:
             return
         if not info.available or info.frame_count <= 0:
-            QMessageBox.information(self, "Run tracking", info.error or "The selected media cannot be tracked.")
+            QMessageBox.information(self, tr('Run tracking'), info.error or "The selected media cannot be tracked.")
             return
         if info.kind != "video":
-            QMessageBox.information(self, "Run tracking", "Video tracking requires a video file.")
+            QMessageBox.information(self, tr('Run tracking'), tr('Video tracking requires a video file.'))
             return
         if (task.pipeline.results or task.edit_history) and not self._ask_result_replacement(task):
             self.statusBar().showMessage(
-                "Full tracking canceled. Current Results/Edits are unchanged.",
+                tr('Full tracking canceled. Current Results/Edits are unchanged.'),
                 6000,
             )
             return
@@ -5547,7 +4910,7 @@ class NeoTrackerWindow(
             return
         if self._analysis_thread is not None:
             self.statusBar().showMessage(
-                "Cancel or finish Signal processing before rerunning tracking.",
+                tr('Cancel or finish Signal processing before rerunning tracking.'),
                 6000,
             )
             return
@@ -5555,11 +4918,11 @@ class NeoTrackerWindow(
             return
         task = self.current_task
         if not task.pipeline.results:
-            QMessageBox.information(self, "Rerun after", "Run tracking before rerunning a segment.")
+            QMessageBox.information(self, tr('Rerun after'), tr('Run tracking before rerunning a segment.'))
             return
         index = self._current_result_index()
         if index is None:
-            QMessageBox.information(self, "Rerun after", "Select a result row or move to a tracked frame first.")
+            QMessageBox.information(self, tr('Rerun after'), tr('Select a result row or move to a tracked frame first.'))
             return
         if self._block_tracking_for_unapplied_drafts("Rerun"):
             return
@@ -5568,19 +4931,19 @@ class NeoTrackerWindow(
             if info is not None:
                 QMessageBox.information(
                     self,
-                    "Rerun after",
+                    tr('Rerun after'),
                     info.error or "Add a readable video file before rerunning a segment.",
                 )
             return
         if info.kind != "video":
-            QMessageBox.information(self, "Rerun after", "Video tracking requires a video file.")
+            QMessageBox.information(self, tr('Rerun after'), tr('Video tracking requires a video file.'))
             return
 
         anchor = task.pipeline.results[index]
         start_frame = int(anchor.frame_index) + 1
         max_frame = int(info.frame_count) - 1
         if start_frame > max_frame:
-            QMessageBox.information(self, "Rerun after", "There are no later frames after the selected result.")
+            QMessageBox.information(self, tr('Rerun after'), tr('There are no later frames after the selected result.'))
             return
 
         prefix = list(task.pipeline.results[: index + 1])
@@ -5592,7 +4955,7 @@ class NeoTrackerWindow(
             result_count=replaced_result_count,
         ):
             self.statusBar().showMessage(
-                "Rerun canceled. Current later Results/Edits are unchanged.",
+                tr('Rerun canceled. Current later Results/Edits are unchanged.'),
                 6000,
             )
             return
@@ -5693,7 +5056,7 @@ class NeoTrackerWindow(
         self.run_tracking_button.style().polish(self.run_tracking_button)
         self._sync_roi_node_editing()
         if busy:
-            verb = "Rerunning" if mode == "rerun" else "Tracking"
+            verb = tr("Rerunning") if mode == "rerun" else tr("Tracking")
             preview_frame = int(self.current_task.preview_frame_index)
             self._show_playback_status(
                 f"Preview paused · Frame {preview_frame}",
@@ -5706,34 +5069,34 @@ class NeoTrackerWindow(
                 "tracking",
             )
             self._set_tracking_status_outcome("running")
-            self.tracking_status_label.setText(f"{verb} 0%")
-            self.tracking_summary_label.setText("Preparing frames…")
-            self.tracking_performance_label.setText("Measuring input, compute, and review cache…")
+            self.tracking_status_label.setText(tr('{v0} 0%', v0=verb))
+            self.tracking_summary_label.setText(tr('Preparing frames…'))
+            self.tracking_performance_label.setText(tr('Measuring input, compute, and review cache…'))
             self.tracking_performance_label.setProperty("performanceState", "running")
             self.tracking_performance_label.style().unpolish(self.tracking_performance_label)
             self.tracking_performance_label.style().polish(self.tracking_performance_label)
             self.tracking_performance_label.setToolTip(
-                "Live averages separate media input from tracking computation and show retained Review data."
+                tr('Live averages separate media input from tracking computation and show retained Review data.')
             )
             self.tracking_performance_label.setAccessibleDescription(
-                "Measuring average media input and tracking computation time per frame, plus retained Review data."
+                tr('Measuring average media input and tracking computation time per frame, plus retained Review data.')
             )
             self.tracking_performance_title_label.show()
             self.tracking_performance_label.show()
             self.tracking_summary_label.setToolTip(
-                "Waiting for the first frame before estimating throughput and remaining time."
+                tr('Waiting for the first frame before estimating throughput and remaining time.')
             )
             self.tracking_summary_label.setAccessibleDescription(
-                "Preparing video frames. Throughput and estimated remaining time are not available yet."
+                tr('Preparing video frames. Throughput and estimated remaining time are not available yet.')
             )
             self._update_action(
                 "tracking.run",
                 enabled=True,
-                text="Cancel",
+                text=tr('Cancel'),
                 icon=self.style().standardIcon(QStyle.StandardPixmap.SP_MediaStop),
-                tool_tip=f"Cancel the active {verb.lower()} job.",
+                tool_tip=tr('Cancel the active {v0} job.', v0=verb.lower()),
             )
-            self.run_tracking_button.setAccessibleName(f"Cancel {verb.lower()}")
+            self.run_tracking_button.setAccessibleName(tr('Cancel {v0}', v0=verb.lower()))
             return
         previous_tab = self._tracking_previous_sidebar_tab
         self._tracking_previous_sidebar_tab = None
@@ -5749,11 +5112,11 @@ class NeoTrackerWindow(
         self.tracking_performance_label.hide()
         self._update_action(
             "tracking.run",
-            text="Run Tracking",
+            text=tr('Run Tracking'),
             icon=self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay),
-            tool_tip="Run the selected video tracking pipeline in the background.",
+            tool_tip=tr('Run the selected video tracking pipeline in the background.'),
         )
-        self.run_tracking_button.setAccessibleName("Run video tracking")
+        self.run_tracking_button.setAccessibleName(tr('Run video tracking'))
         self._render_tracking_status(self.current_task)
 
     def _current_task_can_play(self) -> bool:
@@ -5770,12 +5133,12 @@ class NeoTrackerWindow(
         span = max(1, int(total) - job.start_frame)
         processed = max(0, int(completed) - job.start_frame)
         percent = min(100, int(round(processed * 100 / span)))
-        verb = "Rerunning" if job.mode == "rerun" else "Tracking"
-        self.tracking_status_label.setText(f"{verb} {percent}%")
+        verb = tr("Rerunning") if job.mode == "rerun" else tr("Tracking")
+        self.tracking_status_label.setText(tr('{v0} {v1}%', v0=verb, v1=percent))
         rate = progress.throughput_fps
         eta = self._format_tracking_eta(progress.eta_s)
         self.tracking_summary_label.setText(
-            f"Frame {completed}/{total} · Throughput {rate:.1f} fps · {eta} left"
+            tr('Frame {v0}/{v1} · Throughput {v2:.1f} fps · {v3} left', v0=completed, v1=total, v2=rate, v3=eta)
         )
         cache_target = (
             f" against a {self._format_binary_bytes(progress.debug_history_max_bytes)} target"
@@ -5817,7 +5180,7 @@ class NeoTrackerWindow(
         self.tracking_performance_label.setToolTip(detail)
         self.tracking_performance_label.setAccessibleDescription(detail)
         self.statusBar().showMessage(
-            f"{verb} frame {completed} of {total} · Throughput {rate:.1f} fps · {eta} left…"
+            tr('{v0} frame {v1} of {v2} · Throughput {v3:.1f} fps · {v4} left…', v0=verb, v1=completed, v2=total, v3=rate, v4=eta)
         )
 
     @staticmethod
@@ -5847,9 +5210,9 @@ class NeoTrackerWindow(
         if worker is None:
             return
         self._tracking_coordinator.cancel("user")
-        self._update_action("tracking.run", enabled=False, text="Cancelling…")
-        self.tracking_status_label.setText("Cancelling…")
-        self.tracking_summary_label.setText("Finishing the current frame safely.")
+        self._update_action("tracking.run", enabled=False, text=tr('Cancelling…'))
+        self.tracking_status_label.setText(tr('Cancelling…'))
+        self.tracking_summary_label.setText(tr('Finishing the current frame safely.'))
         current_lines = self.tracking_performance_label.text().splitlines()
         metric_lines = [
             line
@@ -5884,16 +5247,16 @@ class NeoTrackerWindow(
         self.tracking_summary_label.setToolTip(detail)
         self.tracking_summary_label.setAccessibleDescription(detail)
         if self._background_tasks.closing:
-            self.statusBar().showMessage("Closing… Finishing background operations safely.")
+            self.statusBar().showMessage(tr('Closing… Finishing background operations safely.'))
         else:
-            self.statusBar().showMessage("Cancellation requested · finishing the current frame safely…")
+            self.statusBar().showMessage(tr('Cancellation requested · finishing the current frame safely…'))
 
     def _tracking_terminal_ready(self, job: TrackingJob) -> None:
         if job.source_changed:
             self._quarantine_changed_tracking_source(job)
         if job.failed and not self._background_tasks.closing:
             title = "Rerun after" if job.mode == "rerun" else "Run tracking"
-            QMessageBox.warning(self, title, f"Tracking failed:\n{job.completion_note}")
+            QMessageBox.warning(self, title, tr('Tracking failed:\n{v0}', v0=job.completion_note))
         self._finish_tracking_job(job)
         if not self._background_tasks.closing:
             self._set_tracking_busy(False)
@@ -6036,7 +5399,7 @@ class NeoTrackerWindow(
         else:
             message = f"Tracked {len(task.pipeline.results)} frames."
         if self._background_tasks.closing:
-            self.statusBar().showMessage("Closing… Finishing background operations safely.")
+            self.statusBar().showMessage(tr('Closing… Finishing background operations safely.'))
         else:
             self.statusBar().showMessage(message, 6000)
         if task is self.current_task:
@@ -6064,16 +5427,14 @@ class NeoTrackerWindow(
             else "Tracking has stopped. Waiting for the background thread to exit safely before controls unlock."
         )
         self._set_tracking_status_outcome("running")
-        self.tracking_status_label.setText(status_text)
+        self.tracking_status_label.setText(tr(status_text))
         self.tracking_status_label.setToolTip(detail)
         self.tracking_status_label.setAccessibleDescription(detail)
-        self.tracking_summary_label.setText(summary)
+        self.tracking_summary_label.setText(tr(summary))
         self.tracking_summary_label.setToolTip(detail)
         self.tracking_summary_label.setAccessibleDescription(detail)
         self.tracking_performance_label.setText(
-            "Closing · tracking stopped\nWaiting for the worker to exit safely"
-            if closing
-            else "Tracking stopped\nFinalizing results and releasing the worker"
+            (tr('Closing · tracking stopped\nWaiting for the worker to exit safely') if closing else tr('Tracking stopped\nFinalizing results and releasing the worker'))
         )
         self.tracking_performance_label.setProperty(
             "performanceState",
@@ -6086,34 +5447,34 @@ class NeoTrackerWindow(
         self._update_action(
             "tracking.run",
             enabled=False,
-            text="Finishing…",
+            text=tr('Finishing…'),
             tool_tip=detail,
         )
         self.run_tracking_button.setAccessibleName(
-            "Closing Neo-Tracker" if closing else "Finishing video tracking"
+            (tr('Closing Neo-Tracker') if closing else tr('Finishing video tracking'))
         )
         self.run_tracking_button.setAccessibleDescription(detail)
 
     def _export_tracking_csv(self) -> None:
         results = self.current_task.pipeline.results
         if not results:
-            QMessageBox.information(self, "Export tracking", "Run tracking before exporting CSV.")
+            QMessageBox.information(self, tr('Export tracking'), tr('Run tracking before exporting CSV.'))
             return
-        path, _ = QFileDialog.getSaveFileName(self, "Export tracking CSV", "", "CSV files (*.csv);;All files (*)")
+        path, _ = QFileDialog.getSaveFileName(self, tr('Export tracking CSV'), "", "CSV files (*.csv);;All files (*)")
         if not path:
             return
         write_tracking_csv(path, results, state_units=self.current_task.pipeline.state_model.units())
-        self.statusBar().showMessage(f"Exported tracking CSV: {path}", 6000)
+        self.statusBar().showMessage(tr('Exported tracking CSV: {v0}', v0=path), 6000)
 
     def _export_report(self) -> None:
         task = self.current_task
         if task.media_path is None:
-            QMessageBox.information(self, "Export report", "Add media before exporting a report.")
+            QMessageBox.information(self, tr('Export report'), tr('Add media before exporting a report.'))
             return
         default_name = f"{Path(task.media_path).stem}-report.md"
         path, _ = QFileDialog.getSaveFileName(
             self,
-            "Export report",
+            tr('Export report'),
             default_name,
             "Markdown files (*.md);;All files (*)",
         )
@@ -6134,9 +5495,9 @@ class NeoTrackerWindow(
                 project_path=str(self.project_path) if self.project_path else None,
             )
         except Exception as exc:
-            QMessageBox.warning(self, "Export report", f"Could not export report:\n{exc}")
+            QMessageBox.warning(self, tr('Export report'), tr('Could not export report:\n{v0}', v0=exc))
             return
-        self.statusBar().showMessage(f"Exported report: {path}", 6000)
+        self.statusBar().showMessage(tr('Exported report: {v0}', v0=path), 6000)
 
     def _jump_to_selected_result(self) -> None:
         self._result_selection_changed()
@@ -6461,7 +5822,7 @@ class NeoTrackerWindow(
             self._reset_analysis_sample_rate_override()
         inventory = self._render_analysis_source_detail()
         if force:
-            self.statusBar().showMessage(f"Signal sources refreshed · {inventory}.", 6000)
+            self.statusBar().showMessage(tr('Signal sources refreshed · {v0}.', v0=inventory), 6000)
         if self._analysis_thread is not None:
             return
         if not source.available:
@@ -6570,7 +5931,7 @@ class NeoTrackerWindow(
             else:
                 message = "No signal source is available. Run tracking or add a WAV file first."
                 state = state or "empty"
-        self.analysis_result_view.setPlainText(message)
+        self.analysis_result_view.setPlainText(tr(message))
         resolved_state = state or "dirty"
         labels = {
             "empty": "No source",
@@ -6591,7 +5952,7 @@ class NeoTrackerWindow(
         self._clear_analysis_result("Analysis settings changed. Run processing again.", state="dirty")
 
     def _set_analysis_status(self, text: str, state: str, detail: str = "") -> None:
-        self.analysis_status_label.setText(text)
+        self.analysis_status_label.setText(tr(text))
         self.analysis_status_label.setProperty("analysisState", state)
         self.analysis_status_label.setToolTip(detail)
         self.analysis_status_label.setAccessibleDescription(detail)
@@ -6638,7 +5999,7 @@ class NeoTrackerWindow(
             return
         if {"media-probe", "project-open"}.intersection(self._background_tasks.active_kinds):
             self.statusBar().showMessage(
-                "Finish or cancel project/media loading before starting Signal processing.",
+                tr('Finish or cancel project/media loading before starting Signal processing.'),
                 6000,
             )
             return
@@ -6703,11 +6064,11 @@ class NeoTrackerWindow(
             self._update_action(
                 "analysis.run",
                 enabled=True,
-                text="Cancel",
+                text=tr('Cancel'),
                 icon=self.style().standardIcon(QStyle.StandardPixmap.SP_MediaStop),
-                tool_tip="Cancel the active background signal-processing job.",
+                tool_tip=tr('Cancel the active background signal-processing job.'),
             )
-            self.run_analysis_button.setAccessibleName("Cancel signal processing")
+            self.run_analysis_button.setAccessibleName(tr('Cancel signal processing'))
             self._set_action_enabled("tracking.run", False)
             self._set_action_enabled("review.correct", False)
             self._set_action_enabled("review.mark_lost", False)
@@ -6721,13 +6082,13 @@ class NeoTrackerWindow(
         self._update_action(
             "analysis.run",
             enabled=source.available,
-            text="Run processing",
+            text=tr('Run processing'),
             icon=self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay),
             tool_tip=(
-                "Run FFT or STFT on the selected signal source in the background."
+                tr('Run FFT or STFT on the selected signal source in the background.')
             ),
         )
-        self.run_analysis_button.setAccessibleName("Run signal processing")
+        self.run_analysis_button.setAccessibleName(tr('Run signal processing'))
         self._render_tracking_status(self.current_task)
 
     def _analysis_stage_changed(self, job: AnalysisJob, stage: str) -> None:
@@ -6758,7 +6119,7 @@ class NeoTrackerWindow(
                 f"Stage 2 of 2 · Running {method} on {job.source.label} ({source_detail}) in the background. "
                 "The window remains interactive."
             )
-        self.analysis_result_view.setPlainText(detail)
+        self.analysis_result_view.setPlainText(tr(detail))
         self._set_analysis_status(label, "running", detail)
 
     def _cancel_analysis(self, message: str, *, state: str) -> None:
@@ -6766,9 +6127,9 @@ class NeoTrackerWindow(
             return
         self.analysis_controller.clear()
         self._set_analysis_export_enabled(False)
-        self._update_action("analysis.run", enabled=False, text="Cancelling…")
+        self._update_action("analysis.run", enabled=False, text=tr('Cancelling…'))
         detail = f"{message} Finishing the active background operation safely."
-        self.analysis_result_view.setPlainText(detail)
+        self.analysis_result_view.setPlainText(tr(detail))
         self._set_analysis_status("Cancelling…", "running", detail)
 
     def _analysis_completed(self, job: AnalysisJob, run_object: AnalysisRun) -> None:
@@ -6803,18 +6164,18 @@ class NeoTrackerWindow(
         self._update_action(
             "analysis.run",
             enabled=False,
-            text="Finishing…",
+            text=tr('Finishing…'),
             tool_tip=(
-                "Waiting for the background signal-processing thread to exit safely."
+                tr('Waiting for the background signal-processing thread to exit safely.')
             ),
         )
-        self.run_analysis_button.setAccessibleName("Finishing signal processing")
+        self.run_analysis_button.setAccessibleName(tr('Finishing signal processing'))
 
     def _show_analysis_failure(self, message: str) -> None:
         self.analysis_controller.clear()
         self._set_analysis_export_enabled(False)
         detail = f"Processing failed:\n{message}"
-        self.analysis_result_view.setPlainText(detail)
+        self.analysis_result_view.setPlainText(tr(detail))
         self._set_analysis_status("Failed", "failed", detail)
 
     def _analysis_thread_finished(self, job: AnalysisJob) -> None:
@@ -6840,31 +6201,31 @@ class NeoTrackerWindow(
 
     def _export_analysis_csv(self) -> None:
         if not self.analysis_controller.has_result:
-            QMessageBox.information(self, "Export analysis", "Run FFT or STFT before exporting.")
+            QMessageBox.information(self, tr('Export analysis'), tr('Run FFT or STFT before exporting.'))
             return
-        path, _ = QFileDialog.getSaveFileName(self, "Export analysis CSV", "", "CSV files (*.csv);;All files (*)")
+        path, _ = QFileDialog.getSaveFileName(self, tr('Export analysis CSV'), "", "CSV files (*.csv);;All files (*)")
         if not path:
             return
         try:
             self.analysis_controller.export_csv(path)
         except Exception as exc:
-            QMessageBox.warning(self, "Export analysis", f"Could not export CSV:\n{exc}")
+            QMessageBox.warning(self, tr('Export analysis'), tr('Could not export CSV:\n{v0}', v0=exc))
             return
-        self.statusBar().showMessage(f"Exported analysis CSV: {path}", 6000)
+        self.statusBar().showMessage(tr('Exported analysis CSV: {v0}', v0=path), 6000)
 
     def _export_analysis_npz(self) -> None:
         if not self.analysis_controller.has_result:
-            QMessageBox.information(self, "Export analysis", "Run FFT or STFT before exporting.")
+            QMessageBox.information(self, tr('Export analysis'), tr('Run FFT or STFT before exporting.'))
             return
-        path, _ = QFileDialog.getSaveFileName(self, "Export analysis NPZ", "", "NumPy archives (*.npz);;All files (*)")
+        path, _ = QFileDialog.getSaveFileName(self, tr('Export analysis NPZ'), "", "NumPy archives (*.npz);;All files (*)")
         if not path:
             return
         try:
             self.analysis_controller.export_npz(path)
         except Exception as exc:
-            QMessageBox.warning(self, "Export analysis", f"Could not export NPZ:\n{exc}")
+            QMessageBox.warning(self, tr('Export analysis'), tr('Could not export NPZ:\n{v0}', v0=exc))
             return
-        self.statusBar().showMessage(f"Exported analysis NPZ: {path}", 6000)
+        self.statusBar().showMessage(tr('Exported analysis NPZ: {v0}', v0=path), 6000)
 
     @staticmethod
     def _format_fft_summary(series: SignalSeries, result: FFTResult) -> str:
@@ -6901,7 +6262,7 @@ class NeoTrackerWindow(
             if not self._confirm_project_transition("closing Neo-Tracker"):
                 self._resume_after_cancelled_close()
                 self.statusBar().showMessage(
-                    "Close canceled. Current project and editor work are still available.",
+                    tr('Close canceled. Current project and editor work are still available.'),
                     6000,
                 )
                 event.ignore()
@@ -6911,7 +6272,7 @@ class NeoTrackerWindow(
             root = self.centralWidget()
             if root is not None:
                 root.setEnabled(False)
-            self.statusBar().showMessage("Closing… Finishing background operations safely.")
+            self.statusBar().showMessage(tr('Closing… Finishing background operations safely.'))
             if "tracking" in active_kinds:
                 self._cancel_tracking()
             if "analysis" in active_kinds:
@@ -6976,12 +6337,15 @@ class NeoTrackerWindow(
 
 def run() -> int:
     app = QApplication.instance() or QApplication(sys.argv)
+    from neo_tracker.ui.language import configure_language, add_language_menu
+    configure_language(app)
     window = NeoTrackerWindow(
         physics_export_directory_picker=lambda parent: QFileDialog.getExistingDirectory(
             parent,
-            "Export physics analysis",
+            tr('Export physics analysis'),
             "",
         )
     )
+    add_language_menu(window)
     window.show()
     return int(app.exec())

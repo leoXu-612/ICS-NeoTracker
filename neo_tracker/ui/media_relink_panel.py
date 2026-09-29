@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from neo_tracker.ui.language import tr
+
 from pathlib import Path
 
 from PySide6.QtCore import Signal
@@ -18,45 +20,45 @@ class MediaRelinkPanel(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.status_label = QLabel("No media")
+        self.status_label = QLabel(tr('No media'))
         self.status_label.setObjectName("mediaRelinkStatus")
         self.status_label.setProperty("mediaRelinkState", "empty")
-        self.status_label.setAccessibleName("Media source status")
+        self.status_label.setAccessibleName(tr('Media source status'))
 
-        self.detail_label = QLabel("Select a media task before relinking a source.")
+        self.detail_label = QLabel(tr('Select a media task before relinking a source.'))
         self.detail_label.setObjectName("mediaRelinkDetail")
         self.detail_label.setWordWrap(True)
-        self.detail_label.setAccessibleName("Media source status detail")
+        self.detail_label.setAccessibleName(tr('Media source status detail'))
 
         self.candidate_label = QLabel()
         self.candidate_label.setObjectName("mediaRelinkCandidate")
         self.candidate_label.setWordWrap(True)
-        self.candidate_label.setAccessibleName("Replacement media candidate")
+        self.candidate_label.setAccessibleName(tr('Replacement media candidate'))
         self.candidate_label.hide()
 
         self.differences_label = QLabel()
         self.differences_label.setObjectName("mediaRelinkDifferences")
         self.differences_label.setWordWrap(True)
-        self.differences_label.setAccessibleName("Replacement media differences")
+        self.differences_label.setAccessibleName(tr('Replacement media differences'))
         self.differences_label.hide()
 
-        self.browse_button = QPushButton("Relink Media…")
+        self.browse_button = QPushButton(tr('Relink Media…'))
         self.browse_button.setObjectName("browseMediaRelinkButton")
-        self.browse_button.setToolTip("Choose a replacement file for this task without creating a new task.")
-        self.browse_button.setAccessibleName("Choose replacement media")
+        self.browse_button.setToolTip(tr('Choose a replacement file for this task without creating a new task.'))
+        self.browse_button.setAccessibleName(tr('Choose replacement media'))
         self.browse_button.clicked.connect(self.browseRequested.emit)
 
-        self.apply_button = QPushButton("Apply Relink")
+        self.apply_button = QPushButton(tr('Apply Relink'))
         self.apply_button.setObjectName("applyMediaRelinkButton")
-        self.apply_button.setToolTip("Apply the checked replacement to the current task.")
-        self.apply_button.setAccessibleName("Apply replacement media")
+        self.apply_button.setToolTip(tr('Apply the checked replacement to the current task.'))
+        self.apply_button.setAccessibleName(tr('Apply replacement media'))
         self.apply_button.clicked.connect(self.applyRequested.emit)
         self.apply_button.setEnabled(False)
 
-        self.cancel_button = QPushButton("Cancel")
+        self.cancel_button = QPushButton(tr('Cancel'))
         self.cancel_button.setObjectName("cancelMediaRelinkButton")
-        self.cancel_button.setToolTip("Discard the replacement candidate and keep the current task unchanged.")
-        self.cancel_button.setAccessibleName("Cancel replacement media")
+        self.cancel_button.setToolTip(tr('Discard the replacement candidate and keep the current task unchanged.'))
+        self.cancel_button.setAccessibleName(tr('Cancel replacement media'))
         self.cancel_button.clicked.connect(self.cancelRequested.emit)
         self.cancel_button.hide()
 
@@ -77,7 +79,7 @@ class MediaRelinkPanel(QWidget):
 
     def set_current(self, media_path: str | None, info: MediaInfo | None) -> None:
         self._clear_candidate()
-        self.browse_button.setText("Relink Media…")
+        self.browse_button.setText(tr('Relink Media…'))
         self.browse_button.setEnabled(media_path is not None)
         if media_path is None:
             self._set_status("No media", "empty", "Select a media task before relinking a source.")
@@ -104,7 +106,7 @@ class MediaRelinkPanel(QWidget):
         if info is not None and info.error.strip():
             detail += f" {info.error.strip()}"
         self._set_status("Media missing", "missing", detail)
-        self.browse_button.setText("Choose Replacement…")
+        self.browse_button.setText(tr('Choose Replacement…'))
 
     def set_candidate(
         self,
@@ -127,13 +129,13 @@ class MediaRelinkPanel(QWidget):
         elif assessment.state == "mismatch" and assessment.identity_state == "mismatch":
             title = "Source differs"
         self._set_status(title, assessment.state, assessment.summary)
-        self.candidate_label.setText(f"Candidate: {Path(media_path).name} · {self.media_summary(info)}")
+        self.candidate_label.setText(tr('Candidate: {v0} · {v1}', v0=Path(media_path).name, v1=self.media_summary(info)))
         self.candidate_label.setToolTip(media_path)
         self.candidate_label.setAccessibleDescription(media_path)
         self.candidate_label.show()
         self.differences_label.setText(" · ".join(assessment.differences))
         self.differences_label.setVisible(bool(assessment.differences))
-        self.apply_button.setText("Relink + Clear Results/Edits" if assessment.clear_results else "Apply Relink")
+        self.apply_button.setText((tr('Relink + Clear Results/Edits') if assessment.clear_results else tr('Apply Relink')))
         self.apply_button.setAccessibleDescription(assessment.summary)
         self.apply_button.setEnabled(assessment.can_apply)
         self.cancel_button.show()
@@ -149,7 +151,7 @@ class MediaRelinkPanel(QWidget):
         if info is not None and info.error.strip():
             detail += f" {info.error.strip()}"
         self._set_status("Review source", "unverified", detail)
-        self.browse_button.setText("Review Source…")
+        self.browse_button.setText(tr('Review Source…'))
         self.browse_button.setEnabled(True)
 
     def show_applied(self, info: MediaInfo, *, results_preserved: bool) -> None:
@@ -160,7 +162,7 @@ class MediaRelinkPanel(QWidget):
             "applied",
             f"{result_text} Save Project to persist the new media path.",
         )
-        self.browse_button.setText("Relink Again…")
+        self.browse_button.setText(tr('Relink Again…'))
         self.browse_button.setEnabled(True)
 
     @staticmethod
@@ -178,19 +180,19 @@ class MediaRelinkPanel(QWidget):
         self.candidate_label.hide()
         self.differences_label.clear()
         self.differences_label.hide()
-        self.apply_button.setText("Apply Relink")
+        self.apply_button.setText(tr('Apply Relink'))
         self.apply_button.setAccessibleDescription(
-            "No verified replacement media candidate is ready to apply."
+            tr('No verified replacement media candidate is ready to apply.')
         )
         self.apply_button.setEnabled(False)
         self.cancel_button.hide()
 
     def _set_status(self, text: str, state: str, detail: str) -> None:
-        self.status_label.setText(text)
+        self.status_label.setText(tr(text))
         self.status_label.setProperty("mediaRelinkState", state)
         self.status_label.setToolTip(detail)
         self.status_label.setAccessibleDescription(detail)
-        self.detail_label.setText(detail)
+        self.detail_label.setText(tr(detail))
         self.detail_label.setToolTip(detail)
         self.detail_label.setAccessibleDescription(detail)
         self.status_label.style().unpolish(self.status_label)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from neo_tracker.ui.language import tr
+
 from collections import OrderedDict
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -178,10 +180,9 @@ class PhysicsPlot(QWidget):
         self.setMinimumHeight(180)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMouseTracking(True)
-        self.setAccessibleName("Physics true-time plot")
+        self.setAccessibleName(tr('Physics true-time plot'))
         self.setAccessibleDescription(
-            "Physical series against stored true time. Invalid samples are visible as line gaps. "
-            "Use Left and Right Arrow to move the selected sample."
+            tr('Physical series against stored true time. Invalid samples are visible as line gaps. Use Left and Right Arrow to move the selected sample.')
         )
 
     @property
@@ -412,7 +413,7 @@ class PhysicsPlot(QWidget):
         painter.drawText(
             QRectF(plot_rect.left(), plot_rect.bottom() + 14.0, plot_rect.width(), 18.0),
             Qt.AlignmentFlag.AlignCenter,
-            "true time (s)",
+            tr("true time (s)"),
         )
         unit = next((item.unit for item in self._series if item.unit), "unit unavailable")
         y_label_alignment = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
@@ -559,7 +560,7 @@ class PhysicsPlot(QWidget):
                 15.0,
             )
             text = metrics.elidedText(
-                f"{index + 1} {prepared.name}",
+                f"{index + 1} {tr(prepared.name)}",
                 Qt.TextElideMode.ElideRight,
                 max(1, int(rect.width())),
             )
@@ -589,7 +590,7 @@ class PhysicsPlot(QWidget):
 
     def _update_accessible_description(self) -> None:
         if not self._prepared:
-            self.setAccessibleDescription("No physical series is available to plot.")
+            self.setAccessibleDescription(tr('No physical series is available to plot.'))
             return
         unit = self._prepared[0].unit or "unit unavailable"
         labels = "; ".join(
@@ -599,16 +600,13 @@ class PhysicsPlot(QWidget):
         bounds = self._data_bounds()
         if bounds is None:
             self.setAccessibleDescription(
-                f"No valid samples are available in the selected plot layers: {labels}."
+                tr('No valid samples are available in the selected plot layers: {v0}.', v0=labels)
             )
             return
         extent = f" from {bounds[0]:.6g} to {bounds[1]:.6g} seconds"
         vertical = f" and vertical values from {bounds[2]:.4g} to {bounds[3]:.4g} {unit}"
         self.setAccessibleDescription(
-            f"{len(self._prepared)} visible plot layers against stored true time{extent}{vertical}: "
-            f"{labels}. "
-            "Invalid samples are visible as line gaps. Use Left and Right Arrow to move the "
-            "selected sample."
+            tr('{v0} visible plot layers against stored true time{v1}{v2}: {v3}. Invalid samples are visible as line gaps. Use Left and Right Arrow to move the selected sample.', v0=len(self._prepared), v1=extent, v2=vertical, v3=labels)
         )
 
     def _data_bounds(self) -> tuple[float, float, float, float] | None:

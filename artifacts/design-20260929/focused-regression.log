@@ -1,0 +1,102 @@
+test_application_font_size_is_inherited_instead_of_forced_to_pixels (tests.test_ui_main_window.MainWindowStructureTests.test_application_font_size_is_inherited_instead_of_forced_to_pixels) ... qt.qpa.fonts: Populating font family aliases took 70 ms. Replace uses of missing font family "Sans Serif" with one that exists to avoid this cost. 
+ERROR
+test_open_cancel_preserves_dirty_project_and_discard_loads_clean_target (tests.test_ui_main_window.MainWindowStructureTests.test_open_cancel_preserves_dirty_project_and_discard_loads_clean_target) ... ok
+test_light_scroll_surfaces_and_status_bar_ignore_dark_system_background (tests.test_ui_main_window.MainWindowStructureTests.test_light_scroll_surfaces_and_status_bar_ignore_dark_system_background) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_tracking_tab_keeps_module_details_in_the_dedicated_flow_page (tests.test_ui_main_window.MainWindowStructureTests.test_tracking_tab_keeps_module_details_in_the_dedicated_flow_page) ... This plugin does not support propagateSizeHints()
+ok
+test_bottom_workspace_is_mounted_in_vertical_shell_at_1024 (tests.test_analysis_workspace.MainWindowPhysicsWorkspaceTests.test_bottom_workspace_is_mounted_in_vertical_shell_at_1024) ... This plugin does not support propagateSizeHints()
+ok
+test_data_quantity_change_updates_the_shared_action_source (tests.test_analysis_workspace.MainWindowPhysicsWorkspaceTests.test_data_quantity_change_updates_the_shared_action_source) ... ok
+test_final_window_close_unsubscribes_selection_session (tests.test_analysis_workspace.MainWindowPhysicsWorkspaceTests.test_final_window_close_unsubscribes_selection_session) ... ok
+test_one_plot_keyboard_action_commits_one_canonical_revision (tests.test_analysis_workspace.MainWindowPhysicsWorkspaceTests.test_one_plot_keyboard_action_commits_one_canonical_revision) ... ok
+test_plot_image_export_is_reachable_from_workspace (tests.test_analysis_workspace.MainWindowPhysicsWorkspaceTests.test_plot_image_export_is_reachable_from_workspace) ... This plugin does not support propagateSizeHints()
+ok
+test_plot_inspector_reports_only_visible_compatible_series (tests.test_analysis_workspace.MainWindowPhysicsWorkspaceTests.test_plot_inspector_reports_only_visible_compatible_series) ... ok
+test_same_revision_series_replacement_drops_removed_session_entries (tests.test_analysis_workspace.MainWindowPhysicsWorkspaceTests.test_same_revision_series_replacement_drops_removed_session_entries) ... ok
+test_table_video_and_video_table_share_one_selection_session (tests.test_analysis_workspace.MainWindowPhysicsWorkspaceTests.test_table_video_and_video_table_share_one_selection_session) ... ok
+test_window_rejects_duplicate_series_ids_before_session_attachment (tests.test_analysis_workspace.MainWindowPhysicsWorkspaceTests.test_window_rejects_duplicate_series_ids_before_session_attachment) ... ok
+test_collapse_and_focus_mode_restore_page_and_height (tests.test_analysis_workspace.PhysicsWorkspaceTests.test_collapse_and_focus_mode_restore_page_and_height) ... ok
+test_copy_row_button_uses_the_models_full_precision_text (tests.test_analysis_workspace.PhysicsWorkspaceTests.test_copy_row_button_uses_the_models_full_precision_text) ... ok
+test_quantity_change_keeps_only_compatible_overflow_series_in_the_plot (tests.test_analysis_workspace.PhysicsWorkspaceTests.test_quantity_change_keeps_only_compatible_overflow_series_in_the_plot) ... ok
+test_selected_frame_remains_visible_when_true_time_is_unavailable (tests.test_analysis_workspace.PhysicsWorkspaceTests.test_selected_frame_remains_visible_when_true_time_is_unavailable) ... ok
+test_selection_keeps_an_overflow_series_visible_in_the_bounded_plot (tests.test_analysis_workspace.PhysicsWorkspaceTests.test_selection_keeps_an_overflow_series_visible_in_the_bounded_plot) ... ok
+test_series_only_selection_updates_data_and_plot_sources (tests.test_analysis_workspace.PhysicsWorkspaceTests.test_series_only_selection_updates_data_and_plot_sources) ... ok
+test_shared_selection_refreshes_and_clears_the_data_status (tests.test_analysis_workspace.PhysicsWorkspaceTests.test_shared_selection_refreshes_and_clears_the_data_status) ... ok
+test_table_and_plot_emit_selection_without_cell_widgets (tests.test_analysis_workspace.PhysicsWorkspaceTests.test_table_and_plot_emit_selection_without_cell_widgets) ... ok
+test_workspace_has_all_required_pages_and_virtual_table (tests.test_analysis_workspace.PhysicsWorkspaceTests.test_workspace_has_all_required_pages_and_virtual_table) ... ok
+test_workspace_rejects_duplicate_series_ids_without_collapsing_rows (tests.test_analysis_workspace.PhysicsWorkspaceTests.test_workspace_rejects_duplicate_series_ids_without_collapsing_rows) ... ok
+test_workspace_state_round_trip_is_bounded_and_strict (tests.test_analysis_workspace.PhysicsWorkspaceTests.test_workspace_state_round_trip_is_bounded_and_strict) ... ok
+test_boolean_json_values_are_not_coerced_to_fit_numbers (tests.test_analysis_workspace_fit.FitPanelTests.test_boolean_json_values_are_not_coerced_to_fit_numbers) ... ok
+test_busy_state_exposes_cancel_and_disables_mutating_inputs (tests.test_analysis_workspace_fit.FitPanelTests.test_busy_state_exposes_cancel_and_disables_mutating_inputs) ... ok
+test_draft_comparison_ignores_hidden_settings_and_revert_preserves_text (tests.test_analysis_workspace_fit.FitPanelTests.test_draft_comparison_ignores_hidden_settings_and_revert_preserves_text) ... ok
+test_fit_json_rejects_duplicate_keys_and_nonfinite_constants (tests.test_analysis_workspace_fit.FitPanelTests.test_fit_json_rejects_duplicate_keys_and_nonfinite_constants) ... ok
+test_linear_model_does_not_submit_hidden_nonlinear_settings (tests.test_analysis_workspace_fit.FitPanelTests.test_linear_model_does_not_submit_hidden_nonlinear_settings) ... ok
+test_nonlinear_parameters_are_explicit_json_and_validation_is_textual (tests.test_analysis_workspace_fit.FitPanelTests.test_nonlinear_parameters_are_explicit_json_and_validation_is_textual) ... ok
+test_numeric_json_strings_are_not_coerced_to_fit_numbers (tests.test_analysis_workspace_fit.FitPanelTests.test_numeric_json_strings_are_not_coerced_to_fit_numbers) ... ok
+test_panel_emits_user_draft_not_a_numerical_result (tests.test_analysis_workspace_fit.FitPanelTests.test_panel_emits_user_draft_not_a_numerical_result) ... ok
+test_quadratic_result_shows_physical_acceleration_and_uncertainty (tests.test_analysis_workspace_fit.FitPanelTests.test_quadratic_result_shows_physical_acceleration_and_uncertainty) ... ok
+test_restored_draft_roundtrips_controls_without_becoming_dirty (tests.test_analysis_workspace_fit.FitPanelTests.test_restored_draft_roundtrips_controls_without_becoming_dirty) ... ok
+test_restored_range_preserves_exact_bounds_until_that_endpoint_is_edited (tests.test_analysis_workspace_fit.FitPanelTests.test_restored_range_preserves_exact_bounds_until_that_endpoint_is_edited) ... ok
+test_result_summary_shows_parameters_units_metrics_and_samples (tests.test_analysis_workspace_fit.FitPanelTests.test_result_summary_shows_parameters_units_metrics_and_samples) ... ok
+test_series_without_valid_range_does_not_reuse_previous_fit_range (tests.test_analysis_workspace_fit.FitPanelTests.test_series_without_valid_range_does_not_reuse_previous_fit_range) ... ok
+test_changed_or_invalid_fit_values_still_invalidate_the_result (tests.test_analysis_workspace_fit.MainWindowFitIntegrationTests.test_changed_or_invalid_fit_values_still_invalidate_the_result) ... ok
+test_close_cancels_active_fit_and_reaches_idle (tests.test_analysis_workspace_fit.MainWindowFitIntegrationTests.test_close_cancels_active_fit_and_reaches_idle) ... ok
+test_default_fit_range_includes_both_unrounded_true_time_endpoints (tests.test_analysis_workspace_fit.MainWindowFitIntegrationTests.test_default_fit_range_includes_both_unrounded_true_time_endpoints) ... ok
+test_destructive_media_relink_protects_fit_draft_until_confirmed (tests.test_analysis_workspace_fit.MainWindowFitIntegrationTests.test_destructive_media_relink_protects_fit_draft_until_confirmed) ... ok
+test_engine_protocol_fit_updates_panel_plot_and_selection (tests.test_analysis_workspace_fit.MainWindowFitIntegrationTests.test_engine_protocol_fit_updates_panel_plot_and_selection) ... ok
+test_entering_fit_page_uses_its_visible_series_as_the_action_source (tests.test_analysis_workspace_fit.MainWindowFitIntegrationTests.test_entering_fit_page_uses_its_visible_series_as_the_action_source) ... ok
+test_equivalent_parameter_order_reuses_persisted_fit_definition (tests.test_analysis_workspace_fit.MainWindowFitIntegrationTests.test_equivalent_parameter_order_reuses_persisted_fit_definition) ... ok
+test_fit_series_change_updates_the_shared_action_source (tests.test_analysis_workspace_fit.MainWindowFitIntegrationTests.test_fit_series_change_updates_the_shared_action_source) ... ok
+test_non_destructive_media_relink_preserves_fit_draft_without_prompt (tests.test_analysis_workspace_fit.MainWindowFitIntegrationTests.test_non_destructive_media_relink_preserves_fit_draft_without_prompt) ... ok
+test_review_edit_does_not_silently_discard_unrun_fit_settings (tests.test_analysis_workspace_fit.MainWindowFitIntegrationTests.test_review_edit_does_not_silently_discard_unrun_fit_settings) ... ok
+test_unavailable_fit_keeps_series_export_but_not_residual (tests.test_analysis_workspace_fit.MainWindowFitIntegrationTests.test_unavailable_fit_keeps_series_export_but_not_residual) ... ok
+test_unrun_fit_settings_are_protected_across_task_switch (tests.test_analysis_workspace_fit.MainWindowFitIntegrationTests.test_unrun_fit_settings_are_protected_across_task_switch) ... ok
+test_validity_policy_creates_a_distinct_persisted_fit_definition (tests.test_analysis_workspace_fit.MainWindowFitIntegrationTests.test_validity_policy_creates_a_distinct_persisted_fit_definition) ... ok
+test_config_result_protection_dialog_covers_outcome_only_state (tests.test_project_status_panel.ProjectStatusPanelTests.test_config_result_protection_dialog_covers_outcome_only_state) ... ok
+test_config_result_protection_dialog_names_loss_and_defaults_to_keep_results (tests.test_project_status_panel.ProjectStatusPanelTests.test_config_result_protection_dialog_names_loss_and_defaults_to_keep_results) ... ok
+test_panel_distinguishes_new_saved_and_dirty_states_in_text (tests.test_project_status_panel.ProjectStatusPanelTests.test_panel_distinguishes_new_saved_and_dirty_states_in_text) ... ok
+test_rerun_replacement_dialog_scopes_tail_and_defaults_to_keep_it (tests.test_project_status_panel.ProjectStatusPanelTests.test_rerun_replacement_dialog_scopes_tail_and_defaults_to_keep_it) ... ok
+test_result_replacement_dialog_names_loss_and_defaults_to_keep_results (tests.test_project_status_panel.ProjectStatusPanelTests.test_result_replacement_dialog_names_loss_and_defaults_to_keep_results) ... ok
+test_unapplied_drafts_dialog_names_work_and_defaults_to_keep_editing (tests.test_project_status_panel.ProjectStatusPanelTests.test_unapplied_drafts_dialog_names_work_and_defaults_to_keep_editing) ... ok
+test_unsaved_dialog_names_risk_and_offers_save_discard_cancel (tests.test_project_status_panel.ProjectStatusPanelTests.test_unsaved_dialog_names_risk_and_offers_save_discard_cancel) ... ok
+test_global_test_teardown_does_not_revisit_closed_windows (tests.test_source_review_ui.SourceReviewUITests.test_global_test_teardown_does_not_revisit_closed_windows) ... ok
+test_review_table_tabs_leave_table_but_arrows_still_select_rows (tests.test_source_review_ui.SourceReviewUITests.test_review_table_tabs_leave_table_but_arrows_still_select_rows) ... This plugin does not support propagateSizeHints()
+ok
+test_sampled_match_requires_review_without_claiming_content_changed (tests.test_source_review_ui.SourceReviewUITests.test_sampled_match_requires_review_without_claiming_content_changed) ... ok
+test_source_review_blocks_direct_physics_exports_before_file_pickers (tests.test_source_review_ui.SourceReviewUITests.test_source_review_blocks_direct_physics_exports_before_file_pickers) ... ok
+test_source_review_starting_in_file_picker_cancels_physics_exports (tests.test_source_review_ui.SourceReviewUITests.test_source_review_starting_in_file_picker_cancels_physics_exports) ... ok
+test_toolbar_can_shrink_after_long_source_and_draft_statuses (tests.test_source_review_ui.SourceReviewUITests.test_toolbar_can_shrink_after_long_source_and_draft_statuses) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+
+======================================================================
+ERROR: test_application_font_size_is_inherited_instead_of_forced_to_pixels (tests.test_ui_main_window.MainWindowStructureTests.test_application_font_size_is_inherited_instead_of_forced_to_pixels)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/tests/test_ui_main_window.py", line 674, in test_application_font_size_is_inherited_instead_of_forced_to_pixels
+    window = NeoTrackerWindow()
+             ^^^^^^^^^^^^^^^^^^
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/neo_tracker/ui/main_window.py", line 625, in __init__
+    self._render_task(refresh_project_state=False)
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/neo_tracker/ui/main_window.py", line 2887, in _render_task
+    self._render_media_info(task)
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/neo_tracker/ui/main_window.py", line 3057, in _render_media_info
+    self._render_media_relink(task)
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/neo_tracker/ui/main_window.py", line 1867, in _render_media_relink
+    self.media_relink_panel.set_current(None, None)
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/neo_tracker/ui/media_relink_panel.py", line 85, in set_current
+    self._set_status("No media", "empty", "Select a media task before relinking a source.")
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/neo_tracker/ui/media_relink_panel.py", line 198, in _set_status
+    self.status_label.style().unpolish(self.status_label)
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PySide6.QtWidgets.QWidgetItem' object has no attribute 'unpolish'
+
+----------------------------------------------------------------------
+Ran 63 tests in 3.359s
+
+FAILED (errors=1)

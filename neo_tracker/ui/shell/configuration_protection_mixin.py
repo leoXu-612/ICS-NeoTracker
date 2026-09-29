@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from neo_tracker.ui.language import tr
+
 from neo_tracker.ui.project_controller import DesktopTask
 from neo_tracker.ui.project_status_panel import build_config_result_protection_dialog
 
@@ -21,7 +23,7 @@ class ConfigurationProtectionMixin:
         if clicked is not None and clicked.objectName() == "confirmConfigResultReplacementButton":
             return True
         self.statusBar().showMessage(
-            "Configuration change canceled. Current Results/Edits are unchanged.",
+            tr('Configuration change canceled. Current Results/Edits are unchanged.'),
             6000,
         )
         return False
@@ -34,7 +36,7 @@ class ConfigurationProtectionMixin:
         if self._ask_unapplied_drafts(action, conflicts):
             return True
         self.statusBar().showMessage(
-            f"Canceled: {action}. Unapplied editor work is unchanged.",
+            tr('Canceled: {v0}. Unapplied editor work is unchanged.', v0=action),
             6000,
         )
         return False

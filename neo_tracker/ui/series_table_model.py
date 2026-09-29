@@ -9,6 +9,7 @@ from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide6.QtGui import QBrush, QColor
 
 from neo_tracker.kinematics import SampleSeries
+from neo_tracker.ui.language import tr
 
 
 @dataclass(frozen=True)
@@ -71,7 +72,7 @@ class SeriesTableModel(QAbstractTableModel):
         if role != Qt.ItemDataRole.DisplayRole:
             return None
         if orientation == Qt.Orientation.Horizontal and 0 <= section < len(self.HEADERS):
-            return self.HEADERS[section]
+            return tr(self.HEADERS[section])
         if orientation == Qt.Orientation.Vertical:
             return str(section + 1)
         return None

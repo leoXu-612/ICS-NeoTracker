@@ -1,0 +1,28 @@
+test_chinese_destructive_dialog_keeps_reject_as_default (tests.test_chinese_ui.ChineseDesktopTests.test_chinese_destructive_dialog_keeps_reject_as_default) ... qt.qpa.fonts: Populating font family aliases took 61 ms. Replace uses of missing font family "Sans Serif" with one that exists to avoid this cost. 
+ok
+test_core_actions_navigation_and_small_window_are_chinese (tests.test_chinese_ui.ChineseDesktopTests.test_core_actions_navigation_and_small_window_are_chinese) ... This plugin does not support propagateSizeHints()
+ok
+test_model_labels_do_not_change_scientific_identifiers (tests.test_chinese_ui.ChineseDesktopTests.test_model_labels_do_not_change_scientific_identifiers) ... ok
+test_navigation_respects_busy_gate_and_export_headers_stay_canonical (tests.test_chinese_ui.ChineseDesktopTests.test_navigation_respects_busy_gate_and_export_headers_stay_canonical) ... ok
+test_translated_pages_keep_canonical_persistence_and_routes (tests.test_chinese_ui.ChineseDesktopTests.test_translated_pages_keep_canonical_persistence_and_routes) ... ok
+test_manual_correction_and_lost_edit_have_reproducible_history (tests.test_review_controller.ReviewControllerTests.test_manual_correction_and_lost_edit_have_reproducible_history) ... ok
+test_manual_correction_updates_cached_overlay_for_first_result (tests.test_review_controller.ReviewControllerTests.test_manual_correction_updates_cached_overlay_for_first_result) ... ok
+test_overlay_cache_updates_one_result_when_pipeline_is_supplied (tests.test_review_controller.ReviewControllerTests.test_overlay_cache_updates_one_result_when_pipeline_is_supplied) ... ok
+test_overlay_static_geometry_is_cached_and_edit_invalidates_it (tests.test_review_controller.ReviewControllerTests.test_overlay_static_geometry_is_cached_and_edit_invalidates_it) ... ok
+test_overlay_uses_filtered_measurement_and_diagnostic_candidates (tests.test_review_controller.ReviewControllerTests.test_overlay_uses_filtered_measurement_and_diagnostic_candidates) ... ok
+test_rerun_supersedes_only_current_manual_edits_in_replaced_tail (tests.test_review_controller.ReviewControllerTests.test_rerun_supersedes_only_current_manual_edits_in_replaced_tail) ... ok
+test_result_lookup_keeps_unsorted_plugin_results_compatible (tests.test_review_controller.ReviewControllerTests.test_result_lookup_keeps_unsorted_plugin_results_compatible) ... ok
+test_table_and_selection_include_units_status_and_tone (tests.test_review_controller.ReviewControllerTests.test_table_and_selection_include_units_status_and_tone) ... ok
+test_incremental_result_refresh_rejects_new_state_columns (tests.test_results_table_model.ResultsTableModelTests.test_incremental_result_refresh_rejects_new_state_columns) ... ok
+test_incremental_result_refresh_rejects_removed_state_columns (tests.test_results_table_model.ResultsTableModelTests.test_incremental_result_refresh_rejects_removed_state_columns) ... ok
+test_incremental_result_refresh_updates_row_tone_and_summary (tests.test_results_table_model.ResultsTableModelTests.test_incremental_result_refresh_updates_row_tone_and_summary) ... ok
+test_large_model_formats_only_requested_rows (tests.test_results_table_model.ResultsTableModelTests.test_large_model_formats_only_requested_rows) ... ok
+test_membership_snapshot_stays_stable_until_next_reset (tests.test_results_table_model.ResultsTableModelTests.test_membership_snapshot_stays_stable_until_next_reset) ... ok
+test_model_preserves_headers_tones_and_result_indices (tests.test_results_table_model.ResultsTableModelTests.test_model_preserves_headers_tones_and_result_indices) ... ok
+test_keyboard_focus_has_a_visible_style_and_changes_rendered_pixels (tests.test_ui_main_window.MainWindowStructureTests.test_keyboard_focus_has_a_visible_style_and_changes_rendered_pixels) ... This plugin does not support propagateSizeHints()
+ok
+
+----------------------------------------------------------------------
+Ran 20 tests in 0.996s
+
+OK

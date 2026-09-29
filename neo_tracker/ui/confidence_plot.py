@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from neo_tracker.ui.language import tr
+
 import math
 from collections.abc import Sequence
 
@@ -42,8 +44,8 @@ class ConfidencePlot(QWidget):
         self.setMaximumHeight(104)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        self.setAccessibleName("Review diagnostic plot")
-        self.setToolTip("Click a timeline point or use Left/Right to move to that frame.")
+        self.setAccessibleName(tr('Review diagnostic plot'))
+        self.setToolTip(tr('Click a timeline point or use Left/Right to move to that frame.'))
 
     @property
     def kind(self) -> str:
@@ -270,9 +272,9 @@ class ConfidencePlot(QWidget):
             if len(self._x_values) > 2000
             else ""
         )
-        self.setToolTip(f"{interaction_tip}{display_tip}")
+        self.setToolTip(tr('{v0}{v1}', v0=interaction_tip, v1=display_tip))
         self.setAccessibleDescription(
-            f"{self._title}. {len(self._x_values):,} data points.{display_tip}"
+            tr('{v0}. {v1:,} data points.{v2}', v0=self._title, v1=len(self._x_values), v2=display_tip)
         )
         self.update()
 

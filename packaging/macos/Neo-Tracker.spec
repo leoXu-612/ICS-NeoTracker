@@ -1,8 +1,10 @@
 from pathlib import Path
 from PyInstaller.utils.hooks import copy_metadata
+from PySide6.QtCore import QLibraryInfo
 
 root = Path(SPECPATH).resolve().parents[1]
 metadata = []
+metadata.append((str(Path(QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)) / "qtbase_zh_CN.qm"), "PySide6/Qt/translations"))
 for distribution in ("numpy", "scipy", "opencv-python", "PySide6", "shiboken6"):
     metadata += copy_metadata(distribution)
 
@@ -27,7 +29,7 @@ app = BUNDLE(
     bundle_identifier="org.ics.neotracker", version="0.1.0",
     info_plist={
         "CFBundleDisplayName": "Neo-Tracker",
-        "CFBundleVersion": "20260928.1",
+        "CFBundleVersion": "20260929.1",
         "LSMinimumSystemVersion": "27.0",
         "NSHighResolutionCapable": True,
     },

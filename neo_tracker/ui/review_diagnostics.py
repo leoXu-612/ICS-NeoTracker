@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from neo_tracker.ui.language import tr
+
 import math
 from collections import OrderedDict
 from collections.abc import Callable, Sequence
@@ -166,15 +168,15 @@ class ReviewDiagnosticsPanel(QWidget):
 
         self.mode_combo = QComboBox()
         self.mode_combo.setObjectName("reviewDiagnosticModeCombo")
-        self.mode_combo.setAccessibleName("Review diagnostic plot")
-        self.mode_combo.setToolTip("Choose one diagnostic without adding more overlays to the preview.")
+        self.mode_combo.setAccessibleName(tr('Review diagnostic plot'))
+        self.mode_combo.setToolTip(tr('Choose one diagnostic without adding more overlays to the preview.'))
         self.series_combo = QComboBox()
         self.series_combo.setObjectName("reviewDiagnosticSeriesCombo")
-        self.series_combo.setAccessibleName("Filter velocity series")
+        self.series_combo.setAccessibleName(tr('Filter velocity series'))
         self.series_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
-        self.status_label = QLabel("No tracking diagnostics")
+        self.status_label = QLabel(tr('No tracking diagnostics'))
         self.status_label.setObjectName("reviewDiagnosticStatusLabel")
-        self.status_label.setAccessibleName("Selected diagnostic value")
+        self.status_label.setAccessibleName(tr('Selected diagnostic value'))
         self.plot = ConfidencePlot()
 
         controls = QHBoxLayout()
@@ -193,7 +195,7 @@ class ReviewDiagnosticsPanel(QWidget):
         self.mode_combo.currentIndexChanged.connect(lambda _index: self._mode_changed())
         self.series_combo.currentIndexChanged.connect(lambda _index: self._render())
         self.plot.frameActivated.connect(self.frameActivated.emit)
-        self.setAccessibleName("Review diagnostics")
+        self.setAccessibleName(tr('Review diagnostics'))
         self.set_results([], {}, None)
 
     @property
@@ -217,8 +219,7 @@ class ReviewDiagnosticsPanel(QWidget):
         self._selected_frame = int(selected_frame) if selected_frame is not None else None
         self.plot.set_results(self._results, self._selected_frame, render=False)
         self.setAccessibleDescription(
-            f"Diagnostics indexed from {len(self._results):,} tracking results. "
-            "Complete timeline navigation remains available."
+            tr('Diagnostics indexed from {v0:,} tracking results. Complete timeline navigation remains available.', v0=len(self._results))
         )
         self._rebuild_modes()
 
@@ -300,8 +301,7 @@ class ReviewDiagnosticsPanel(QWidget):
         self._state_units = dict(state_units)
         self._selected_frame = int(selected_frame) if selected_frame is not None else None
         self.setAccessibleDescription(
-            f"Diagnostics indexed from {len(self._results):,} tracking results. "
-            "Complete timeline navigation remains available."
+            tr('Diagnostics indexed from {v0:,} tracking results. Complete timeline navigation remains available.', v0=len(self._results))
         )
         self._rebuild_modes(render=False)
         self.plot.set_prepared_confidence(
@@ -675,7 +675,7 @@ class ReviewDiagnosticsPanel(QWidget):
 
     def _set_status(self, text: str, *, detail: str | None = None) -> None:
         full_detail = detail or text
-        self.status_label.setText(text)
+        self.status_label.setText(tr(text))
         self.status_label.setToolTip(full_detail)
         self.status_label.setAccessibleDescription(full_detail)
 

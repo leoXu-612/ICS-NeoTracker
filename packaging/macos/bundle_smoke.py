@@ -16,6 +16,7 @@ def run(report_path: str) -> int:
     from scipy.optimize import least_squares
     from neo_tracker.ui.main_window import NeoTrackerWindow
     from neo_tracker.ui.view_state import PhysicsWorkspaceStateStore
+    from neo_tracker.ui.language import configure_language, add_language_menu
 
     report = {"frozen": bool(getattr(sys, "frozen", False)), "executable": sys.executable,
               "passed": False, "checks": []}
@@ -24,6 +25,7 @@ def run(report_path: str) -> int:
         for name in ("numpy", "cv2", "scipy", "PySide6", "neo_tracker")
     }
     app = QApplication.instance() or QApplication(["Neo-Tracker packaging check"])
+    configure_language(app, "zh_CN")
     windows = []
 
     def wait_for(predicate, timeout=30.0):
@@ -59,9 +61,13 @@ def run(report_path: str) -> int:
                 physics_export_directory_picker=lambda _parent: str(exports),
             )
             windows.append(window)
+            add_language_menu(window)
             window.show()
             wait_for(lambda: window.windowHandle() is not None and window.windowHandle().isExposed())
             report["checks"].append("Cocoa window exposed")
+            assert window.add_media_button.text() == "导入素材"
+            assert window.run_tracking_button.text() == "开始追踪"
+            report["checks"].append("Simplified Chinese primary actions")
             assert window._start_media_probe([str(video)])
             wait_for(lambda: window._background_tasks.idle)
             assert window.current_task.media_info.available
@@ -86,6 +92,12 @@ def run(report_path: str) -> int:
             with np.load(next(exports.glob("*.npz")), allow_pickle=False) as archive:
                 np.testing.assert_array_equal(archive["time_s"], source.time_s)
             report["checks"].append("fit and CSV/NPZ/Markdown export")
+            window.physics_workspace.show_page("Plot")
+            assert window.physics_workspace.layout_state().page == "Plot"
+            assert window.physics_workspace.tabs.tabText(window.physics_workspace.tabs.currentIndex()) == "图表"
+            window.sidebar_tabs.setCurrentWidget(window.tracking_tab)
+            app.processEvents()
+            window.grab().save(str(Path(report_path).with_suffix(".png")))
             window.project_path = root / "smoke.ntproj"
             assert window._save_project()
             wait_for(lambda: window._background_tasks.idle)

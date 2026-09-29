@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Callable, MutableSequence, Sequence
 
 from neo_tracker.core import ObservationCandidate, TrackerResult, TrackingPipeline
+from neo_tracker.ui.language import tr
 
 
 MANUAL_EDIT_TYPES = frozenset({"manual_correction", "mark_lost"})
@@ -261,11 +262,9 @@ class ReviewController:
         if result_index is None or result_index < 0 or result_index >= len(results):
             return None
         result = results[result_index]
-        status = result.status.replace("_", " ")
-        text = (
-            f"Frame {result.frame_index}  ·  {result.time_s:.6g} s  ·  "
-            f"{status}  ·  confidence {result.confidence:.3f}"
-        )
+        status = tr(result.status.replace("_", " "))
+        text = tr("Frame {frame}  ·  {time:.6g} s  ·  {status}  ·  confidence {confidence:.3f}",
+                  frame=result.frame_index, time=result.time_s, status=status, confidence=result.confidence)
         state_keys = self.result_state_keys((result,))
         state_parts = []
         for key in state_keys:
@@ -514,13 +513,14 @@ class ReviewController:
     @classmethod
     def tracking_summary_text(cls, results: Sequence[TrackerResult]) -> str:
         if not results:
-            return "Results: none"
+            return tr("Results: none")
         avg_confidence = sum(float(result.confidence) for result in results) / len(results)
         statuses: dict[str, int] = {}
         for result in results:
             statuses[result.status] = statuses.get(result.status, 0) + 1
-        status_summary = ", ".join(f"{key} {value}" for key, value in sorted(statuses.items()))
-        return f"Results: {len(results)} | avg confidence {avg_confidence:.2f} | {status_summary}"
+        status_summary = ", ".join(f"{tr(key)} {value}" for key, value in sorted(statuses.items()))
+        return tr("Results: {count} | avg confidence {confidence:.2f} | {statuses}",
+                  count=len(results), confidence=avg_confidence, statuses=status_summary)
 
     @classmethod
     def review_summary_text(

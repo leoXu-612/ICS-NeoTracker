@@ -565,7 +565,7 @@ class MainWindowStructureTests(unittest.TestCase):
         self.assertEqual(placeholder.text(), "No media tasks yet")
         self.assertFalse(bool(placeholder.flags() & Qt.ItemFlag.ItemIsEnabled))
 
-    def test_tracking_tab_keeps_every_current_module_visible_at_minimum_window_size(self) -> None:
+    def test_tracking_tab_keeps_module_details_in_the_dedicated_flow_page(self) -> None:
         window = NeoTrackerWindow()
         self.addCleanup(close_window_safely, window)
         window.resize(window.minimumSizeHint())
@@ -573,13 +573,12 @@ class MainWindowStructureTests(unittest.TestCase):
         window.sidebar_tabs.setCurrentWidget(window.tracking_tab)
         QCoreApplication.processEvents()
 
-        self.assertGreater(window.module_summary_list.count(), 0)
-        last_item = window.module_summary_list.item(window.module_summary_list.count() - 1)
-        last_rect = window.module_summary_list.visualItemRect(last_item)
-        self.assertTrue(
-            window.module_summary_list.viewport().rect().contains(last_rect),
-            f"last module row is clipped: viewport={window.module_summary_list.viewport().rect()} row={last_rect}",
-        )
+        self.assertFalse(hasattr(window, "module_summary_list"))
+        flow_button = next(button for button in window.tracking_tab.findChildren(QPushButton)
+                           if button.text() == "View processing flow →")
+        flow_button.click()
+        self.assertIs(window.sidebar_tabs.currentWidget(), window.workflow_tab)
+        self.assertEqual(window.workflow_list.count(), len(window._pipeline_steps(window.current_task.pipeline)))
 
     def test_main_window_fits_1024_with_dynamic_statuses_without_toolbar_overlap(self) -> None:
         window = NeoTrackerWindow()
@@ -661,7 +660,7 @@ class MainWindowStructureTests(unittest.TestCase):
         open_focus = window.grab().toImage().constBits().tobytes()
 
         self.assertIn("QPushButton:focus", window.styleSheet())
-        self.assertIn("border: 2px solid #0071e3", window.styleSheet())
+        self.assertIn("border: 2px solid #4b93e1", window.styleSheet())
         self.assertNotEqual(add_focus, open_focus)
 
     def test_application_font_size_is_inherited_instead_of_forced_to_pixels(self) -> None:
@@ -704,7 +703,7 @@ class MainWindowStructureTests(unittest.TestCase):
             scale = image.devicePixelRatio()
             self.assertEqual(
                 image.pixelColor(int(point.x() * scale), int(point.y() * scale)).name(),
-                "#f5f5f7",
+                "#f5f6f8",
                 widget.objectName(),
             )
 

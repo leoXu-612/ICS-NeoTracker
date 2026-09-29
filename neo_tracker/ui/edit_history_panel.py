@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from neo_tracker.ui.language import tr
+
 import json
 from dataclasses import dataclass
 
@@ -74,22 +76,22 @@ class EditHistoryPanel(QWidget):
 
         self.event_filter = QComboBox()
         self.event_filter.setObjectName("editHistoryTypeFilter")
-        self.event_filter.setAccessibleName("Filter manual edits by action")
-        self.event_filter.setToolTip("Show all manual edits or one action type.")
-        self.jump_button = QPushButton("Jump to Frame")
+        self.event_filter.setAccessibleName(tr('Filter manual edits by action'))
+        self.event_filter.setToolTip(tr('Show all manual edits or one action type.'))
+        self.jump_button = QPushButton(tr('Jump to Frame'))
         self.jump_button.setObjectName("jumpToEditFrameButton")
-        self.jump_button.setAccessibleName("Jump to the frame for the selected edit")
-        self.export_button = QPushButton("Export CSV")
+        self.jump_button.setAccessibleName(tr('Jump to the frame for the selected edit'))
+        self.export_button = QPushButton(tr('Export CSV'))
         self.export_button.setObjectName("exportEditHistoryButton")
-        self.export_button.setAccessibleName("Export visible manual edits to CSV")
+        self.export_button.setAccessibleName(tr('Export visible manual edits to CSV'))
         self.list_widget = QListWidget()
         self.list_widget.setObjectName("editHistoryList")
-        self.list_widget.setAccessibleName("Manual edit history")
+        self.list_widget.setAccessibleName(tr('Manual edit history'))
         self.list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.list_widget.setTextElideMode(Qt.TextElideMode.ElideRight)
-        self.status_label = QLabel("No manual edits recorded yet")
+        self.status_label = QLabel(tr('No manual edits recorded yet'))
         self.status_label.setObjectName("editHistoryStatusLabel")
-        self.status_label.setAccessibleName("Manual edit history status")
+        self.status_label.setAccessibleName(tr('Manual edit history status'))
 
         controls = QHBoxLayout()
         controls.setContentsMargins(0, 0, 0, 0)
@@ -201,12 +203,10 @@ class EditHistoryPanel(QWidget):
         frame_index = selection.frame_index if selection is not None else None
         self.jump_button.setEnabled(frame_index is not None)
         self.jump_button.setToolTip(
-            f"Move the preview and result selection to frame {frame_index}."
-            if frame_index is not None
-            else "Select an edit with an associated frame first."
+            (tr('Move the preview and result selection to frame {v0}.', v0=frame_index) if frame_index is not None else tr('Select an edit with an associated frame first.'))
         )
         self.export_button.setEnabled(visible_count > 0)
-        self.export_button.setToolTip(f"Export the {visible_count} visible manual edits to CSV.")
+        self.export_button.setToolTip(tr('Export the {v0} visible manual edits to CSV.', v0=visible_count))
         if total_count == 0:
             status = "No manual edits recorded yet"
         else:

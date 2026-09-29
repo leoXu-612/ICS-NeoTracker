@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from neo_tracker.ui.language import tr
+
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -216,9 +218,9 @@ PRIMARY_BUTTON_ATTRIBUTES = {
 
 def bind_primary_actions(owner: Any, registry: ActionRegistry) -> None:
     menus = {
-        "file": owner.menuBar().addMenu("&File"),
-        "run": owner.menuBar().addMenu("&Run"),
-        "review": owner.menuBar().addMenu("Re&view"),
+        "file": owner.menuBar().addMenu(tr('&File')),
+        "run": owner.menuBar().addMenu(tr('&Run')),
+        "review": owner.menuBar().addMenu(tr('Re&view')),
     }
     for key, menu in menus.items():
         menu.setObjectName(f"{key}Menu")

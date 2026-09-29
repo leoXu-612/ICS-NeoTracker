@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from neo_tracker.ui.language import tr
+
 import json
 import math
 from collections.abc import Sequence
@@ -50,9 +52,9 @@ class FitPanel(QWidget):
         self._draft_baseline: tuple[object, ...] | None = None
         self._request_baseline: FitRequest | None = None
         self._range_values = [0.0, 0.0]
-        self.setAccessibleName("Physics model fit")
+        self.setAccessibleName(tr('Physics model fit'))
         self.setAccessibleDescription(
-            "Choose a physical series, model, and true-time range. Fits run in the background."
+            tr('Choose a physical series, model, and true-time range. Fits run in the background.')
         )
         root = QVBoxLayout(self)
         root.setContentsMargins(10, 8, 10, 8)
@@ -60,17 +62,17 @@ class FitPanel(QWidget):
 
         form = QFormLayout()
         self.series_combo = QComboBox()
-        self.series_combo.setAccessibleName("Fit physical series")
+        self.series_combo.setAccessibleName(tr('Fit physical series'))
         self.series_combo.currentIndexChanged.connect(self._series_changed)
         self.series_combo.currentIndexChanged.connect(self._emit_draft_changed)
-        form.addRow("Series", self.series_combo)
+        form.addRow(tr('Series'), self.series_combo)
         self.model_combo = QComboBox()
-        self.model_combo.setAccessibleName("Fit model")
+        self.model_combo.setAccessibleName(tr('Fit model'))
         for display, value in self._MODELS.items():
-            self.model_combo.addItem(display, value)
+            self.model_combo.addItem(tr(display), value)
         self.model_combo.currentTextChanged.connect(self._model_changed)
         self.model_combo.currentTextChanged.connect(self._emit_draft_changed)
-        form.addRow("Model", self.model_combo)
+        form.addRow(tr('Model'), self.model_combo)
 
         range_row = QHBoxLayout()
         self.range_start_spin = self._range_spin("Fit range start in true seconds")
@@ -78,51 +80,51 @@ class FitPanel(QWidget):
         self.range_start_spin.valueChanged.connect(lambda value: self._range_edited(0, value))
         self.range_end_spin.valueChanged.connect(lambda value: self._range_edited(1, value))
         range_row.addWidget(self.range_start_spin)
-        range_row.addWidget(QLabel("to"))
+        range_row.addWidget(QLabel(tr('to')))
         range_row.addWidget(self.range_end_spin)
-        form.addRow("True-time range", range_row)
-        self.valid_only_checkbox = QCheckBox("Use only samples marked valid")
+        form.addRow(tr('True-time range'), range_row)
+        self.valid_only_checkbox = QCheckBox(tr('Use only samples marked valid'))
         self.valid_only_checkbox.setChecked(True)
-        self.valid_only_checkbox.setAccessibleName("Fit valid samples only")
+        self.valid_only_checkbox.setAccessibleName(tr('Fit valid samples only'))
         self.valid_only_checkbox.setToolTip(
-            "Exclude finite samples that the tracking or processing pipeline marked invalid."
+            tr('Exclude finite samples that the tracking or processing pipeline marked invalid.')
         )
         self.valid_only_checkbox.toggled.connect(self._emit_draft_changed)
-        form.addRow("Samples", self.valid_only_checkbox)
+        form.addRow(tr('Samples'), self.valid_only_checkbox)
 
-        self.initial_parameters_label = QLabel("Initial parameters")
+        self.initial_parameters_label = QLabel(tr('Initial parameters'))
         self.initial_parameters_edit = QLineEdit("{}")
-        self.initial_parameters_edit.setAccessibleName("Nonlinear initial parameters JSON")
+        self.initial_parameters_edit.setAccessibleName(tr('Nonlinear initial parameters JSON'))
         self.initial_parameters_edit.setToolTip(
-            'Named JSON values, for example {"omega": 6.28, "amplitude": 0.2}.'
+            tr('Named JSON values, for example {"omega": 6.28, "amplitude": 0.2}.')
         )
         self.initial_parameters_edit.textChanged.connect(self._emit_draft_changed)
         form.addRow(self.initial_parameters_label, self.initial_parameters_edit)
-        self.bounds_label = QLabel("Bounds")
+        self.bounds_label = QLabel(tr('Bounds'))
         self.bounds_edit = QLineEdit("{}")
-        self.bounds_edit.setAccessibleName("Nonlinear parameter bounds JSON")
-        self.bounds_edit.setToolTip('Named JSON pairs, for example {"omega": [0.1, 20.0]}.')
+        self.bounds_edit.setAccessibleName(tr('Nonlinear parameter bounds JSON'))
+        self.bounds_edit.setToolTip(tr('Named JSON pairs, for example {"omega": [0.1, 20.0]}.'))
         self.bounds_edit.textChanged.connect(self._emit_draft_changed)
         form.addRow(self.bounds_label, self.bounds_edit)
         root.addLayout(form)
 
         action_row = QHBoxLayout()
-        self.run_button = QPushButton("Run Fit")
+        self.run_button = QPushButton(tr('Run Fit'))
         self.run_button.setObjectName("runPhysicsFitButton")
-        self.run_button.setAccessibleName("Run physics model fit")
+        self.run_button.setAccessibleName(tr('Run physics model fit'))
         self.run_button.clicked.connect(self._emit_run)
-        self.cancel_button = QPushButton("Cancel")
+        self.cancel_button = QPushButton(tr('Cancel'))
         self.cancel_button.setObjectName("cancelPhysicsFitButton")
-        self.cancel_button.setAccessibleName("Cancel active physics model fit")
+        self.cancel_button.setAccessibleName(tr('Cancel active physics model fit'))
         self.cancel_button.clicked.connect(self.cancelRequested)
         self.cancel_button.setEnabled(False)
-        self.residual_checkbox = QCheckBox("Show residual")
-        self.residual_checkbox.setAccessibleName("Show fit residual plot")
+        self.residual_checkbox = QCheckBox(tr('Show residual'))
+        self.residual_checkbox.setAccessibleName(tr('Show fit residual plot'))
         self.residual_checkbox.toggled.connect(self.residualToggled)
         self.residual_checkbox.setEnabled(False)
-        self.export_button = QPushButton("Export")
+        self.export_button = QPushButton(tr('Export'))
         self.export_button.setObjectName("exportPhysicsAnalysisButton")
-        self.export_button.setAccessibleName("Export physics fit analysis")
+        self.export_button.setAccessibleName(tr('Export physics fit analysis'))
         self.export_button.clicked.connect(self.exportRequested)
         self.export_button.setEnabled(False)
         action_row.addWidget(self.run_button)
@@ -132,25 +134,25 @@ class FitPanel(QWidget):
         action_row.addWidget(self.export_button)
         root.addLayout(action_row)
 
-        self.status_label = QLabel("Choose a physical series.")
+        self.status_label = QLabel(tr('Choose a physical series.'))
         self.status_label.setObjectName("physicsFitStatus")
         self.status_label.setWordWrap(True)
-        self.status_label.setAccessibleName("Physics fit status")
+        self.status_label.setAccessibleName(tr('Physics fit status'))
         self.status_label.setAccessibleDescription(self.status_label.text())
         root.addWidget(self.status_label)
-        self.summary_label = QLabel("No fit result")
+        self.summary_label = QLabel(tr('No fit result'))
         self.summary_label.setObjectName("physicsFitSummary")
         self.summary_label.setWordWrap(True)
-        self.summary_label.setAccessibleName("Physics fit quality summary")
+        self.summary_label.setAccessibleName(tr('Physics fit quality summary'))
         root.addWidget(self.summary_label)
 
         self.parameter_table = QTableWidget(0, 4)
-        self.parameter_table.setHorizontalHeaderLabels(("Parameter", "Value", "Unit", "Std. error"))
+        self.parameter_table.setHorizontalHeaderLabels((tr('Parameter'), tr('Value'), tr('Unit'), tr('Std. error')))
         self.parameter_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.parameter_table.horizontalHeader().setStretchLastSection(True)
         self.parameter_table.verticalHeader().setVisible(False)
         self.parameter_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-        self.parameter_table.setAccessibleName("Fit parameters and uncertainty")
+        self.parameter_table.setAccessibleName(tr('Fit parameters and uncertainty'))
         root.addWidget(self.parameter_table, 1)
         self._model_changed(self.model_combo.currentText())
         self._update_controls()
@@ -178,7 +180,7 @@ class FitPanel(QWidget):
         self.series_combo.clear()
         for item in items:
             unit = item.unit or "unit unavailable"
-            self.series_combo.addItem(f"{item.name} · {unit}", item.series_id)
+            self.series_combo.addItem(f"{tr(item.name)} · {unit}", item.series_id)
         selected = self.series_combo.findData(previous_id)
         self.series_combo.setCurrentIndex(selected if selected >= 0 else (0 if items else -1))
         self.series_combo.blockSignals(False)
@@ -322,7 +324,7 @@ class FitPanel(QWidget):
             message = result.message or f"Fit ended with status: {result.status.value}."
             self._set_status(message)
             self.summary_label.setText(
-                f"{result.status.value.title()} · no plot or residual layer was created"
+                tr('{v0} · no plot or residual layer was created', v0=result.status.value.title())
             )
             self.summary_label.setAccessibleDescription(message)
             return
@@ -357,9 +359,7 @@ class FitPanel(QWidget):
             for column, value in enumerate(values):
                 self.parameter_table.setItem(row, column, QTableWidgetItem(value))
         self.summary_label.setText(
-            f"{result.model.value.title()} · R² {result.r_squared:.6g} · "
-            f"RMSE {result.rmse:.6g} · {result.sample_count:,} samples · "
-            f"{result.range_start_s:.6g}–{result.range_end_s:.6g} s"
+            tr('{v0} · R² {v1:.6g} · RMSE {v2:.6g} · {v3:,} samples · {v4:.6g}–{v5:.6g} s', v0=result.model.value.title(), v1=result.r_squared, v2=result.rmse, v3=result.sample_count, v4=result.range_start_s, v5=result.range_end_s)
         )
         detail = (
             f"{result.model.value} fit using {result.sample_count:,} samples. "
@@ -372,14 +372,14 @@ class FitPanel(QWidget):
 
     def clear_result(self) -> None:
         self.parameter_table.setRowCount(0)
-        self.summary_label.setText("No fit result")
-        self.summary_label.setToolTip("No fit result is available.")
-        self.summary_label.setAccessibleDescription("No fit result is available.")
+        self.summary_label.setText(tr('No fit result'))
+        self.summary_label.setToolTip(tr('No fit result is available.'))
+        self.summary_label.setAccessibleDescription(tr('No fit result is available.'))
         self.residual_checkbox.setEnabled(False)
         self.export_button.setEnabled(False)
 
     def _set_status(self, text: str) -> None:
-        self.status_label.setText(text)
+        self.status_label.setText(tr(text))
         self.status_label.setAccessibleDescription(text)
 
     def _emit_run(self) -> None:
@@ -427,7 +427,7 @@ class FitPanel(QWidget):
         self._emit_draft_changed()
 
     def _model_changed(self, model: str) -> None:
-        nonlinear = model in {"Exponential", "Sinusoidal"}
+        nonlinear = self.model_combo.currentData() in {"exponential", "sinusoidal"}
         for widget in (
             self.initial_parameters_label,
             self.initial_parameters_edit,

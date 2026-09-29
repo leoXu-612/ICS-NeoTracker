@@ -8,6 +8,7 @@ from PySide6.QtGui import QColor
 
 from neo_tracker.core import TrackerResult
 from neo_tracker.ui.review_controller import ReviewController
+from neo_tracker.ui.language import tr
 
 
 class ResultsTableModel(QAbstractTableModel):
@@ -109,7 +110,7 @@ class ResultsTableModel(QAbstractTableModel):
             and orientation == Qt.Orientation.Horizontal
             and 0 <= section < len(self._headers)
         ):
-            return self._headers[section]
+            return tr(self._headers[section])
         return None
 
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> object:
@@ -168,16 +169,17 @@ class ResultsTableModel(QAbstractTableModel):
 
     def _tracking_summary_from_aggregates(self, results: Sequence[TrackerResult]) -> str:
         if not results:
-            return "Results: none"
+            return tr("Results: none")
         avg_confidence = self._confidence_total / len(results)
         status_summary = ", ".join(
-            f"{key} {value}" for key, value in sorted(self._status_counts.items())
+            f"{tr(key)} {value}" for key, value in sorted(self._status_counts.items())
         )
-        return f"Results: {len(results)} | avg confidence {avg_confidence:.2f} | {status_summary}"
+        return tr("Results: {count} | avg confidence {confidence:.2f} | {statuses}",
+                  count=len(results), confidence=avg_confidence, statuses=status_summary)
 
     @staticmethod
     def _review_summary(tracking_summary: str, state_headers: Sequence[str]) -> str:
-        if tracking_summary == "Results: none":
+        if tracking_summary == tr("Results: none"):
             return (
                 "Run tracking to populate the review table. "
                 "Use calibration and ROI first for better physical units."
@@ -192,5 +194,5 @@ class ResultsTableModel(QAbstractTableModel):
             ReviewController.format_state_value(result.filtered_state.get(key))
             for key in self._state_keys
         )
-        values.extend((f"{result.confidence:.3f}", result.status))
+        values.extend((f"{result.confidence:.3f}", tr(result.status)))
         return tuple(values)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from neo_tracker.ui.language import tr
+
 from PySide6.QtWidgets import QMessageBox
 
 
@@ -42,8 +44,8 @@ class PreviewSelectionMixin:
         if not self.preview_label.begin_roi_selection():
             QMessageBox.information(
                 self,
-                "ROI selection",
-                "Load a readable video frame before marking an ROI.",
+                tr('ROI selection'),
+                tr('Load a readable video frame before marking an ROI.'),
             )
             return
         if self.calibration_tab is not None:
@@ -55,8 +57,8 @@ class PreviewSelectionMixin:
         if not self.preview_label.begin_circular_roi_selection():
             QMessageBox.information(
                 self,
-                "Circle ROI selection",
-                "Load a readable video frame before marking a circle ROI.",
+                tr('Circle ROI selection'),
+                tr('Load a readable video frame before marking a circle ROI.'),
             )
             return
         if self.calibration_tab is not None:
@@ -68,8 +70,8 @@ class PreviewSelectionMixin:
         if not self.preview_label.begin_annular_roi_selection():
             QMessageBox.information(
                 self,
-                "Annular ROI selection",
-                "Load a readable video frame before marking an annular ROI.",
+                tr('Annular ROI selection'),
+                tr('Load a readable video frame before marking an annular ROI.'),
             )
             return
         if self.calibration_tab is not None:
@@ -81,14 +83,14 @@ class PreviewSelectionMixin:
         if not self.preview_label.begin_polygon_roi_selection():
             QMessageBox.information(
                 self,
-                "Polygon ROI selection",
-                "Load a readable video frame before marking a polygon ROI.",
+                tr('Polygon ROI selection'),
+                tr('Load a readable video frame before marking a polygon ROI.'),
             )
             return
         if self.calibration_tab is not None:
             self.sidebar_tabs.setCurrentWidget(self.calibration_tab)
         self.statusBar().showMessage(
-            "Click polygon vertices in the preview, then use Finish Drawing, right click, or double click.",
+            tr('Click polygon vertices in the preview, then use Finish Drawing, right click, or double click.'),
             8000,
         )
 
@@ -98,14 +100,14 @@ class PreviewSelectionMixin:
         if not self.preview_label.begin_curve_band_roi_selection(self.curve_half_width_spin.value()):
             QMessageBox.information(
                 self,
-                "Curve band ROI selection",
-                "Load a readable video frame before marking a curve band ROI.",
+                tr('Curve band ROI selection'),
+                tr('Load a readable video frame before marking a curve band ROI.'),
             )
             return
         if self.calibration_tab is not None:
             self.sidebar_tabs.setCurrentWidget(self.calibration_tab)
         self.statusBar().showMessage(
-            "Click curve centerline points in the preview, then use Finish Drawing, right click, or double click.",
+            tr('Click curve centerline points in the preview, then use Finish Drawing, right click, or double click.'),
             8000,
         )
 
@@ -115,8 +117,8 @@ class PreviewSelectionMixin:
         if not self.preview_label.begin_calibration_selection():
             QMessageBox.information(
                 self,
-                "Calibration rod selection",
-                "Load a readable video frame before marking a calibration rod.",
+                tr('Calibration rod selection'),
+                tr('Load a readable video frame before marking a calibration rod.'),
             )
             return
         if self.calibration_tab is not None:
@@ -126,8 +128,8 @@ class PreviewSelectionMixin:
         if self._color_blob_observation() is None:
             QMessageBox.information(
                 self,
-                "Marker color",
-                "The selected preset does not use color-marker detection.",
+                tr('Marker color'),
+                tr('The selected preset does not use color-marker detection.'),
             )
             return
         if not self._prepare_preview_selection("starting color sampling"):
@@ -135,10 +137,10 @@ class PreviewSelectionMixin:
         if not self.preview_label.begin_color_sample_selection():
             QMessageBox.information(
                 self,
-                "Marker color",
-                "Load a readable video frame before sampling marker color.",
+                tr('Marker color'),
+                tr('Load a readable video frame before sampling marker color.'),
             )
             return
         if self.tracking_tab is not None:
             self.sidebar_tabs.setCurrentWidget(self.tracking_tab)
-        self.statusBar().showMessage("Click the marker color in the preview canvas.", 6000)
+        self.statusBar().showMessage(tr('Click the marker color in the preview canvas.'), 6000)

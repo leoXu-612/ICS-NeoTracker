@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from neo_tracker.ui.language import tr
+
 from copy import deepcopy
 import math
 
@@ -179,7 +181,7 @@ class PreviewCanvas(QLabel):
         self._curve_band_half_width: float = 24.0
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        self.setAccessibleName("Video preview and ROI editor")
+        self.setAccessibleName(tr('Video preview and ROI editor'))
         self.setAccessibleDescription(self.DEFAULT_ACCESSIBLE_DESCRIPTION)
 
     def has_frame(self) -> bool:
@@ -236,7 +238,7 @@ class PreviewCanvas(QLabel):
         self._dragged_roi_node_origin = None
         self._dragged_roi_node_has_moved = False
         self.setPixmap(QPixmap())
-        self.setText(text)
+        self.setText(tr(text))
         description = str(detail or text).strip()
         self.setToolTip(description)
         self.setAccessibleDescription(description)
@@ -1076,7 +1078,7 @@ class PreviewCanvas(QLabel):
         self._paint_candidate_points(painter)
         self._paint_prediction_point(painter, self.prediction_point)
         self._paint_observation_point(painter, self.observation_point)
-        self._paint_tracking_point(painter, self.current_tracking_point, QColor("#ffb020"), "Current")
+        self._paint_tracking_point(painter, self.current_tracking_point, QColor("#ffb020"), tr("Current"))
 
     def _paint_measurement_trajectory(self, painter: QPainter) -> None:
         if not self.measurement_points:

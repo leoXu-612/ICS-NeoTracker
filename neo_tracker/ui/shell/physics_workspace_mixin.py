@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from neo_tracker.ui.language import tr
+
 import hashlib
 import re
 from collections.abc import Sequence
@@ -101,7 +103,7 @@ class PhysicsWorkspaceMixin:
             return False
         self._physics_pending_build = None
         detail = "Building immutable physical series from current tracking Results in the background."
-        self.physics_workspace.cursor_label.setText("true time — · checking Results source revision")
+        self.physics_workspace.cursor_label.setText(tr('true time — · checking Results source revision'))
         self.physics_workspace.cursor_label.setToolTip(detail)
         self.physics_workspace.cursor_label.setAccessibleDescription(detail)
         self._update_physics_actions(self.analysis_workspace_controller.state)
@@ -345,7 +347,7 @@ class PhysicsWorkspaceMixin:
                 )
             except (TypeError, ValueError) as exc:
                 self.statusBar().showMessage(
-                    f"Could not save fit definition: {exc}",
+                    tr('Could not save fit definition: {v0}', v0=exc),
                     8000,
                 )
                 return
@@ -360,7 +362,7 @@ class PhysicsWorkspaceMixin:
     def _export_physics_analysis(self) -> None:
         if not self.analysis_workspace_controller.request_export():
             self.statusBar().showMessage(
-                "Choose an available physical series before exporting analysis.",
+                tr('Choose an available physical series before exporting analysis.'),
                 5000,
             )
 
@@ -368,7 +370,7 @@ class PhysicsWorkspaceMixin:
         if not self.current_task.media_identity_requires_review:
             return False
         self.statusBar().showMessage(
-            "Review the media source before exporting physics results.", 6000,
+            tr('Review the media source before exporting physics results.'), 6000,
         )
         return True
 
@@ -403,7 +405,7 @@ class PhysicsWorkspaceMixin:
         source = self._physics_series_by_id.get(request.series_id)
         if source is None or source.source_revision != request.source_revision:
             self.statusBar().showMessage(
-                "Physics request rejected because its Results revision is stale.",
+                tr('Physics request rejected because its Results revision is stale.'),
                 6000,
             )
             return
@@ -412,13 +414,13 @@ class PhysicsWorkspaceMixin:
             picker = self._physics_export_directory_picker
             if picker is None:
                 self.statusBar().showMessage(
-                    "Physics export request is ready for the application host.",
+                    tr('Physics export request is ready for the application host.'),
                     5000,
                 )
                 return
             directory_value = picker(self)
             if not directory_value:
-                self.statusBar().showMessage("Physics export canceled.", 4000)
+                self.statusBar().showMessage(tr('Physics export canceled.'), 4000)
                 return
             directory = Path(directory_value).expanduser()
             safe_name = re.sub(r"[^A-Za-z0-9._-]+", "-", source.name).strip("-._")
@@ -435,14 +437,14 @@ class PhysicsWorkspaceMixin:
                 names = ", ".join(path.name for path in existing)
                 decision = QMessageBox.question(
                     self,
-                    "Replace physics export files?",
-                    f"{names} already exist. Replace the existing export files?",
+                    tr('Replace physics export files?'),
+                    tr('{v0} already exist. Replace the existing export files?', v0=names),
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                     QMessageBox.StandardButton.No,
                 )
                 if decision != QMessageBox.StandardButton.Yes:
                     self.statusBar().showMessage(
-                        "Physics export canceled; existing files were kept.",
+                        tr('Physics export canceled; existing files were kept.'),
                         5000,
                     )
                     return
@@ -456,7 +458,7 @@ class PhysicsWorkspaceMixin:
             or self._physics_series_by_id.get(request.series_id) is not source
         ):
             self.statusBar().showMessage(
-                "Physics request canceled because its task or Results changed. Try again with the current series.",
+                tr('Physics request canceled because its task or Results changed. Try again with the current series.'),
                 6000,
             )
             return
@@ -471,7 +473,7 @@ class PhysicsWorkspaceMixin:
         )
         if not self._kinematics_workspace_coordinator.start(task):
             self.statusBar().showMessage(
-                "Finish or cancel the current physics operation before starting another.",
+                tr('Finish or cancel the current physics operation before starting another.'),
                 6000,
             )
             return
@@ -507,7 +509,7 @@ class PhysicsWorkspaceMixin:
                 )
             self._prepare_persisted_physics_definitions(output.source_revision)
             self.statusBar().showMessage(
-                f"Built {len(output.series)} physical series from current Results.",
+                tr('Built {v0} physical series from current Results.', v0=len(output.series)),
                 5000,
             )
             return
@@ -518,7 +520,7 @@ class PhysicsWorkspaceMixin:
         if output.operation in {"derivative", "smooth"} and output.series:
             if not self._attach_physics_series(output.series):
                 self.statusBar().showMessage(
-                    "Derived series was rejected because its identity is ambiguous.",
+                    tr('Derived series was rejected because its identity is ambiguous.'),
                     6000,
                 )
                 return
@@ -529,12 +531,12 @@ class PhysicsWorkspaceMixin:
                 if definition is not None:
                     self._apply_replayed_definition_view(definition)
             self.statusBar().showMessage(
-                f"Created {output.series[0].name}.",
+                tr('Created {v0}.', v0=output.series[0].name),
                 5000,
             )
         elif output.operation == "export":
             rendered = ", ".join(path.name for path in output.exported_paths)
-            self.statusBar().showMessage(f"Exported physics analysis: {rendered}", 8000)
+            self.statusBar().showMessage(tr('Exported physics analysis: {v0}', v0=rendered), 8000)
 
     def _kinematics_workspace_failed(
         self,
@@ -542,7 +544,7 @@ class PhysicsWorkspaceMixin:
         message: str,
     ) -> None:
         if job.task.owner is self.current_task:
-            self.statusBar().showMessage(f"Physics operation failed: {message}", 8000)
+            self.statusBar().showMessage(tr('Physics operation failed: {v0}', v0=message), 8000)
             if job.task.operation == "build":
                 self.physics_workspace.set_cursor(None, None, "unavailable")
         self._mark_active_physics_replay("failed")
@@ -719,12 +721,12 @@ class PhysicsWorkspaceMixin:
         unavailable = unresolved - deferred_fit_count
         if deferred_fit_count:
             self.statusBar().showMessage(
-                f"Deferred {deferred_fit_count} saved fit definition(s) because the Fit panel has unapplied settings.",
+                tr('Deferred {v0} saved fit definition(s) because the Fit panel has unapplied settings.', v0=deferred_fit_count),
                 8000,
             )
         elif unavailable:
             self.statusBar().showMessage(
-                f"{unavailable} saved physics definition(s) could not be rebuilt because a source series is unavailable.",
+                tr('{v0} saved physics definition(s) could not be rebuilt because a source series is unavailable.', v0=unavailable),
                 8000,
             )
         return False
@@ -798,7 +800,7 @@ class PhysicsWorkspaceMixin:
             )
         except (TypeError, ValueError) as exc:
             self.statusBar().showMessage(
-                f"Could not save analysis definition: {exc}",
+                tr('Could not save analysis definition: {v0}', v0=exc),
                 8000,
             )
             return
@@ -816,7 +818,7 @@ class PhysicsWorkspaceMixin:
         try:
             task.analysis_workspace = AnalysisWorkspaceSnapshot(tuple(definitions))
         except (TypeError, ValueError) as exc:
-            self.statusBar().showMessage(f"Could not save analysis definition: {exc}", 8000)
+            self.statusBar().showMessage(tr('Could not save analysis definition: {v0}', v0=exc), 8000)
             return
         self._physics_definition_states[definition.analysis_id] = "current"
         self._mark_project_changed()
@@ -873,27 +875,27 @@ class PhysicsWorkspaceMixin:
         self._update_action(
             "physics.velocity",
             enabled=mutable,
-            tool_tip="Request a gap-aware first derivative from the kinematics engine.",
+            tool_tip=tr('Request a gap-aware first derivative from the kinematics engine.'),
         )
         self._update_action(
             "physics.acceleration",
             enabled=mutable,
-            tool_tip="Request a gap-aware second derivative from the kinematics engine.",
+            tool_tip=tr('Request a gap-aware second derivative from the kinematics engine.'),
         )
         self._update_action(
             "physics.smooth",
             enabled=mutable,
-            tool_tip="Request segment-aware smoothing without implicit resampling.",
+            tool_tip=tr('Request segment-aware smoothing without implicit resampling.'),
         )
         self._update_action(
             "physics.fit",
             enabled=mutable,
-            tool_tip="Open model and true-time fit controls.",
+            tool_tip=tr('Open model and true-time fit controls.'),
         )
         self._update_action(
             "physics.export",
             enabled=mutable and not self.current_task.media_identity_requires_review,
-            tool_tip="Export the selected series and any current fit as CSV, safe NPZ, and Markdown.",
+            tool_tip=tr('Export the selected series and any current fit as CSV, safe NPZ, and Markdown.'),
         )
         self.physics_workspace.export_plot_image_button.setEnabled(
             has_series and not self.current_task.media_identity_requires_review
@@ -902,7 +904,7 @@ class PhysicsWorkspaceMixin:
             "physics.residual",
             enabled=has_fit,
             text=residual_text,
-            tool_tip="Show or hide the current fit residual layer.",
+            tool_tip=tr('Show or hide the current fit residual layer.'),
         )
         self.show_residual_button.setAccessibleName(residual_text)
         self.fit_panel.residual_checkbox.setAccessibleName(residual_text)
@@ -955,8 +957,8 @@ class PhysicsWorkspaceMixin:
             return
         path, _selected_filter = QFileDialog.getSaveFileName(
             self,
-            "Export physics plot image",
-            "physics-plot.png",
+            tr('Export physics plot image'),
+            tr('physics-plot.png'),
             "PNG images (*.png);;All files (*)",
         )
         if not path or self._physics_export_blocked():
@@ -964,15 +966,15 @@ class PhysicsWorkspaceMixin:
         try:
             saved = self.physics_workspace.plot.export_image(path)
         except Exception as exc:
-            self.statusBar().showMessage(f"Could not export physics plot: {exc}", 8000)
+            self.statusBar().showMessage(tr('Could not export physics plot: {v0}', v0=exc), 8000)
             return
         if saved:
             self.statusBar().showMessage(
-                f"Exported physics plot: {Path(path).name}",
+                tr('Exported physics plot: {v0}', v0=Path(path).name),
                 6000,
             )
         else:
-            self.statusBar().showMessage("Could not export physics plot image.", 8000)
+            self.statusBar().showMessage(tr('Could not export physics plot image.'), 8000)
 
     def _selection_session_changed(self, event: SelectionEvent) -> None:
         state = event.current
@@ -1059,14 +1061,14 @@ class PhysicsWorkspaceMixin:
             self.physics_workspace.set_canvas_focus(True)
             self._update_action(
                 "view.canvas_focus",
-                text="Exit Focus",
-                tool_tip="Restore the inspector and physics workspace layout.",
+                text=tr('Exit Focus'),
+                tool_tip=tr('Restore the inspector and physics workspace layout.'),
             )
-            self.canvas_focus_button.setAccessibleName("Exit canvas focus mode")
+            self.canvas_focus_button.setAccessibleName(tr('Exit canvas focus mode'))
             self.canvas_focus_button.setAccessibleDescription(
-                "Restore the inspector and physics workspace layout."
+                tr('Restore the inspector and physics workspace layout.')
             )
-            self.statusBar().showMessage("Canvas Focus · inspector hidden · physics workspace collapsed")
+            self.statusBar().showMessage(tr('Canvas Focus · inspector hidden · physics workspace collapsed'))
             return
         self._canvas_focus_active = False
         if self._canvas_focus_sidebar_visible:
@@ -1076,14 +1078,14 @@ class PhysicsWorkspaceMixin:
         self.physics_workspace.set_canvas_focus(False)
         self._update_action(
             "view.canvas_focus",
-            text="Canvas Focus",
-            tool_tip="Temporarily enlarge the video canvas.",
+            text=tr('Canvas Focus'),
+            tool_tip=tr('Temporarily enlarge the video canvas.'),
         )
-        self.canvas_focus_button.setAccessibleName("Enter canvas focus mode")
+        self.canvas_focus_button.setAccessibleName(tr('Enter canvas focus mode'))
         self.canvas_focus_button.setAccessibleDescription(
-            "Temporarily hide the inspector and collapse this workspace to enlarge the video canvas."
+            tr('Temporarily hide the inspector and collapse this workspace to enlarge the video canvas.')
         )
-        self.statusBar().showMessage("Canvas Focus ended · workspace layout restored", 4000)
+        self.statusBar().showMessage(tr('Canvas Focus ended · workspace layout restored'), 4000)
 
     def _physics_route_requested(self, route: str) -> None:
         if route == "Signal":

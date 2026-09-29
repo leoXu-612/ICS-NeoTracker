@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from neo_tracker.ui.language import tr
+
 import math
 from collections.abc import Sequence
 
@@ -46,10 +48,9 @@ class PhysicsWorkspace(QFrame):
         self.setObjectName("physicsWorkspace")
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        self.setAccessibleName("Physics analysis workspace")
+        self.setAccessibleName(tr('Physics analysis workspace'))
         self.setAccessibleDescription(
-            "Collapsible Data, Plot, Fit, Diagnostics, Runs, Edits, and Signal workspace. "
-            "Selections remain aligned to stored true time."
+            tr('Collapsible Data, Plot, Fit, Diagnostics, Runs, Edits, and Signal workspace. Selections remain aligned to stored true time.')
         )
         self._collapsed = False
         self._canvas_focus = False
@@ -67,27 +68,27 @@ class PhysicsWorkspace(QFrame):
         header_layout = QHBoxLayout(header)
         header_layout.setContentsMargins(10, 4, 8, 4)
         header_layout.setSpacing(8)
-        title = QLabel("PHYSICS")
+        title = QLabel(tr('PHYSICS'))
         title.setObjectName("physicsWorkspaceTitle")
-        self.cursor_label = QLabel("true time — · no sample selected")
+        self.cursor_label = QLabel(tr('true time — · no sample selected'))
         self.cursor_label.setObjectName("physicsCursorLabel")
-        self.cursor_label.setAccessibleName("Shared physics true-time cursor")
-        self.cursor_label.setAccessibleDescription("No physical sample is selected.")
+        self.cursor_label.setAccessibleName(tr('Shared physics true-time cursor'))
+        self.cursor_label.setAccessibleDescription(tr('No physical sample is selected.'))
         self.cursor_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self.collapse_button = QToolButton()
         self.collapse_button.setObjectName("physicsCollapseButton")
-        self.collapse_button.setText("Collapse")
+        self.collapse_button.setText(tr('Collapse'))
         self.collapse_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
-        self.collapse_button.setAccessibleName("Collapse physics analysis workspace")
+        self.collapse_button.setAccessibleName(tr('Collapse physics analysis workspace'))
         self.collapse_button.clicked.connect(self.toggle_collapsed)
         self.focus_button = QToolButton()
         self.focus_button.setObjectName("canvasFocusButton")
-        self.focus_button.setText("Canvas Focus")
+        self.focus_button.setText(tr('Canvas Focus'))
         self.focus_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
-        self.focus_button.setToolTip("Temporarily enlarge the video canvas.")
-        self.focus_button.setAccessibleName("Enter canvas focus mode")
+        self.focus_button.setToolTip(tr('Temporarily enlarge the video canvas.'))
+        self.focus_button.setAccessibleName(tr('Enter canvas focus mode'))
         self.focus_button.setAccessibleDescription(
-            "Temporarily hide the inspector and collapse this workspace to enlarge the video canvas."
+            tr('Temporarily hide the inspector and collapse this workspace to enlarge the video canvas.')
         )
         header_layout.addWidget(title)
         header_layout.addWidget(self.cursor_label, 1)
@@ -97,8 +98,8 @@ class PhysicsWorkspace(QFrame):
 
         self.tabs = QTabWidget()
         self.tabs.setObjectName("physicsWorkspaceTabs")
-        self.tabs.setAccessibleName("Physics analysis pages")
-        self.tabs.tabBar().setAccessibleName("Physics analysis page tabs")
+        self.tabs.setAccessibleName(tr('Physics analysis pages'))
+        self.tabs.tabBar().setAccessibleName(tr('Physics analysis page tabs'))
         self.tabs.currentChanged.connect(self._page_changed)
         outer.addWidget(self.tabs, 1)
 
@@ -117,31 +118,31 @@ class PhysicsWorkspace(QFrame):
         for section, width in enumerate((86, 112, 132, 82, 176, 96)):
             header.resizeSection(section, width)
         header.setStretchLastSection(True)
-        self.series_table.setAccessibleName("Physical series data")
+        self.series_table.setAccessibleName(tr('Physical series data'))
         self.series_table.setAccessibleDescription(
-            "Virtual frame-aligned physical data. Columns identify validity, provenance, and units in text."
+            tr('Virtual frame-aligned physical data. Columns identify validity, provenance, and units in text.')
         )
         self.series_table.selectionModel().selectionChanged.connect(
             lambda _selected, _deselected: self._table_selection_changed()
         )
         self.series_combo = QComboBox()
         self.series_combo.setObjectName("physicsSeriesCombo")
-        self.series_combo.setAccessibleName("Physical quantity")
-        self.series_combo.setToolTip("Choose the physical series shown in the Data table.")
+        self.series_combo.setAccessibleName(tr('Physical quantity'))
+        self.series_combo.setToolTip(tr('Choose the physical series shown in the Data table.'))
         self.series_combo.currentIndexChanged.connect(self._series_changed)
         data_page = QWidget()
         data_layout = QVBoxLayout(data_page)
         data_layout.setContentsMargins(8, 7, 8, 8)
         data_header = QHBoxLayout()
-        data_header.addWidget(QLabel("Quantity"))
+        data_header.addWidget(QLabel(tr('Quantity')))
         data_header.addWidget(self.series_combo, 1)
-        self.copy_status_label = QLabel("Select rows to inspect exact values and units.")
-        self.copy_status_label.setAccessibleName("Physical data selection status")
+        self.copy_status_label = QLabel(tr('Select rows to inspect exact values and units.'))
+        self.copy_status_label.setAccessibleName(tr('Physical data selection status'))
         self.copy_status_label.setAccessibleDescription(self.copy_status_label.text())
-        self.copy_row_button = QPushButton("Copy Row")
-        self.copy_row_button.setAccessibleName("Copy selected physical data row")
+        self.copy_row_button = QPushButton(tr('Copy Row'))
+        self.copy_row_button.setAccessibleName(tr('Copy selected physical data row'))
         self.copy_row_button.setAccessibleDescription(
-            "Copy the selected frame, true time, full-precision value, validity, source, and unit."
+            tr('Copy the selected frame, true time, full-precision value, validity, source, and unit.')
         )
         self.copy_row_button.setEnabled(False)
         self.copy_row_button.clicked.connect(self._copy_selected_rows)
@@ -154,10 +155,10 @@ class PhysicsWorkspace(QFrame):
         self.plot = PhysicsPlot()
         self.plot.sampleActivated.connect(self._plot_sample_activated)
         self.plot.rangeSelected.connect(self.rangeSelected)
-        self.export_plot_image_button = QPushButton("Export PNG")
-        self.export_plot_image_button.setAccessibleName("Export physics plot image")
+        self.export_plot_image_button = QPushButton(tr('Export PNG'))
+        self.export_plot_image_button.setAccessibleName(tr('Export physics plot image'))
         self.export_plot_image_button.setAccessibleDescription(
-            "Save the current true-time plot, including fit and residual layers, as a PNG image."
+            tr('Save the current true-time plot, including fit and residual layers, as a PNG image.')
         )
         self.export_plot_image_button.setEnabled(False)
         self.export_plot_image_button.clicked.connect(self.plotImageExportRequested)
@@ -176,7 +177,7 @@ class PhysicsWorkspace(QFrame):
 
         self.fit_stack = QStackedWidget()
         self.fit_placeholder = self._placeholder(
-            "Choose a physical series, model, and true-time range to run a background fit."
+            tr('Choose a physical series, model, and true-time range to run a background fit.')
         )
         self.fit_stack.addWidget(self.fit_placeholder)
         self.fit_stack.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
@@ -270,7 +271,7 @@ class PhysicsWorkspace(QFrame):
 
     @property
     def current_page(self) -> str:
-        return self.tabs.tabText(max(0, self.tabs.currentIndex())) or "Data"
+        return self.tabs.tabBar().tabData(max(0, self.tabs.currentIndex())) or "Data"
 
     def set_series(self, series: Sequence[SampleSeries]) -> None:
         items = tuple(series)
@@ -288,7 +289,7 @@ class PhysicsWorkspace(QFrame):
         self.series_combo.clear()
         for item in items:
             unit = item.unit or "unit unavailable"
-            self.series_combo.addItem(f"{item.name} · {unit}", item.series_id)
+            self.series_combo.addItem(f"{tr(item.name)} · {unit}", item.series_id)
         index = self.series_combo.findData(previous)
         self.series_combo.setCurrentIndex(index if index >= 0 else (0 if items else -1))
         self.series_combo.blockSignals(False)
@@ -316,18 +317,18 @@ class PhysicsWorkspace(QFrame):
             text = "true time — · no sample selected"
             detail = "No physical sample is selected."
         elif time_s is None or not math.isfinite(float(time_s)):
-            text = f"true time unavailable · frame {int(frame_index)} · {normalized_match}"
+            text = tr("true time unavailable · frame {frame} · {match}", frame=int(frame_index), match=tr(normalized_match))
             detail = (
                 f"The shared cursor is at source frame {int(frame_index)}; true time is unavailable "
                 f"and the sample match is {normalized_match}."
             )
         else:
-            text = f"true time {float(time_s):.6f} s · frame {int(frame_index)} · {normalized_match}"
+            text = tr("true time {time:.6f} s · frame {frame} · {match}", time=float(time_s), frame=int(frame_index), match=tr(normalized_match))
             detail = (
                 f"The shared cursor is at true time {float(time_s):.6f} seconds and source frame "
                 f"{int(frame_index)} using a {normalized_match} sample match."
             )
-        self.cursor_label.setText(text)
+        self.cursor_label.setText(tr(text))
         self.cursor_label.setToolTip(detail)
         self.cursor_label.setAccessibleDescription(detail)
 
@@ -375,7 +376,7 @@ class PhysicsWorkspace(QFrame):
         self._preferred_height = max(120, min(1_200, int(height)))
 
     def layout_state(self) -> PhysicsWorkspaceState:
-        page = self.tabs.tabText(max(0, self.tabs.currentIndex())) or "Data"
+        page = self.current_page
         return PhysicsWorkspaceState(
             collapsed=self._collapsed,
             page=page,
@@ -388,7 +389,7 @@ class PhysicsWorkspace(QFrame):
         page_index = next(
             index
             for index in range(self.tabs.count())
-            if self.tabs.tabText(index) == state.page
+            if self.tabs.tabBar().tabData(index) == state.page
         )
         self.tabs.setCurrentIndex(page_index)
         self.remember_height(state.height)
@@ -403,9 +404,9 @@ class PhysicsWorkspace(QFrame):
             return
         self._collapsed = resolved
         self.tabs.setVisible(not resolved)
-        self.collapse_button.setText("Expand" if resolved else "Collapse")
+        self.collapse_button.setText((tr('Expand') if resolved else tr('Collapse')))
         self.collapse_button.setAccessibleName(
-            "Expand physics analysis workspace" if resolved else "Collapse physics analysis workspace"
+            (tr('Expand physics analysis workspace') if resolved else tr('Collapse physics analysis workspace'))
         )
         self.setMaximumHeight(38 if resolved else 16_777_215)
         self.layoutStateChanged.emit(self.layout_state())
@@ -425,16 +426,17 @@ class PhysicsWorkspace(QFrame):
         if page not in PHYSICS_WORKSPACE_PAGES:
             raise ValueError(f"unknown physics workspace page: {page}")
         for index in range(self.tabs.count()):
-            if self.tabs.tabText(index) == page:
+            if self.tabs.tabBar().tabData(index) == page:
                 self.tabs.setCurrentIndex(index)
                 self.set_collapsed(False)
                 return
 
     def _add_page(self, name: str, widget: QWidget) -> None:
         widget.setObjectName(f"physics{name}Page")
-        widget.setAccessibleName(f"Physics {name} page")
+        widget.setAccessibleName(tr('Physics {v0} page', v0=name))
         self._page_widgets[name] = widget
-        self.tabs.addTab(widget, name)
+        index = self.tabs.addTab(widget, tr(name))
+        self.tabs.tabBar().setTabData(index, name)
 
     def _series_changed(self, _index: int) -> None:
         self.copy_row_button.setEnabled(False)
@@ -537,8 +539,8 @@ class PhysicsWorkspace(QFrame):
         self._set_data_status_text(text)
 
     def _set_data_status_text(self, text: str) -> None:
-        self.copy_status_label.setText(text)
-        self.copy_status_label.setAccessibleDescription(text)
+        self.copy_status_label.setText(tr(text))
+        self.copy_status_label.setAccessibleDescription(tr(text))
 
     def _page_changed(self, _index: int) -> None:
         self.pageChanged.emit(self.current_page)
@@ -549,11 +551,11 @@ class PhysicsWorkspace(QFrame):
         page = QWidget()
         layout = QVBoxLayout(page)
         layout.setContentsMargins(16, 12, 16, 12)
-        label = QLabel(text)
+        label = QLabel(tr(text))
         label.setWordWrap(True)
         label.setAccessibleDescription(text)
-        button = QPushButton(button_text)
-        button.setAccessibleDescription(f"Show the existing {route} workflow in the inspector.")
+        button = QPushButton(tr(button_text))
+        button.setAccessibleDescription(tr('Show the existing {v0} workflow in the inspector.', v0=route))
         button.clicked.connect(lambda _checked=False, route=route: self.pageRouteRequested.emit(route))
         layout.addWidget(label)
         layout.addWidget(button, 0, Qt.AlignmentFlag.AlignLeft)

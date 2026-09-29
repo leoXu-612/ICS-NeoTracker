@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from neo_tracker.ui.language import tr
+
 from dataclasses import dataclass
 from typing import Any
 
@@ -29,28 +31,28 @@ class ReviewEditingMixin:
     def _start_manual_correction(self) -> None:
         if self._analysis_thread is not None:
             self.statusBar().showMessage(
-                "Cancel or finish Signal processing before correcting a result.", 6000
+                tr('Cancel or finish Signal processing before correcting a result.'), 6000
             )
             return
         if not self.current_task.pipeline.results:
-            QMessageBox.information(self, "Correct point", "Run tracking before correcting a result.")
+            QMessageBox.information(self, tr('Correct point'), tr('Run tracking before correcting a result.'))
             return
         if not self._prepare_preview_selection("starting a manual correction"):
             return
         if not self.preview_label.begin_manual_point_selection():
             QMessageBox.information(
-                self, "Correct point", "Load a readable video frame before correcting a point."
+                self, tr('Correct point'), tr('Load a readable video frame before correcting a point.')
             )
             return
         if self.review_tab is not None:
             self.sidebar_tabs.setCurrentWidget(self.review_tab)
-        self.statusBar().showMessage("Click the corrected point in the preview canvas.", 6000)
+        self.statusBar().showMessage(tr('Click the corrected point in the preview canvas.'), 6000)
 
     def _manual_point_selected(self, point: object) -> None:
         if self._analysis_thread is not None:
             self.preview_label.cancel_selection()
             self.statusBar().showMessage(
-                "Signal processing is using a stable result snapshot; correct the point after it finishes.",
+                tr('Signal processing is using a stable result snapshot; correct the point after it finishes.'),
                 6000,
             )
             return
@@ -61,7 +63,7 @@ class ReviewEditingMixin:
         index = self._current_result_index()
         if index is None:
             QMessageBox.information(
-                self, "Correct point", "No tracking result matches the current frame."
+                self, tr('Correct point'), tr('No tracking result matches the current frame.')
             )
             return
         if not self._confirm_draft_replacement(
@@ -73,23 +75,23 @@ class ReviewEditingMixin:
         try:
             edit = self.review_controller.manual_correction(task.pipeline, index, point_px)
         except Exception as exc:
-            QMessageBox.warning(self, "Correct point", f"Could not map manual point:\n{exc}")
+            QMessageBox.warning(self, tr('Correct point'), tr('Could not map manual point:\n{v0}', v0=exc))
             return
         self._finish_review_edit(task, index, previous_result, edit, "manual correction")
         self.statusBar().showMessage(
-            f"Corrected frame {task.pipeline.results[index].frame_index}.", 6000
+            tr('Corrected frame {v0}.', v0=task.pipeline.results[index].frame_index), 6000
         )
 
     def _mark_current_result_lost(self) -> None:
         if self._analysis_thread is not None:
             self.statusBar().showMessage(
-                "Cancel or finish Signal processing before changing result status.", 6000
+                tr('Cancel or finish Signal processing before changing result status.'), 6000
             )
             return
         index = self._current_result_index()
         if index is None:
             QMessageBox.information(
-                self, "Mark lost", "Select a result row or move to a tracked frame first."
+                self, tr('Mark lost'), tr('Select a result row or move to a tracked frame first.')
             )
             return
         if not self._confirm_draft_replacement(
@@ -103,7 +105,7 @@ class ReviewEditingMixin:
         )
         self._finish_review_edit(task, index, previous_result, edit, "marking a result lost")
         self.statusBar().showMessage(
-            f"Marked frame {task.pipeline.results[index].frame_index} as lost.", 6000
+            tr('Marked frame {v0} as lost.', v0=task.pipeline.results[index].frame_index), 6000
         )
 
     def _finish_review_edit(
@@ -216,6 +218,6 @@ class ReviewEditingMixin:
             self._mark_project_changed()
         self._sync_review_undo_action()
         self.statusBar().showMessage(
-            f"Undid the most recent Review edit on frame {undo.result.frame_index}.", 6000
+            tr('Undid the most recent Review edit on frame {v0}.', v0=undo.result.frame_index), 6000
         )
         return True

@@ -1,0 +1,110 @@
+test_100k_review_edits_use_incremental_ui_and_avoid_fingerprinting (tests.test_ui_main_window.MainWindowStructureTests.test_100k_review_edits_use_incremental_ui_and_avoid_fingerprinting) ... qt.qpa.fonts: Populating font family aliases took 68 ms. Replace uses of missing font family "Sans Serif" with one that exists to avoid this cost. 
+ok
+test_add_media_from_scratch_keep_editing_then_discard_controls_context_replacement (tests.test_ui_main_window.MainWindowStructureTests.test_add_media_from_scratch_keep_editing_then_discard_controls_context_replacement) ... ok
+test_add_media_probe_keeps_ui_responsive_and_avoids_duplicate_probe (tests.test_ui_main_window.MainWindowStructureTests.test_add_media_probe_keeps_ui_responsive_and_avoids_duplicate_probe) ... ok
+test_add_media_to_existing_project_preserves_current_task_draft (tests.test_ui_main_window.MainWindowStructureTests.test_add_media_to_existing_project_preserves_current_task_draft) ... ok
+test_analysis_terminal_signal_stays_locked_until_thread_exits (tests.test_ui_main_window.MainWindowStructureTests.test_analysis_terminal_signal_stays_locked_until_thread_exits) ... ok
+test_analysis_worker_keeps_ui_responsive_and_cancels_stale_results (tests.test_ui_main_window.MainWindowStructureTests.test_analysis_worker_keeps_ui_responsive_and_cancels_stale_results) ... ok
+test_annular_response_routes_to_angular_diagnostic_instead_of_empty_overlay (tests.test_ui_main_window.MainWindowStructureTests.test_annular_response_routes_to_angular_diagnostic_instead_of_empty_overlay) ... ok
+test_annular_retained_theta_signal_skips_review_recompute_without_a_frame (tests.test_ui_main_window.MainWindowStructureTests.test_annular_retained_theta_signal_skips_review_recompute_without_a_frame) ... ok
+test_annular_roi_selection_updates_roi_and_annular_mapping (tests.test_ui_main_window.MainWindowStructureTests.test_annular_roi_selection_updates_roi_and_annular_mapping) ... ok
+test_application_font_size_is_inherited_instead_of_forced_to_pixels (tests.test_ui_main_window.MainWindowStructureTests.test_application_font_size_is_inherited_instead_of_forced_to_pixels) ... This plugin does not support propagateSizeHints()
+ok
+test_application_level_close_all_windows_cannot_bypass_unsaved_confirmation (tests.test_ui_main_window.MainWindowStructureTests.test_application_level_close_all_windows_cannot_bypass_unsaved_confirmation) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_apply_project_defensively_cancels_active_preview_selection (tests.test_ui_main_window.MainWindowStructureTests.test_apply_project_defensively_cancels_active_preview_selection) ... ok
+test_background_project_open_reuses_prepared_clean_fingerprint (tests.test_ui_main_window.MainWindowStructureTests.test_background_project_open_reuses_prepared_clean_fingerprint) ... ok
+test_calibrated_wavefront_manual_correction_and_rerun_use_world_units (tests.test_ui_main_window.MainWindowStructureTests.test_calibrated_wavefront_manual_correction_and_rerun_use_world_units) ... ok
+test_calibration_change_clears_edit_only_result_state (tests.test_ui_main_window.MainWindowStructureTests.test_calibration_change_clears_edit_only_result_state) ... ok
+test_calibration_line_uses_editable_draft_before_length_and_unit_apply (tests.test_ui_main_window.MainWindowStructureTests.test_calibration_line_uses_editable_draft_before_length_and_unit_apply) ... ok
+test_calibration_rod_updates_and_resets_path_coordinate_scale (tests.test_ui_main_window.MainWindowStructureTests.test_calibration_rod_updates_and_resets_path_coordinate_scale) ... ok
+test_calibration_rod_updates_annular_coordinate_scale (tests.test_ui_main_window.MainWindowStructureTests.test_calibration_rod_updates_annular_coordinate_scale) ... ok
+test_calibration_rod_updates_scale_and_coordinate_mapping (tests.test_ui_main_window.MainWindowStructureTests.test_calibration_rod_updates_scale_and_coordinate_mapping) ... ok
+test_calibration_rod_updates_wavefront_scalar_state_to_world_units (tests.test_ui_main_window.MainWindowStructureTests.test_calibration_rod_updates_wavefront_scalar_state_to_world_units) ... ok
+test_cancel_media_import_keeps_selected_batch_out_of_project (tests.test_ui_main_window.MainWindowStructureTests.test_cancel_media_import_keeps_selected_batch_out_of_project) ... ok
+test_cancel_project_open_keeps_current_project_unchanged (tests.test_ui_main_window.MainWindowStructureTests.test_cancel_project_open_keeps_current_project_unchanged) ... ok
+test_canceling_scheduled_dirty_close_reopens_window_controls (tests.test_ui_main_window.MainWindowStructureTests.test_canceling_scheduled_dirty_close_reopens_window_controls) ... ok
+test_canceling_staged_source_review_keeps_changed_source_state (tests.test_ui_main_window.MainWindowStructureTests.test_canceling_staged_source_review_keeps_changed_source_state) ... ok
+test_circular_roi_selection_updates_roi_and_polar_mapping (tests.test_ui_main_window.MainWindowStructureTests.test_circular_roi_selection_updates_roi_and_polar_mapping) ... ok
+test_closing_tracking_terminal_gap_replaces_stale_success_status (tests.test_ui_main_window.MainWindowStructureTests.test_closing_tracking_terminal_gap_replaces_stale_success_status) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_closing_window_cancels_analysis_worker_safely (tests.test_ui_main_window.MainWindowStructureTests.test_closing_window_cancels_analysis_worker_safely) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_closing_window_cancels_media_import_safely (tests.test_ui_main_window.MainWindowStructureTests.test_closing_window_cancels_media_import_safely) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_closing_window_cancels_project_open_safely (tests.test_ui_main_window.MainWindowStructureTests.test_closing_window_cancels_project_open_safely) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_closing_window_cancels_review_response_worker_safely (tests.test_ui_main_window.MainWindowStructureTests.test_closing_window_cancels_review_response_worker_safely) ... This plugin does not support propagateSizeHints()
+ok
+test_closing_window_cancels_tracking_worker_and_blocks_new_jobs (tests.test_ui_main_window.MainWindowStructureTests.test_closing_window_cancels_tracking_worker_and_blocks_new_jobs) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_closing_window_terminates_active_preview_session_and_qthread (tests.test_ui_main_window.MainWindowStructureTests.test_closing_window_terminates_active_preview_session_and_qthread) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_curve_band_roi_selection_updates_path_pipeline_and_project (tests.test_ui_main_window.MainWindowStructureTests.test_curve_band_roi_selection_updates_path_pipeline_and_project) ... ok
+test_curve_node_canvas_and_table_selection_share_explicit_apply_draft (tests.test_ui_main_window.MainWindowStructureTests.test_curve_node_canvas_and_table_selection_share_explicit_apply_draft) ... ok
+test_default_tracking_job_wires_required_process_isolation (tests.test_ui_main_window.MainWindowStructureTests.test_default_tracking_job_wires_required_process_isolation) ... ok
+test_draft_transition_approval_defers_discard_until_commit (tests.test_ui_main_window.MainWindowStructureTests.test_draft_transition_approval_defers_discard_until_commit) ... ok
+test_failed_project_load_keeps_existing_tasks_usable_and_signals_unblocked (tests.test_ui_main_window.MainWindowStructureTests.test_failed_project_load_keeps_existing_tasks_usable_and_signals_unblocked) ... ok
+test_full_tracking_requires_explicit_result_replacement_and_clears_after_confirm (tests.test_ui_main_window.MainWindowStructureTests.test_full_tracking_requires_explicit_result_replacement_and_clears_after_confirm) ... ok
+test_identity_drift_after_progress_restores_complete_pre_run_state (tests.test_ui_main_window.MainWindowStructureTests.test_identity_drift_after_progress_restores_complete_pre_run_state) ... ok
+test_invalid_background_project_open_keeps_current_project (tests.test_ui_main_window.MainWindowStructureTests.test_invalid_background_project_open_keeps_current_project) ... ok
+test_isolated_ui_preview_commits_only_latest_exact_frame (tests.test_ui_main_window.MainWindowStructureTests.test_isolated_ui_preview_commits_only_latest_exact_frame) ... ok
+test_json_tab_validates_applies_and_rejects_pipeline_config (tests.test_ui_main_window.MainWindowStructureTests.test_json_tab_validates_applies_and_rejects_pipeline_config) ... ok
+test_keyboard_focus_has_a_visible_style_and_changes_rendered_pixels (tests.test_ui_main_window.MainWindowStructureTests.test_keyboard_focus_has_a_visible_style_and_changes_rendered_pixels) ... This plugin does not support propagateSizeHints()
+FAIL
+test_known_project_mutation_marks_dirty_and_revision_without_fingerprinting (tests.test_ui_main_window.MainWindowStructureTests.test_known_project_mutation_marks_dirty_and_revision_without_fingerprinting) ... ok
+test_large_replaced_project_releases_result_graph_after_gui_commit (tests.test_ui_main_window.MainWindowStructureTests.test_large_replaced_project_releases_result_graph_after_gui_commit) ... ok
+test_large_review_table_keeps_full_row_navigation_with_virtual_model (tests.test_ui_main_window.MainWindowStructureTests.test_large_review_table_keeps_full_row_navigation_with_virtual_model) ... This plugin does not support propagateSizeHints()
+ok
+test_legacy_media_relink_with_results_requires_explicit_clear (tests.test_ui_main_window.MainWindowStructureTests.test_legacy_media_relink_with_results_requires_explicit_clear) ... ok
+test_light_scroll_surfaces_and_status_bar_ignore_dark_system_background (tests.test_ui_main_window.MainWindowStructureTests.test_light_scroll_surfaces_and_status_bar_ignore_dark_system_background) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_loading_another_project_discards_task_removal_undo (tests.test_ui_main_window.MainWindowStructureTests.test_loading_another_project_discards_task_removal_undo) ... ok
+test_long_tracking_failure_is_bounded_and_still_records_terminal_run (tests.test_ui_main_window.MainWindowStructureTests.test_long_tracking_failure_is_bounded_and_still_records_terminal_run) ... ok
+test_main_window_fits_1024_with_dynamic_statuses_without_toolbar_overlap (tests.test_ui_main_window.MainWindowStructureTests.test_main_window_fits_1024_with_dynamic_statuses_without_toolbar_overlap) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_manual_correction_updates_current_result_and_overlay (tests.test_ui_main_window.MainWindowStructureTests.test_manual_correction_updates_current_result_and_overlay) ... ok
+test_marker_color_sampling_updates_observation_controls_and_json (tests.test_ui_main_window.MainWindowStructureTests.test_marker_color_sampling_updates_observation_controls_and_json) ... ok
+test_media_relink_protects_other_editor_and_preview_drafts (tests.test_ui_main_window.MainWindowStructureTests.test_media_relink_protects_other_editor_and_preview_drafts) ... ok
+test_mismatched_media_relink_clears_edit_only_result_state (tests.test_ui_main_window.MainWindowStructureTests.test_mismatched_media_relink_clears_edit_only_result_state) ... ok
+test_mismatched_media_relink_uses_explicit_destructive_apply (tests.test_ui_main_window.MainWindowStructureTests.test_mismatched_media_relink_uses_explicit_destructive_apply) ... ok
+test_open_and_tracking_wait_for_background_project_save (tests.test_ui_main_window.MainWindowStructureTests.test_open_and_tracking_wait_for_background_project_save) ... ok
+test_open_cancel_preserves_dirty_project_and_discard_loads_clean_target (tests.test_ui_main_window.MainWindowStructureTests.test_open_cancel_preserves_dirty_project_and_discard_loads_clean_target) ... ok
+test_open_project_probes_duplicate_media_path_once (tests.test_ui_main_window.MainWindowStructureTests.test_open_project_probes_duplicate_media_path_once) ... ok
+test_open_project_probes_media_in_background_and_keeps_ui_responsive (tests.test_ui_main_window.MainWindowStructureTests.test_open_project_probes_media_in_background_and_keeps_ui_responsive) ... ok
+test_open_project_waits_for_active_kinematics_jobs (tests.test_ui_main_window.MainWindowStructureTests.test_open_project_waits_for_active_kinematics_jobs) ... ok
+test_playback_controls_are_present_and_safe_without_media (tests.test_ui_main_window.MainWindowStructureTests.test_playback_controls_are_present_and_safe_without_media) ... ok
+test_playback_decode_failure_stops_with_visible_recovery_guidance (tests.test_ui_main_window.MainWindowStructureTests.test_playback_decode_failure_stops_with_visible_recovery_guidance) ... ok
+test_playback_interval_keeps_one_fps_media_at_source_rate (tests.test_ui_main_window.MainWindowStructureTests.test_playback_interval_keeps_one_fps_media_at_source_rate) ... Fatal Python error: Segmentation fault
+
+Current thread 0x00000001f2d87f80 (most recent call first):
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/neo_tracker/ui/action_registry.py", line 38 in register
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/neo_tracker/ui/shell/bindings.py", line 237 in bind_primary_actions
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/neo_tracker/ui/shell/main_shell.py", line 17 in __init__
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/neo_tracker/ui/main_window.py", line 619 in __init__
+  File "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/tests/test_ui_main_window.py", line 2576 in test_playback_interval_keeps_one_fps_media_at_source_rate
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/case.py", line 589 in _callTestMethod
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/case.py", line 634 in run
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/case.py", line 690 in __call__
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/suite.py", line 122 in run
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/suite.py", line 84 in __call__
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/suite.py", line 122 in run
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/suite.py", line 84 in __call__
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/runner.py", line 240 in run
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/main.py", line 281 in runTests
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/main.py", line 105 in __init__
+  File "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/unittest/__main__.py", line 18 in <module>
+  File "<frozen runpy>", line 88 in _run_code
+  File "<frozen runpy>", line 198 in _run_module_as_main
+
+Extension modules: numpy._core._multiarray_umath, numpy.linalg._umath_linalg, shiboken6.Shiboken, PySide6.QtCore, PySide6.QtGui, PySide6.QtWidgets, PySide6.QtTest, PySide6.QtUiTools (total: 8)
