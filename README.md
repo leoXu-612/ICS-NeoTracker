@@ -111,9 +111,9 @@ PSO 在设计中主要用于调参和局部精修，而不是代替整个追踪�
 当前桌面端使用 PySide6。窗口设计围绕实验工作流展开：
 
 - 2026-09-29 起默认简体中文，菜单“语言 / Language”可选择英文并在下次启动生效。新版截图和验证范围见 [中文桌面改版](artifacts/design-20260929/README.md)，独立 App 的使用方式见 [本机包说明](packaging/macos/README.md)。下文英文名称也用于对照内部标识和历史记录。
-- 左侧是工作区导航和素材列表；中央视频区支持首帧/指定帧显示、播放控制、ROI 覆盖层。
-- 顶部是 macOS 风格的统一工具栏，显示当前媒体、追踪状态、结果摘要，并提供 `Run Tracking`、`Export CSV` 和 `Report` 快捷入口；追踪运行时会显示实时帧进度，并将主按钮切换为可安全取消的 `Cancel`。已有 Results/Edits 时，新的 Full Run 会先列出替换数量并默认保留当前结果，用户必须明确选择 `Run + Replace Results/Edits` 才会覆盖。
-- 右侧参数区显示左侧所选工作区：素材、追踪、检查、信号、定标、流程、高级。追踪页只保留常用设置，完整模块信息集中在“流程”页。
+- 2026-10-02 按用户提供的 MATLAB 截图改为工程工作台：顶部阶段导航与分组工具带、左侧素材、中央视频、右侧参数和底部分析。说明和实测截图见 [工程工作台改版](artifacts/design-20261002/README.md)。
+- 顶部固定显示文件操作、`Run Tracking`、`Export CSV` 和 `Report`；中间命令组随素材、定标、追踪、检查、信号、流程、高级阶段切换。追踪时主按钮仍切换为 `Cancel`，且不会因参数页锁定而消失。已有 Results/Edits 时，新的 Full Run 仍先列出替换数量并默认保留当前结果，必须明确选择替换才会覆盖。
+- 右侧保留所选阶段的参数与上下文信息；取色、绘制选区、定标杆等常用命令集中到工具带，原控制器和禁用条件保持不变。完整模块信息仍在“流程”页。
 - 底部是可折叠的 Physics 工作台：`Data` 使用虚拟表显示 frame/true-time/value/validity/provenance/unit，`Plot` 以真实时间绘制并保留 gap，`Fit` 在后台运行模型；Video/Data/Plot/Fit 只通过一个带 source revision 的 true-time SelectionSession 联动。Velocity、Acceleration、Smooth、Fit、Residual 与 Export 统一走 Action Registry，UI 不包含数值算法。
 - `Media` 用于添加视频或 WAV 文件、查看 FPS/帧数/分辨率、播放和切换当前帧。多任务项目可在移除前查看该任务的 Results/Edits/Runs 数量，经二次确认后只移除项目条目、不删除磁盘媒体，并可立即撤销恢复同一任务及历史。项目媒体移动或离线时可在当前任务内选择替代文件：类型、核心元数据和已保存 source identity 匹配时保留历史结果；内容摘要或分辨率/FPS/帧数等不一致时明确要求重连并清除结果，视频与音频互换会被拒绝。
 - WAV 会作为音频媒体识别，显示采样率、样本数和通道数；视频追踪按钮保持禁用，但 `Signal` 标签页可直接使用 mono 或单独声道做 FFT/STFT。

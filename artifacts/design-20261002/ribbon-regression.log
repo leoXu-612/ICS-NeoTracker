@@ -1,0 +1,42 @@
+test_arrow_navigation_routes_by_stable_index_and_parameters_are_not_duplicated (tests.test_command_ribbon.CommandRibbonTests.test_arrow_navigation_routes_by_stable_index_and_parameters_are_not_duplicated) ... qt.qpa.fonts: Populating font family aliases took 70 ms. Replace uses of missing font family "Sans Serif" with one that exists to avoid this cost. 
+This plugin does not support propagateSizeHints()
+ok
+test_busy_gate_keeps_cancel_reachable_and_rejects_stage_switch (tests.test_command_ribbon.CommandRibbonTests.test_busy_gate_keeps_cancel_reachable_and_rejects_stage_switch) ... This plugin does not support propagateSizeHints()
+ok
+test_grouped_commands_fit_and_primary_actions_remain_visible_on_every_page (tests.test_command_ribbon.CommandRibbonTests.test_grouped_commands_fit_and_primary_actions_remain_visible_on_every_page) ... This plugin does not support propagateSizeHints()
+ok
+test_parameter_command_tracks_source_and_parent_enable_gates (tests.test_command_ribbon.CommandRibbonTests.test_parameter_command_tracks_source_and_parent_enable_gates) ... This plugin does not support propagateSizeHints()
+ok
+test_registry_command_has_one_handler_and_cannot_bypass_disabled_state (tests.test_command_ribbon.CommandRibbonTests.test_registry_command_has_one_handler_and_cannot_bypass_disabled_state) ... This plugin does not support propagateSizeHints()
+ok
+test_chinese_destructive_dialog_keeps_reject_as_default (tests.test_chinese_ui.ChineseDesktopTests.test_chinese_destructive_dialog_keeps_reject_as_default) ... ok
+test_core_actions_navigation_and_small_window_are_chinese (tests.test_chinese_ui.ChineseDesktopTests.test_core_actions_navigation_and_small_window_are_chinese) ... This plugin does not support propagateSizeHints()
+ok
+test_model_labels_do_not_change_scientific_identifiers (tests.test_chinese_ui.ChineseDesktopTests.test_model_labels_do_not_change_scientific_identifiers) ... ok
+test_navigation_respects_busy_gate_and_export_headers_stay_canonical (tests.test_chinese_ui.ChineseDesktopTests.test_navigation_respects_busy_gate_and_export_headers_stay_canonical) ... ok
+test_translated_pages_keep_canonical_persistence_and_routes (tests.test_chinese_ui.ChineseDesktopTests.test_translated_pages_keep_canonical_persistence_and_routes) ... ok
+test_blocked_action_keeps_latest_view_state_for_restore (tests.test_action_registry.ActionRegistryTests.test_blocked_action_keeps_latest_view_state_for_restore) ... ok
+test_button_and_action_share_one_handler_and_view_state (tests.test_action_registry.ActionRegistryTests.test_button_and_action_share_one_handler_and_view_state) ... ok
+test_unknown_and_duplicate_command_keys_are_rejected (tests.test_action_registry.ActionRegistryTests.test_unknown_and_duplicate_command_keys_are_rejected) ... ok
+test_primary_buttons_and_menus_share_registry_actions (tests.test_application_shell.ApplicationShellTests.test_primary_buttons_and_menus_share_registry_actions) ... ok
+test_view_state_drives_button_and_action_and_both_trigger_one_command (tests.test_application_shell.ApplicationShellTests.test_view_state_drives_button_and_action_and_both_trigger_one_command) ... ok
+test_global_test_teardown_does_not_revisit_closed_windows (tests.test_source_review_ui.SourceReviewUITests.test_global_test_teardown_does_not_revisit_closed_windows) ... ok
+test_review_table_tabs_leave_table_but_arrows_still_select_rows (tests.test_source_review_ui.SourceReviewUITests.test_review_table_tabs_leave_table_but_arrows_still_select_rows) ... This plugin does not support propagateSizeHints()
+ok
+test_sampled_match_requires_review_without_claiming_content_changed (tests.test_source_review_ui.SourceReviewUITests.test_sampled_match_requires_review_without_claiming_content_changed) ... ok
+test_source_review_blocks_direct_physics_exports_before_file_pickers (tests.test_source_review_ui.SourceReviewUITests.test_source_review_blocks_direct_physics_exports_before_file_pickers) ... ok
+test_source_review_starting_in_file_picker_cancels_physics_exports (tests.test_source_review_ui.SourceReviewUITests.test_source_review_starting_in_file_picker_cancels_physics_exports) ... ok
+test_toolbar_can_shrink_after_long_source_and_draft_statuses (tests.test_source_review_ui.SourceReviewUITests.test_toolbar_can_shrink_after_long_source_and_draft_statuses) ... This plugin does not support propagateSizeHints()
+ok
+test_main_window_fits_1024_with_dynamic_statuses_without_toolbar_overlap (tests.test_ui_main_window.MainWindowStructureTests.test_main_window_fits_1024_with_dynamic_statuses_without_toolbar_overlap) ... This plugin does not support propagateSizeHints()
+ok
+test_application_font_size_is_inherited_instead_of_forced_to_pixels (tests.test_ui_main_window.MainWindowStructureTests.test_application_font_size_is_inherited_instead_of_forced_to_pixels) ... This plugin does not support propagateSizeHints()
+ok
+test_light_scroll_surfaces_and_status_bar_ignore_dark_system_background (tests.test_ui_main_window.MainWindowStructureTests.test_light_scroll_surfaces_and_status_bar_ignore_dark_system_background) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+
+----------------------------------------------------------------------
+Ran 24 tests in 6.413s
+
+OK

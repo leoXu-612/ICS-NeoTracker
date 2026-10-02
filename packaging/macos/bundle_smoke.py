@@ -73,7 +73,14 @@ def run(report_path: str) -> int:
             assert window.current_task.media_info.available
             assert window.current_task.media_info.frame_count == 24
             report["checks"].append("frozen probe and preview helpers")
-            window._run_tracking()
+            window.workflow_navigation.setCurrentRow(window.workflow_order.index(4))
+            window.command_ribbon.parameter_buttons["roi.rectangle"].click()
+            assert window.preview_label.selection_mode() == "roi_rectangle"
+            window.command_ribbon.parameter_buttons["drawing.cancel"].click()
+            assert window.preview_label.selection_mode() is None
+            report["checks"].append("ribbon ROI drawing and cancellation use existing parameter controls")
+            window.workflow_navigation.setCurrentRow(window.workflow_order.index(1))
+            window.run_tracking_button.click()
             wait_for(lambda: window._background_tasks.idle)
             results = window.current_task.pipeline.results
             assert len(results) == 24
@@ -82,11 +89,13 @@ def run(report_path: str) -> int:
             np.testing.assert_allclose(source.time_s, np.arange(24) / 30, atol=1e-9)
             report["checks"].append("frozen tracking helper: 24 frames, positions and times")
             assert window.analysis_workspace_controller.select_series(source.series_id)
-            window._run_physics_fit(window.fit_panel.draft())
+            window.sidebar_tabs.setCurrentWidget(window.review_tab)
+            window.command_ribbon.command_buttons["physics.fit"].click()
+            window.fit_panel.run_button.click()
             wait_for(lambda: window._background_tasks.idle)
             fit = window.analysis_workspace_controller.state.fit_result
             assert fit is not None and fit.sample_count == 24
-            window._export_physics_analysis()
+            window.command_ribbon.command_buttons["physics.export"].click()
             wait_for(lambda: window._background_tasks.idle)
             assert {p.suffix for p in exports.iterdir()} == {".csv", ".npz", ".md"}
             with np.load(next(exports.glob("*.npz")), allow_pickle=False) as archive:
@@ -98,6 +107,12 @@ def run(report_path: str) -> int:
             window.sidebar_tabs.setCurrentWidget(window.tracking_tab)
             app.processEvents()
             window.grab().save(str(Path(report_path).with_suffix(".png")))
+            window.resize(1024, 768)
+            app.processEvents()
+            assert (window.width(), window.height()) == (1024, 768)
+            assert window.run_tracking_button.isVisible()
+            window.grab().save(str(Path(report_path).with_name("bundle-compact.png")))
+            report["checks"].append("engineering ribbon and native 1024x768 layout")
             window.project_path = root / "smoke.ntproj"
             assert window._save_project()
             wait_for(lambda: window._background_tasks.idle)

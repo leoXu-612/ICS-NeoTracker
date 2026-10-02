@@ -1,6 +1,12 @@
 """Simplified Chinese UI strings; scientific symbols and export schemas stay stable."""
 
 ZH_CN = {
+    "Grouped experiment commands": "实验分组工具带", "Project files": "项目文件",
+    "Execution": "追踪运行", "Tracking output": "追踪结果导出", "Experiment setup": "实验准备",
+    "Inspection": "数据检查", "Analysis views": "分析视图", "Target": "追踪目标",
+    "Correct results": "人工修正", "Revision": "结果修订", "Model pipeline": "处理流程",
+    "Kinematics": "运动学", "Model fit": "模型分析", "Analysis output": "分析结果",
+    "Signal source": "信号来源", "Frequency analysis": "频域分析", "Signal output": "信号导出", "Drawing": "绘图操作",
     "Save Project…": "保存项目…", "Current": "当前", "exact": "精确", "nearest": "最近样本", "unavailable": "不可用",
     "true time (s)": "真实时间（s）",
     "true time {time:.6f} s · frame {frame} · {match}": "时间 {time:.6f} s · 第 {frame} 帧 · {match}",

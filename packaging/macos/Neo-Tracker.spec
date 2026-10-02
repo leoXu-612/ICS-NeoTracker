@@ -29,7 +29,7 @@ app = BUNDLE(
     bundle_identifier="org.ics.neotracker", version="0.1.0",
     info_plist={
         "CFBundleDisplayName": "Neo-Tracker",
-        "CFBundleVersion": "20260929.1",
+        "CFBundleVersion": "20261002.1",
         "LSMinimumSystemVersion": "27.0",
         "NSHighResolutionCapable": True,
     },

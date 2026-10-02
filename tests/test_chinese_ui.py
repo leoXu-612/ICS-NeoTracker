@@ -31,14 +31,15 @@ class ChineseDesktopTests(unittest.TestCase):
         self.assertEqual(window.save_project_button.text(), "保存项目")
         self.assertEqual(window.run_tracking_button.text(), "开始追踪")
         self.assertEqual([window.workflow_navigation.item(i).text() for i in range(7)],
-                         ["素材", "追踪", "检查", "信号", "定标", "流程", "高级"])
+                         ["素材", "定标", "追踪", "检查", "信号", "流程", "高级"])
         self.assertFalse(window.sidebar_tabs.tabBar().isVisible())
         self.assertIn("从一段实验视频开始", window.preview_label.text())
         for index in range(7):
             window.workflow_navigation.setCurrentRow(index)
             self.app.processEvents()
-            self.assertEqual(window.sidebar_tabs.currentIndex(), index)
-            self.assertFalse(window.sidebar_tabs.widget(index).horizontalScrollBar().isVisible())
+            target = window.workflow_order[index]
+            self.assertEqual(window.sidebar_tabs.currentIndex(), target)
+            self.assertFalse(window.sidebar_tabs.widget(target).horizontalScrollBar().isVisible())
 
     def test_translated_pages_keep_canonical_persistence_and_routes(self):
         workspace = self.window.physics_workspace

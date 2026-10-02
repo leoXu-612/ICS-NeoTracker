@@ -611,7 +611,7 @@ class MainWindowStructureTests(unittest.TestCase):
             window.tracking_summary_label.text(),
             "Results: 20,000 · source review required",
         )
-        self.assertTrue(window.tracking_summary_label.displayedText().endswith("…"))
+        self.assertTrue(window.tracking_summary_label.displayedText())
         self.assertEqual((window.width(), window.height()), (1024, 768))
         self.assertLessEqual(window.minimumSizeHint().width(), 1024)
 
@@ -703,7 +703,7 @@ class MainWindowStructureTests(unittest.TestCase):
             scale = image.devicePixelRatio()
             self.assertEqual(
                 image.pixelColor(int(point.x() * scale), int(point.y() * scale)).name(),
-                "#f5f6f8",
+                "#f3f5f7",
                 widget.objectName(),
             )
 

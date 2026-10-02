@@ -230,10 +230,10 @@ class PhysicsWorkspace(QFrame):
             QFrame#physicsWorkspace {
                 background: #FBFCFC;
                 border: 1px solid #D8DEE2;
-                border-radius: 8px;
+                border-radius: 0px;
             }
             QFrame#physicsWorkspaceHeader {
-                background: #F3F5F6;
+                background: #E5ECF3;
                 border: none;
                 border-bottom: 1px solid #D8DEE2;
             }

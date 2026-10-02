@@ -11,7 +11,7 @@ from pathlib import Path
 from time import monotonic
 
 import numpy as np
-from PySide6.QtCore import QSignalBlocker, Qt, QTimer, Signal
+from PySide6.QtCore import QSignalBlocker, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (
@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QListWidget,
     QListWidgetItem,
+    QListView,
     QMainWindow,
     QMessageBox,
     QPushButton,
@@ -617,6 +618,9 @@ class NeoTrackerWindow(
         self._restore_physics_layout()
         self._reset_physics_context()
         self._application_shell = ApplicationShell(self)
+        from neo_tracker.ui.command_ribbon import CommandRibbon
+        self.command_ribbon = CommandRibbon(self, self.ribbon_host)
+        self.ribbon_host.layout().addWidget(self.command_ribbon)
         self.action_registry.bind_button("physics.export", self.fit_panel.export_button)
         self.action_registry.bind_button("physics.residual", self.fit_panel.residual_checkbox)
         self._update_physics_actions(self.analysis_workspace_controller.state)
@@ -624,6 +628,7 @@ class NeoTrackerWindow(
         self._load_presets()
         self._render_task(refresh_project_state=False)
         self._set_project_clean()
+        self.add_media_button.setFocus(Qt.FocusReason.OtherFocusReason)
 
     @property
     def action_registry(self) -> ActionRegistry:
@@ -672,21 +677,21 @@ class NeoTrackerWindow(
         root = QWidget()
         root.setObjectName("appRoot")
         root_layout = QVBoxLayout(root)
-        root_layout.setContentsMargins(12, 0, 12, 12)
-        root_layout.setSpacing(12)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setSpacing(0)
 
         top_toolbar = QFrame()
         top_toolbar.setObjectName("topToolbar")
-        top_toolbar.setMinimumHeight(54)
+        top_toolbar.setMinimumHeight(34)
         top_toolbar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         app_header = QHBoxLayout(top_toolbar)
-        app_header.setContentsMargins(12, 8, 12, 8)
+        app_header.setContentsMargins(10, 3, 10, 3)
         app_header.setSpacing(8)
         app_title = QLabel(tr('Neo-Tracker'))
         app_title.setObjectName("appTitle")
         app_title_font = app_title.font()
         if app_title_font.pointSizeF() > 0:
-            app_title_font.setPointSizeF(app_title_font.pointSizeF() * 1.45)
+            app_title_font.setPointSizeF(app_title_font.pointSizeF() * 1.15)
             app_title.setFont(app_title_font)
         self.preview_title_label.setObjectName("mediaTitle")
         self.tracking_status_label.setObjectName("statusChip")
@@ -727,29 +732,38 @@ class NeoTrackerWindow(
         app_header.addWidget(self.preview_title_label, 1)
         app_header.addWidget(self.tracking_status_label)
         app_header.addWidget(self.tracking_summary_label, 1)
-        app_header.addWidget(self.run_tracking_button)
-        app_header.addWidget(self.export_tracking_csv_button)
-        app_header.addWidget(self.export_report_button)
         root_layout.addWidget(top_toolbar)
+
+        self.workflow_order = (0, 4, 1, 2, 3, 5, 6)
+        self.workflow_navigation = QListWidget()
+        self.workflow_navigation.setObjectName("workflowNavigation")
+        self.workflow_navigation.setAccessibleName(tr("Workspace"))
+        self.workflow_navigation.setFlow(QListView.Flow.LeftToRight)
+        self.workflow_navigation.setWrapping(False)
+        self.workflow_navigation.setMovement(QListView.Movement.Static)
+        self.workflow_navigation.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.workflow_navigation.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.workflow_navigation.setFixedHeight(max(34, self.fontMetrics().height() + 16))
+        root_layout.addWidget(self.workflow_navigation)
+        self.ribbon_host = QWidget()
+        self.ribbon_host.setObjectName("ribbonHost")
+        ribbon_layout = QVBoxLayout(self.ribbon_host)
+        ribbon_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.addWidget(self.ribbon_host)
 
         self.workspace_splitter = QSplitter(Qt.Orientation.Vertical)
         self.workspace_splitter.setObjectName("workspaceSplitter")
         self.workspace_splitter.setChildrenCollapsible(False)
         self.workspace_splitter.splitterMoved.connect(self._physics_splitter_moved)
         content_layout = QHBoxLayout()
-        content_layout.setSpacing(12)
+        content_layout.setContentsMargins(5, 5, 5, 5)
+        content_layout.setSpacing(5)
         self.navigation_rail = QFrame()
         self.navigation_rail.setObjectName("navigationRail")
-        self.navigation_rail.setFixedWidth(174)
+        self.navigation_rail.setFixedWidth(185)
         self.navigation_layout = QVBoxLayout(self.navigation_rail)
-        self.navigation_layout.setContentsMargins(10, 8, 10, 10)
-        self.navigation_layout.setSpacing(7)
-        self.navigation_layout.addWidget(self._section_label(tr("Workspace")))
-        self.workflow_navigation = QListWidget()
-        self.workflow_navigation.setObjectName("workflowNavigation")
-        self.workflow_navigation.setAccessibleName(tr("Workspace"))
-        self.workflow_navigation.setFixedHeight(298)
-        self.navigation_layout.addWidget(self.workflow_navigation)
+        self.navigation_layout.setContentsMargins(0, 0, 0, 0)
+        self.navigation_layout.setSpacing(2)
         content_layout.addWidget(self.navigation_rail)
         content_layout.addWidget(self.workspace_splitter, 1)
         root_layout.addLayout(content_layout, 1)
@@ -762,9 +776,12 @@ class NeoTrackerWindow(
         preview_panel = QWidget()
         preview_panel.setObjectName("previewPanel")
         preview_layout = QVBoxLayout(preview_panel)
-        preview_layout.setContentsMargins(0, 0, 10, 0)
-        preview_layout.setSpacing(8)
-        preview_header = QHBoxLayout()
+        preview_layout.setContentsMargins(0, 0, 0, 0)
+        preview_layout.setSpacing(2)
+        preview_caption = QFrame()
+        preview_caption.setObjectName("previewPaneHeader")
+        preview_header = QHBoxLayout(preview_caption)
+        preview_header.setContentsMargins(7, 2, 7, 2)
         title = QLabel(tr('Preview'))
         title.setObjectName("previewTitle")
         preview_header.addWidget(title)
@@ -774,11 +791,11 @@ class NeoTrackerWindow(
         self.playback_status_label.setAccessibleName(tr('Preview status'))
         self.playback_status_label.hide()
         preview_header.addWidget(self.playback_status_label)
-        preview_layout.addLayout(preview_header)
+        preview_layout.addWidget(preview_caption)
 
         self.preview_label.setObjectName("previewCanvas")
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.preview_label.setMinimumSize(330, 220)
+        self.preview_label.setMinimumSize(320, 195)
         self.preview_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.preview_label.setFrameShape(QFrame.Shape.StyledPanel)
         self.preview_label.setText(tr('No media loaded\nAdd a video or WAV file from the Media tab.'))
@@ -794,8 +811,8 @@ class NeoTrackerWindow(
         transport_bar = QFrame()
         transport_bar.setObjectName("transportBar")
         preview_controls = QHBoxLayout(transport_bar)
-        preview_controls.setContentsMargins(10, 8, 10, 8)
-        preview_controls.setSpacing(8)
+        preview_controls.setContentsMargins(6, 3, 6, 3)
+        preview_controls.setSpacing(5)
         self.previous_frame_button.setObjectName("transportButton")
         self.play_button.setObjectName("transportButton")
         self.next_frame_button.setObjectName("transportButton")
@@ -840,12 +857,12 @@ class NeoTrackerWindow(
         sidebar = QWidget()
         sidebar.setObjectName("rightSidebar")
         self.right_sidebar = sidebar
-        sidebar.setMinimumWidth(320)
+        sidebar.setMinimumWidth(300)
         sidebar_layout = QVBoxLayout(sidebar)
-        sidebar_layout.setContentsMargins(4, 8, 4, 4)
-        sidebar_layout.setSpacing(8)
+        sidebar_layout.setContentsMargins(0, 0, 0, 0)
+        sidebar_layout.setSpacing(2)
         self.sidebar_tabs.setObjectName("sidebarTabs")
-        self.sidebar_tabs.setMinimumHeight(300)
+        self.sidebar_tabs.setMinimumHeight(220)
         self.inspector_heading = QLabel(tr("Inspector"))
         self.inspector_heading.setObjectName("inspectorHeading")
         sidebar_layout.addWidget(self.inspector_heading)
@@ -865,17 +882,17 @@ class NeoTrackerWindow(
         self._build_calibration_tab()
         self._build_workflow_tab()
         self._build_advanced_tab()
-        for index in range(self.sidebar_tabs.count()):
-            self.workflow_navigation.addItem(self.sidebar_tabs.tabText(index))
+        for index in self.workflow_order:
+            text = self.sidebar_tabs.tabText(index)
+            item = QListWidgetItem(text)
+            item.setSizeHint(QSize(max(76, self.fontMetrics().horizontalAdvance(text) + 34), self.workflow_navigation.height() - 4))
+            self.workflow_navigation.addItem(item)
         self.workflow_navigation.currentRowChanged.connect(self._workflow_selected)
         self.workflow_navigation.setCurrentRow(0)
-        self.navigation_layout.addWidget(self._section_label(tr("Media library")))
-        self.navigation_layout.addWidget(self.add_media_button)
+        project_heading = QLabel(tr("Media library"))
+        project_heading.setObjectName("projectExplorerHeading")
+        self.navigation_layout.addWidget(project_heading)
         self.navigation_layout.addWidget(self.task_list, 1)
-        project_actions = QVBoxLayout()
-        project_actions.addWidget(self.open_project_button)
-        project_actions.addWidget(self.save_project_button)
-        self.navigation_layout.addLayout(project_actions)
         self.sidebar_tabs.setAccessibleName(tr('Neo-Tracker workflow sections'))
         self.sidebar_tabs.setAccessibleDescription(
             tr('Choose Media, Tracking, Review, Signal, Calibration, Flow, or Pipeline JSON. Review also exposes physics inspection.')
@@ -891,11 +908,14 @@ class NeoTrackerWindow(
         self.add_media_button.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def _workflow_selected(self, index: int) -> None:
-        if self.sidebar_tabs.isEnabled() and self.sidebar_tabs.isTabEnabled(index):
-            self.sidebar_tabs.setCurrentIndex(index)
+        if not 0 <= index < len(self.workflow_order):
+            return
+        target = self.workflow_order[index]
+        if self.sidebar_tabs.isEnabled() and self.sidebar_tabs.isTabEnabled(target):
+            self.sidebar_tabs.setCurrentIndex(target)
         else:
             with QSignalBlocker(self.workflow_navigation):
-                self.workflow_navigation.setCurrentRow(self.sidebar_tabs.currentIndex())
+                self.workflow_navigation.setCurrentRow(self.workflow_order.index(self.sidebar_tabs.currentIndex()))
         self.inspector_heading.setText(self.sidebar_tabs.tabText(self.sidebar_tabs.currentIndex()))
 
     def _apply_style(self) -> None:
@@ -929,7 +949,9 @@ class NeoTrackerWindow(
 
     def _sidebar_tab_changed(self, _index: int) -> None:
         with QSignalBlocker(self.workflow_navigation):
-            self.workflow_navigation.setCurrentRow(_index)
+            self.workflow_navigation.setCurrentRow(self.workflow_order.index(_index))
+        if hasattr(self, "command_ribbon"):
+            self.command_ribbon.set_page(_index)
         self.inspector_heading.setText(self.sidebar_tabs.tabText(_index))
         self._sync_roi_node_editing()
         current = self.sidebar_tabs.currentWidget()
@@ -1020,7 +1042,8 @@ class NeoTrackerWindow(
         self.sample_marker_button.clicked.connect(self._start_color_sampling)
         marker_row.addWidget(self.marker_swatch_label)
         marker_row.addWidget(self.marker_sample_label, 1)
-        marker_row.addWidget(self.sample_marker_button)
+        self.sample_marker_button.setParent(self.marker_controls_widget)
+        self.sample_marker_button.hide()
         marker_form.addRow(tr('Marker color'), marker_row)
 
         self.color_tolerance_spin.setObjectName("colorToleranceSpin")
@@ -1275,6 +1298,11 @@ class NeoTrackerWindow(
     def _build_calibration_tab(self) -> None:
         tab = QWidget()
         layout = QVBoxLayout(tab)
+        # Commands keep their original controller wiring and parent enable gate;
+        # the ribbon is their visible surface. No widget is moved between layouts.
+        command_sources = QWidget(tab)
+        command_sources.hide()
+        source_layout = QVBoxLayout(command_sources)
         form = QFormLayout()
         self.curve_half_width_spin.setRange(1.0, 10_000.0)
         self.curve_half_width_spin.setDecimals(1)
@@ -1298,6 +1326,11 @@ class NeoTrackerWindow(
         annulus_button = QPushButton(tr('Annulus'))
         polygon_button = QPushButton(tr('Polygon'))
         curve_button = QPushButton(tr('Curve Band'))
+        self.roi_draw_buttons = {
+            "roi.rectangle": roi_button, "roi.circle": circle_button,
+            "roi.annulus": annulus_button, "roi.polygon": polygon_button,
+            "roi.curve": curve_button, "roi.reset": self.reset_roi_button,
+        }
         roi_button.setToolTip(tr('Draw a rectangular ROI on the current video frame.'))
         circle_button.setToolTip(tr('Draw a circular ROI on the current video frame.'))
         annulus_button.setToolTip(tr('Draw an annular ROI for circular fronts or rings.'))
@@ -1339,15 +1372,14 @@ class NeoTrackerWindow(
         calibration_action_row = QHBoxLayout()
         calibration_action_row.addWidget(self.mark_calibration_button)
         calibration_action_row.addWidget(self.reset_calibration_button)
-        layout.addWidget(self._section_label(tr('ROI TOOLS')))
-        layout.addLayout(roi_grid)
+        source_layout.addLayout(roi_grid)
         curve_width_form = QFormLayout()
         curve_width_form.addRow(tr('New curve half-width'), self.curve_half_width_spin)
         layout.addLayout(curve_width_form)
-        layout.addLayout(polygon_action_row)
+        source_layout.addLayout(polygon_action_row)
         layout.addWidget(self._section_label(tr('CALIBRATION')))
         layout.addWidget(self.calibration_editor)
-        layout.addLayout(calibration_action_row)
+        source_layout.addLayout(calibration_action_row)
         layout.addStretch(1)
         self.calibration_tab = self._add_sidebar_page(tab, tr('Calib'), "calibrationTab")
 
