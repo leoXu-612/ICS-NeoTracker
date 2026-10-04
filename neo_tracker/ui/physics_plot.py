@@ -165,9 +165,11 @@ class PhysicsPlot(QWidget):
     rangeSelected = Signal(float, float)
 
     _COLORS = (QColor("#2F6F9F"), QColor("#477B68"), QColor("#8A641C"), QColor("#6C5B8E"))
+    _DARK_COLORS = tuple(QColor(value) for value in ("#359bff", "#67d6b1", "#d4adff", "#ffbd66"))
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self._dark_mode = False
         self._series: tuple[SampleSeries, ...] = ()
         self._valid_indices: dict[str, np.ndarray] = {}
         self._prepared: tuple[DecimatedSeries, ...] = ()
@@ -184,6 +186,13 @@ class PhysicsPlot(QWidget):
         self.setAccessibleDescription(
             tr('Physical series against stored true time. Invalid samples are visible as line gaps. Use Left and Right Arrow to move the selected sample.')
         )
+
+    def set_dark_mode(self, enabled: bool) -> None:
+        self._dark_mode = bool(enabled)
+        self.update()
+
+    def _color(self, light: str, dark: str) -> QColor:
+        return QColor(dark if self._dark_mode else light)
 
     @property
     def prepared_point_count(self) -> int:
@@ -311,7 +320,12 @@ class PhysicsPlot(QWidget):
         )
         image.setDevicePixelRatio(scale)
         image.fill(QColor("#FBFCFC"))
-        self.render(image)
+        dark_mode = self._dark_mode
+        self._dark_mode = False
+        try:
+            self.render(image)
+        finally:
+            self._dark_mode = dark_mode
         try:
             with atomic_output_path(target) as temporary:
                 if not image.save(str(temporary), "PNG"):
@@ -327,28 +341,28 @@ class PhysicsPlot(QWidget):
         # antialiasing those thousands of crossings can stall the GUI thread;
         # sparse traces retain antialiasing for presentation quality.
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, not dense_trace)
-        painter.fillRect(self.rect(), QColor("#FBFCFC"))
+        painter.fillRect(self.rect(), self._color("#FBFCFC", "#20262c"))
         plot_rect = self._plot_rect()
         self._paint_legend(painter)
-        painter.setPen(QPen(QColor("#D8DEE2"), 1.0))
+        painter.setPen(QPen(self._color("#D8DEE2", "#46505b"), 1.0))
         painter.drawRect(plot_rect)
 
         bounds = self._data_bounds()
         if bounds is None:
-            painter.setPen(QColor("#626A70"))
+            painter.setPen(self._color("#626A70", "#b6c1ce"))
             message = (
                 "No valid samples to plot"
                 if self._prepared
                 else "Choose a physical series to plot"
             )
-            painter.drawText(plot_rect, Qt.AlignmentFlag.AlignCenter, message)
+            painter.drawText(plot_rect, Qt.AlignmentFlag.AlignCenter, tr(message))
             self._paint_focus_ring(painter)
             return
         time_min, time_max, value_min, value_max = bounds
         for fraction in (0.25, 0.5, 0.75):
             x = plot_rect.left() + plot_rect.width() * fraction
             y = plot_rect.top() + plot_rect.height() * fraction
-            painter.setPen(QPen(QColor("#E5E9EB"), 1.0, Qt.PenStyle.DotLine))
+            painter.setPen(QPen(self._color("#E5E9EB", "#3d4751"), 1.0, Qt.PenStyle.DotLine))
             painter.drawLine(QPointF(x, plot_rect.top()), QPointF(x, plot_rect.bottom()))
             painter.drawLine(QPointF(plot_rect.left(), y), QPointF(plot_rect.right(), y))
 
@@ -366,7 +380,10 @@ class PhysicsPlot(QWidget):
 
         endpoints: list[tuple[int, QPointF, QColor]] = []
         for layer_index, prepared in enumerate(self._prepared):
-            color = self._COLORS[layer_index % len(self._COLORS)]
+            colors = self._DARK_COLORS if self._dark_mode else self._COLORS
+            color = colors[layer_index % len(colors)]
+            if self._dark_mode and prepared.series_id.startswith("fit:"):
+                color = QColor("#ffbc43")
             if prepared.series_id.startswith("fit:"):
                 pen = QPen(color, 1.5, Qt.PenStyle.DashLine)
             else:
@@ -397,7 +414,7 @@ class PhysicsPlot(QWidget):
 
         self._paint_layer_labels(painter, plot_rect, endpoints)
         self._paint_cursor(painter, plot_rect, bounds)
-        painter.setPen(QColor("#626A70"))
+        painter.setPen(self._color("#626A70", "#b6c1ce"))
         half_width = plot_rect.width() / 2.0
         tick_alignment = Qt.AlignmentFlag.AlignVCenter
         painter.drawText(
@@ -550,7 +567,7 @@ class PhysicsPlot(QWidget):
         columns = min(4, count)
         cell_width = max(1.0, (self.width() - 16.0) / columns)
         metrics = painter.fontMetrics()
-        painter.setPen(QColor("#20272C"))
+        painter.setPen(self._color("#20272C", "#e3eaf2"))
         for index, prepared in enumerate(self._prepared):
             row, column = divmod(index, 4)
             rect = QRectF(
@@ -570,8 +587,8 @@ class PhysicsPlot(QWidget):
                 text,
             )
 
-    @staticmethod
     def _paint_layer_labels(
+        self,
         painter: QPainter,
         plot_rect: QRectF,
         endpoints: Sequence[tuple[int, QPointF, QColor]],
@@ -584,8 +601,8 @@ class PhysicsPlot(QWidget):
             label = QRectF(plot_rect.right() + 2.0, center_y - 7.0, 16.0, 14.0)
             painter.setPen(QPen(color, 0.8))
             painter.drawLine(endpoint, QPointF(label.left(), label.center().y()))
-            painter.fillRect(label, QColor("#FBFCFC"))
-            painter.setPen(QColor("#20272C"))
+            painter.fillRect(label, self._color("#FBFCFC", "#20262c"))
+            painter.setPen(self._color("#20272C", "#e3eaf2"))
             painter.drawText(label, Qt.AlignmentFlag.AlignCenter, str(layer_index + 1))
 
     def _update_accessible_description(self) -> None:
@@ -649,12 +666,12 @@ class PhysicsPlot(QWidget):
         if not math.isfinite(time_s):
             return
         x = self._x_for_time(time_s, plot_rect, bounds[0], bounds[1])
-        painter.setPen(QPen(QColor("#C55232"), 1.5))
+        painter.setPen(QPen(self._color("#C55232", "#ffbc43"), 1.5))
         painter.drawLine(QPointF(x, plot_rect.top()), QPointF(x, plot_rect.bottom()))
         value = float(source.values[index])
         if source.valid_mask[index] and math.isfinite(value):
             y = self._y_for_value(value, plot_rect, bounds[2], bounds[3])
-            painter.setBrush(QColor("#C55232"))
+            painter.setBrush(self._color("#C55232", "#ffbc43"))
             painter.drawEllipse(QPointF(x, y), 3.5, 3.5)
         text = f"{time_s:.6f} s"
         metrics = painter.fontMetrics()

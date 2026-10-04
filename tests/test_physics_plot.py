@@ -91,6 +91,27 @@ class PlotDecimationTests(unittest.TestCase):
 
 
 class PhysicsPlotWidgetTests(unittest.TestCase):
+    def test_dark_screen_keeps_print_export_light_and_preserves_selection(self) -> None:
+        app = QApplication.instance() or QApplication([])
+        plot = PhysicsPlot()
+        plot.resize(640, 300)
+        source = make_series(120)
+        plot.set_series((source,))
+        plot.set_selected_sample(20, source.series_id)
+        plot.set_dark_mode(True)
+        plot.show()
+        app.processEvents()
+        plot.clearFocus()
+        self.assertEqual(plot.grab().toImage().pixelColor(0, 0).name(), "#20262c")
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "plot.png"
+            self.assertTrue(plot.export_image(target))
+            self.assertEqual(QImage(str(target)).pixelColor(0, 0).name(), "#fbfcfc")
+        self.assertTrue(plot._dark_mode)
+        self.assertEqual(plot.selected_sample_index, 20)
+        self.assertEqual(plot.series_ids, (source.series_id,))
+        plot.close()
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.app = QApplication.instance() or QApplication([])
