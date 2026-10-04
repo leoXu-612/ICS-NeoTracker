@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QListView
+from PySide6.QtWidgets import QApplication, QComboBox
 
 from neo_tracker.ui.language import set_language
 from neo_tracker.ui.main_window import NeoTrackerWindow
@@ -11,7 +11,7 @@ from neo_tracker.ui.view_state import PhysicsWorkspaceStateStore
 from tests.test_ui_main_window import close_window_safely
 
 
-class CommandRibbonTests(unittest.TestCase):
+class WorkspaceCommandTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = QApplication.instance() or QApplication([])
@@ -25,24 +25,25 @@ class CommandRibbonTests(unittest.TestCase):
         self.window.show()
         self.app.processEvents()
 
-    def test_grouped_commands_fit_and_primary_actions_remain_visible_on_every_page(self):
+    def test_compact_commands_fit_and_primary_actions_remain_visible_on_every_page(self):
         window = self.window
         self.assertEqual((window.width(), window.height()), (1024, 768))
-        self.assertEqual(window.workflow_navigation.flow(), QListView.Flow.LeftToRight)
+        self.assertIsInstance(window.workflow_navigation, QComboBox)
+        self.assertEqual(window.workspace_splitter.widget(1), window.physics_workspace)
+        self.assertGreater(window.physics_workspace.width(), window.main_splitter.width())
         for index in range(7):
-            window.workflow_navigation.setCurrentRow(index)
+            window.workflow_navigation.setCurrentIndex(index)
             self.app.processEvents()
-            self.assertEqual(window.command_ribbon.pages.currentIndex(), window.workflow_order[index])
-            for button in (window.add_media_button, window.open_project_button, window.save_project_button,
-                           window.run_tracking_button, window.export_tracking_csv_button):
+            self.assertEqual(window.workspace_commands.pages.currentIndex(), window.workflow_order[index])
+            for button in (window.add_media_button, window.run_tracking_button,
+                           window.workspace_commands.export_button):
                 self.assertTrue(button.isVisible())
-                rectangle = button.rect()
-                point = button.mapTo(window, rectangle.bottomRight())
+                point = button.mapTo(window, button.rect().bottomRight())
                 self.assertTrue(window.rect().contains(point), button.objectName())
 
     def test_registry_command_has_one_handler_and_cannot_bypass_disabled_state(self):
         window = self.window
-        button = window.command_ribbon.command_buttons["physics.velocity"]
+        button = window.workspace_commands.command_buttons["physics.velocity"]
         self.assertIs(button.defaultAction(), window.action_registry.action("physics.velocity"))
         window._set_action_enabled("physics.velocity", True)
         with patch.object(window, "_create_physics_velocity") as handler:
@@ -56,7 +57,7 @@ class CommandRibbonTests(unittest.TestCase):
     def test_parameter_command_tracks_source_and_parent_enable_gates(self):
         window = self.window
         source = window.sample_marker_button
-        button = window.command_ribbon.parameter_buttons["marker.sample"]
+        button = window.workspace_commands.parameter_buttons["marker.sample"]
         calls = []
         with patch.object(window, "_prepare_preview_selection", return_value=False):
             source.clicked.connect(lambda: calls.append(True))
@@ -76,18 +77,30 @@ class CommandRibbonTests(unittest.TestCase):
         window.sidebar_tabs.setCurrentWidget(window.tracking_tab)
         window.sidebar_tabs.setEnabled(False)
         window._update_action("tracking.run", enabled=True, text="取消")
-        window.workflow_navigation.setCurrentRow(0)
+        window.workflow_navigation.setCurrentIndex(0)
         self.assertIs(window.sidebar_tabs.currentWidget(), window.tracking_tab)
-        self.assertEqual(window.workflow_navigation.currentRow(), window.workflow_order.index(1))
+        self.assertEqual(window.workflow_navigation.currentIndex(), window.workflow_order.index(1))
         self.assertTrue(window.run_tracking_button.isVisible())
         self.assertTrue(window.run_tracking_button.isEnabled())
 
-    def test_arrow_navigation_routes_by_stable_index_and_parameters_are_not_duplicated(self):
+    def test_library_preset_obeys_tracking_and_project_open_gates(self):
         window = self.window
+        window._set_tracking_busy(True)
+        self.assertFalse(window.preset_combo.isEnabled())
+        window._set_tracking_busy(False)
+        self.assertTrue(window.preset_combo.isEnabled())
+        window._set_media_probe_busy(True, operation="open")
+        self.assertFalse(window.preset_combo.isEnabled())
+        window._set_media_probe_busy(False, operation="open")
+        self.assertTrue(window.preset_combo.isEnabled())
+
+    def test_keyboard_navigation_and_export_menu_preserve_canonical_routes(self):
+        window = self.window
+        window.workflow_navigation.setCurrentIndex(0)
         window.workflow_navigation.setFocus()
-        QTest.keyClick(window.workflow_navigation, Qt.Key.Key_Right)
+        QTest.keyClick(window.workflow_navigation, Qt.Key.Key_Down)
         self.assertIs(window.sidebar_tabs.currentWidget(), window.calibration_tab)
-        self.assertEqual(window.command_ribbon.pages.currentIndex(), 4)
-        self.assertTrue(window.calibration_editor.isVisible())
-        self.assertFalse(window.mark_calibration_button.isVisible())
-        self.assertTrue(window.command_ribbon.parameter_buttons["calibration.mark"].isVisible())
+        self.assertTrue(window.workspace_commands.parameter_buttons["calibration.mark"].isVisible())
+        menu = window.workspace_commands.export_button.menu()
+        self.assertIn(window.action_registry.action("physics.export"), menu.actions())
+        self.assertIn(window.action_registry.action("tracking.export_csv"), menu.actions())

@@ -319,6 +319,20 @@ class PhysicsPlotWidgetTests(unittest.TestCase):
 
         self.assertIsNone(plot._fit_series)
 
+    def test_comparison_preserves_fit_only_for_the_identical_primary_series(self) -> None:
+        plot = PhysicsPlot()
+        source = make_series(20)
+        other = replace(source, series_id="other:x")
+        plot.set_series((source,))
+        request = FitDraft(source.series_id, "linear", float(source.time_s[0]), float(source.time_s[-1])).to_request(source)
+        plot.set_fit_result(source, fit_result(source, request))
+        layer = plot._fit_series
+        self.assertIsNotNone(layer)
+        plot.set_series((source, other), preserve_fit=True)
+        self.assertIs(plot._fit_series, layer)
+        plot.set_series((other, source), preserve_fit=True)
+        self.assertIsNone(plot._fit_series)
+
     def test_single_axis_rejects_mixed_or_unknown_unit_overlays(self) -> None:
         plot = PhysicsPlot()
         source = make_series(20)

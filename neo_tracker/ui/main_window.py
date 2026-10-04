@@ -12,7 +12,7 @@ from time import monotonic
 
 import numpy as np
 from PySide6.QtCore import QSignalBlocker, QSize, Qt, QTimer, Signal
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QImage, QPixmap
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import (
     QApplication,
@@ -27,7 +27,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QListWidget,
     QListWidgetItem,
-    QListView,
     QMainWindow,
     QMessageBox,
     QPushButton,
@@ -615,12 +614,13 @@ class NeoTrackerWindow(
         )
 
         self._build_ui()
+        self.physics_workspace.compare_checkbox.setChecked(False)
         self._restore_physics_layout()
         self._reset_physics_context()
         self._application_shell = ApplicationShell(self)
-        from neo_tracker.ui.command_ribbon import CommandRibbon
-        self.command_ribbon = CommandRibbon(self, self.ribbon_host)
-        self.ribbon_host.layout().addWidget(self.command_ribbon)
+        from neo_tracker.ui.workspace_commands import WorkspaceCommands
+        self.workspace_commands = WorkspaceCommands(self, self.command_host)
+        self.command_host.layout().addWidget(self.workspace_commands)
         self.action_registry.bind_button("physics.export", self.fit_panel.export_button)
         self.action_registry.bind_button("physics.residual", self.fit_panel.residual_checkbox)
         self._update_physics_actions(self.analysis_workspace_controller.state)
@@ -658,6 +658,8 @@ class NeoTrackerWindow(
                 tool_tip=tool_tip,
             )
             if icon is not None:
+                from neo_tracker.ui.desktop_theme import workbench_icon
+                icon = workbench_icon(icon)
                 shell.set_icon(key, icon)
             return
         button = getattr(self, PRIMARY_BUTTON_ATTRIBUTES[key])
@@ -682,10 +684,10 @@ class NeoTrackerWindow(
 
         top_toolbar = QFrame()
         top_toolbar.setObjectName("topToolbar")
-        top_toolbar.setMinimumHeight(34)
+        top_toolbar.setMinimumHeight(52)
         top_toolbar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         app_header = QHBoxLayout(top_toolbar)
-        app_header.setContentsMargins(10, 3, 10, 3)
+        app_header.setContentsMargins(16, 8, 12, 8)
         app_header.setSpacing(8)
         app_title = QLabel(tr('Neo-Tracker'))
         app_title.setObjectName("appTitle")
@@ -727,61 +729,64 @@ class NeoTrackerWindow(
         self.tracking_status_label.setAccessibleName(tr('Tracking status'))
         self.tracking_summary_label.setAccessibleName(tr('Tracking progress and result summary'))
         app_header.addWidget(app_title)
-        app_header.addWidget(self.global_project_dirty_label)
-        app_header.addWidget(self.global_draft_label)
         app_header.addWidget(self.preview_title_label, 1)
-        app_header.addWidget(self.tracking_status_label)
-        app_header.addWidget(self.tracking_summary_label, 1)
+        app_header.addWidget(self.add_media_button)
+        app_header.addWidget(self.run_tracking_button)
+        self.toolbar_actions = QHBoxLayout()
+        self.toolbar_actions.setSpacing(8)
+        app_header.addLayout(self.toolbar_actions)
+        self.statusBar().addPermanentWidget(self.global_project_dirty_label)
+        self.statusBar().addPermanentWidget(self.global_draft_label)
+        self.statusBar().addPermanentWidget(self.tracking_status_label)
+        self.statusBar().addPermanentWidget(self.tracking_summary_label, 1)
         root_layout.addWidget(top_toolbar)
 
         self.workflow_order = (0, 4, 1, 2, 3, 5, 6)
-        self.workflow_navigation = QListWidget()
+        self.workflow_navigation = QComboBox()
         self.workflow_navigation.setObjectName("workflowNavigation")
-        self.workflow_navigation.setAccessibleName(tr("Workspace"))
-        self.workflow_navigation.setFlow(QListView.Flow.LeftToRight)
-        self.workflow_navigation.setWrapping(False)
-        self.workflow_navigation.setMovement(QListView.Movement.Static)
-        self.workflow_navigation.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.workflow_navigation.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.workflow_navigation.setFixedHeight(max(34, self.fontMetrics().height() + 16))
-        root_layout.addWidget(self.workflow_navigation)
-        self.ribbon_host = QWidget()
-        self.ribbon_host.setObjectName("ribbonHost")
-        ribbon_layout = QVBoxLayout(self.ribbon_host)
-        ribbon_layout.setContentsMargins(0, 0, 0, 0)
-        root_layout.addWidget(self.ribbon_host)
+        self.workflow_navigation.setAccessibleName(tr("Inspector controls"))
+        self.workflow_navigation.setToolTip(tr("Choose controls for the current task."))
+        self.command_host = QWidget()
+        self.command_host.setObjectName("commandHost")
+        command_layout = QVBoxLayout(self.command_host)
+        command_layout.setContentsMargins(0, 0, 0, 0)
 
         self.workspace_splitter = QSplitter(Qt.Orientation.Vertical)
         self.workspace_splitter.setObjectName("workspaceSplitter")
         self.workspace_splitter.setChildrenCollapsible(False)
         self.workspace_splitter.splitterMoved.connect(self._physics_splitter_moved)
-        content_layout = QHBoxLayout()
-        content_layout.setContentsMargins(5, 5, 5, 5)
-        content_layout.setSpacing(5)
+        root_layout.addWidget(self.workspace_splitter, 1)
+        self.upper_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.upper_splitter.setChildrenCollapsible(False)
+        self.upper_splitter.setHandleWidth(1)
+        self.workspace_splitter.addWidget(self.upper_splitter)
         self.navigation_rail = QFrame()
         self.navigation_rail.setObjectName("navigationRail")
-        self.navigation_rail.setFixedWidth(185)
+        self.navigation_rail.setMinimumWidth(170)
+        self.navigation_rail.setMaximumWidth(340)
         self.navigation_layout = QVBoxLayout(self.navigation_rail)
         self.navigation_layout.setContentsMargins(0, 0, 0, 0)
         self.navigation_layout.setSpacing(2)
-        content_layout.addWidget(self.navigation_rail)
-        content_layout.addWidget(self.workspace_splitter, 1)
-        root_layout.addLayout(content_layout, 1)
+        self.upper_splitter.addWidget(self.navigation_rail)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setObjectName("mainSplitter")
         self.main_splitter = splitter
-        self.workspace_splitter.addWidget(splitter)
+        splitter.setHandleWidth(1)
+        self.upper_splitter.addWidget(splitter)
+        self.upper_splitter.setStretchFactor(0, 0)
+        self.upper_splitter.setStretchFactor(1, 1)
+        self.upper_splitter.setSizes([240, 1100])
 
         preview_panel = QWidget()
         preview_panel.setObjectName("previewPanel")
         preview_layout = QVBoxLayout(preview_panel)
-        preview_layout.setContentsMargins(0, 0, 0, 0)
-        preview_layout.setSpacing(2)
+        preview_layout.setContentsMargins(10, 0, 10, 0)
+        preview_layout.setSpacing(0)
         preview_caption = QFrame()
         preview_caption.setObjectName("previewPaneHeader")
         preview_header = QHBoxLayout(preview_caption)
-        preview_header.setContentsMargins(7, 2, 7, 2)
+        preview_header.setContentsMargins(4, 10, 4, 10)
         title = QLabel(tr('Preview'))
         title.setObjectName("previewTitle")
         preview_header.addWidget(title)
@@ -811,7 +816,7 @@ class NeoTrackerWindow(
         transport_bar = QFrame()
         transport_bar.setObjectName("transportBar")
         preview_controls = QHBoxLayout(transport_bar)
-        preview_controls.setContentsMargins(6, 3, 6, 3)
+        preview_controls.setContentsMargins(2, 9, 2, 9)
         preview_controls.setSpacing(5)
         self.previous_frame_button.setObjectName("transportButton")
         self.play_button.setObjectName("transportButton")
@@ -857,7 +862,7 @@ class NeoTrackerWindow(
         sidebar = QWidget()
         sidebar.setObjectName("rightSidebar")
         self.right_sidebar = sidebar
-        sidebar.setMinimumWidth(300)
+        sidebar.setMinimumWidth(280)
         sidebar_layout = QVBoxLayout(sidebar)
         sidebar_layout.setContentsMargins(0, 0, 0, 0)
         sidebar_layout.setSpacing(2)
@@ -865,11 +870,18 @@ class NeoTrackerWindow(
         self.sidebar_tabs.setMinimumHeight(220)
         self.inspector_heading = QLabel(tr("Inspector"))
         self.inspector_heading.setObjectName("inspectorHeading")
-        sidebar_layout.addWidget(self.inspector_heading)
+        inspector_header = QHBoxLayout()
+        inspector_header.setContentsMargins(0, 5, 10, 5)
+        inspector_header.addWidget(self.inspector_heading)
+        inspector_header.addWidget(self.workflow_navigation, 1)
+        sidebar_layout.addLayout(inspector_header)
+        sidebar_layout.addWidget(self.command_host)
         self.sidebar_tabs.tabBar().hide()
         sidebar_layout.addWidget(self.sidebar_tabs)
         splitter.addWidget(sidebar)
-        splitter.setSizes([790, 360])
+        splitter.setSizes([760, 310])
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 0)
         self.workspace_splitter.addWidget(self.physics_workspace)
         self.workspace_splitter.setStretchFactor(0, 1)
         self.workspace_splitter.setStretchFactor(1, 0)
@@ -884,15 +896,28 @@ class NeoTrackerWindow(
         self._build_advanced_tab()
         for index in self.workflow_order:
             text = self.sidebar_tabs.tabText(index)
-            item = QListWidgetItem(text)
-            item.setSizeHint(QSize(max(76, self.fontMetrics().horizontalAdvance(text) + 34), self.workflow_navigation.height() - 4))
-            self.workflow_navigation.addItem(item)
-        self.workflow_navigation.currentRowChanged.connect(self._workflow_selected)
-        self.workflow_navigation.setCurrentRow(0)
+            self.workflow_navigation.addItem(text, index)
+        self.workflow_navigation.currentIndexChanged.connect(self._workflow_selected)
+        self.workflow_navigation.setCurrentIndex(self.workflow_order.index(1))
         project_heading = QLabel(tr("Media library"))
         project_heading.setObjectName("projectExplorerHeading")
         self.navigation_layout.addWidget(project_heading)
-        self.navigation_layout.addWidget(self.task_list, 1)
+        self.task_list.setMaximumHeight(180)
+        self.navigation_layout.addWidget(self.task_list)
+        target_heading = QLabel(tr("Tracking setup"))
+        target_heading.setObjectName("projectExplorerHeading")
+        self.navigation_layout.addWidget(target_heading)
+        target_controls = QWidget()
+        target_layout = QVBoxLayout(target_controls)
+        target_layout.setContentsMargins(10, 0, 10, 10)
+        target_layout.addWidget(self.preset_combo)
+        target_layout.addWidget(self.preset_description)
+        self.navigation_layout.addWidget(target_controls)
+        self.navigation_layout.addStretch(1)
+        for button in (self.open_project_button, self.save_project_button,
+                       self.export_tracking_csv_button, self.export_report_button):
+            button.setParent(root)
+            button.hide()
         self.sidebar_tabs.setAccessibleName(tr('Neo-Tracker workflow sections'))
         self.sidebar_tabs.setAccessibleDescription(
             tr('Choose Media, Tracking, Review, Signal, Calibration, Flow, or Pipeline JSON. Review also exposes physics inspection.')
@@ -915,13 +940,15 @@ class NeoTrackerWindow(
             self.sidebar_tabs.setCurrentIndex(target)
         else:
             with QSignalBlocker(self.workflow_navigation):
-                self.workflow_navigation.setCurrentRow(self.workflow_order.index(self.sidebar_tabs.currentIndex()))
-        self.inspector_heading.setText(self.sidebar_tabs.tabText(self.sidebar_tabs.currentIndex()))
+                self.workflow_navigation.setCurrentIndex(self.workflow_order.index(self.sidebar_tabs.currentIndex()))
 
     def _apply_style(self) -> None:
-        from neo_tracker.ui.desktop_theme import apply_desktop_theme
+        from neo_tracker.ui.desktop_theme import apply_desktop_theme, workbench_icon
 
         apply_desktop_theme(self)
+        for key in self.action_registry.keys:
+            self.action_registry.set_icon(key, workbench_icon(self.action_registry.action(key).icon()))
+        self.workspace_commands.set_page(self.sidebar_tabs.currentIndex())
 
     @staticmethod
     def _section_label(text: str) -> QLabel:
@@ -949,10 +976,9 @@ class NeoTrackerWindow(
 
     def _sidebar_tab_changed(self, _index: int) -> None:
         with QSignalBlocker(self.workflow_navigation):
-            self.workflow_navigation.setCurrentRow(self.workflow_order.index(_index))
-        if hasattr(self, "command_ribbon"):
-            self.command_ribbon.set_page(_index)
-        self.inspector_heading.setText(self.sidebar_tabs.tabText(_index))
+            self.workflow_navigation.setCurrentIndex(self.workflow_order.index(_index))
+        if hasattr(self, "workspace_commands"):
+            self.workspace_commands.set_page(_index)
         self._sync_roi_node_editing()
         current = self.sidebar_tabs.currentWidget()
         if current is self.review_tab:
@@ -976,6 +1002,7 @@ class NeoTrackerWindow(
 
         layout.addWidget(self._section_label(tr('TASKS')))
         self.task_list.setObjectName("taskList")
+        self.task_list.setIconSize(QSize(64, 44))
         self.task_list.currentItemChanged.connect(self._task_changed)
         self._show_empty_task_list_placeholder()
         self.task_actions_panel.removeConfirmed.connect(self._remove_current_task)
@@ -1006,13 +1033,11 @@ class NeoTrackerWindow(
         self.preset_combo.setObjectName("presetCombo")
         self.preset_combo.setToolTip(tr('Choose the tracking pipeline preset for this task.'))
         self.preset_combo.currentIndexChanged.connect(self._preset_changed)
-        layout.addWidget(self._section_label(tr('PRESET')))
-        layout.addWidget(self.preset_combo)
 
         self.preset_description.setObjectName("presetDescription")
-        self.preset_description.setMaximumHeight(92)
+        self.preset_description.setMaximumHeight(50)
+        self.preset_description.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         self.preset_description.setOpenExternalLinks(False)
-        layout.addWidget(self.preset_description)
 
         self.tracking_backend_label.setObjectName("trackingBackendLabel")
         self.tracking_backend_label.setAccessibleName(tr('Observation compute backend'))
@@ -1299,7 +1324,7 @@ class NeoTrackerWindow(
         tab = QWidget()
         layout = QVBoxLayout(tab)
         # Commands keep their original controller wiring and parent enable gate;
-        # the ribbon is their visible surface. No widget is moved between layouts.
+        # the contextual command strip is their visible surface.
         command_sources = QWidget(tab)
         command_sources.hide()
         source_layout = QVBoxLayout(command_sources)
@@ -1602,6 +1627,7 @@ class NeoTrackerWindow(
         )
         for tab_index in range(1, self.sidebar_tabs.count()):
             self.sidebar_tabs.setTabEnabled(tab_index, not project_open_busy)
+        self.preset_combo.setEnabled(self.sidebar_tabs.isEnabled() and not project_open_busy)
         if busy:
             if operation == "open":
                 detail = "Opening project · reading project file…"
@@ -1859,6 +1885,7 @@ class NeoTrackerWindow(
         if current_item is not None and current_item.data(Qt.ItemDataRole.UserRole) is not None:
             current_item.setText(task.title())
             current_item.setToolTip(task.media_path or "")
+            current_item.setIcon(QIcon())
 
         results_preserved = not assessment.clear_results
         self._cancel_media_relink(render=False)
@@ -3954,6 +3981,16 @@ class NeoTrackerWindow(
             self._preview_coordinator.discard_session()
             return
         self._render_preview()
+        item = self.task_list.currentItem()
+        if item is not None and item.icon().isNull():
+            pixels = result_object.bgr_frame
+            height, width = pixels.shape[:2]
+            image = QImage(pixels.data, width, height, int(pixels.strides[0]), QImage.Format.Format_BGR888)
+            thumbnail = image.scaled(128, 88, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            item.setIcon(QIcon(QPixmap.fromImage(thumbnail)))
+            info = task_object.media_info
+            duration = max(0, int(info.duration_s or 0))
+            item.setText(f"{task_object.title()}\n{duration // 60:02d}:{duration % 60:02d}  {width} × {height}")
 
     def _preview_coordinator_failed(
         self,
@@ -5066,6 +5103,7 @@ class NeoTrackerWindow(
                 self._tracking_previous_sidebar_tab = self.sidebar_tabs.currentWidget()
             self.sidebar_tabs.setCurrentWidget(self.tracking_tab)
         self.sidebar_tabs.setEnabled(not busy)
+        self.preset_combo.setEnabled(not busy and self.sidebar_tabs.isTabEnabled(1))
         self._set_action_enabled(
             "tracking.export_csv",
             False if busy else bool(self.current_task.pipeline.results),
@@ -6369,6 +6407,8 @@ class NeoTrackerWindow(
 
 def run() -> int:
     app = QApplication.instance() or QApplication(sys.argv)
+    from neo_tracker.ui.desktop_theme import configure_desktop_appearance
+    configure_desktop_appearance(app)
     from neo_tracker.ui.language import configure_language, add_language_menu
     configure_language(app)
     window = NeoTrackerWindow(

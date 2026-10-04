@@ -17,6 +17,7 @@ def run(report_path: str) -> int:
     from neo_tracker.ui.main_window import NeoTrackerWindow
     from neo_tracker.ui.view_state import PhysicsWorkspaceStateStore
     from neo_tracker.ui.language import configure_language, add_language_menu
+    from neo_tracker.ui.desktop_theme import configure_desktop_appearance
 
     report = {"frozen": bool(getattr(sys, "frozen", False)), "executable": sys.executable,
               "passed": False, "checks": []}
@@ -25,8 +26,17 @@ def run(report_path: str) -> int:
         for name in ("numpy", "cv2", "scipy", "PySide6", "neo_tracker")
     }
     app = QApplication.instance() or QApplication(["Neo-Tracker packaging check"])
+    configure_desktop_appearance(app)
     configure_language(app, "zh_CN")
     windows = []
+
+    def capture(window, path):
+        # Normalize Retina output to the design's 1x logical-pixel viewport.
+        from PySide6.QtCore import Qt
+        pixmap = window.grab().scaled(window.size(), Qt.AspectRatioMode.IgnoreAspectRatio,
+                                      Qt.TransformationMode.SmoothTransformation)
+        pixmap.setDevicePixelRatio(1)
+        assert pixmap.save(str(path))
 
     def wait_for(predicate, timeout=30.0):
         deadline = monotonic() + timeout
@@ -73,13 +83,13 @@ def run(report_path: str) -> int:
             assert window.current_task.media_info.available
             assert window.current_task.media_info.frame_count == 24
             report["checks"].append("frozen probe and preview helpers")
-            window.workflow_navigation.setCurrentRow(window.workflow_order.index(4))
-            window.command_ribbon.parameter_buttons["roi.rectangle"].click()
+            window.workflow_navigation.setCurrentIndex(window.workflow_order.index(4))
+            window.workspace_commands.parameter_buttons["roi.rectangle"].click()
             assert window.preview_label.selection_mode() == "roi_rectangle"
-            window.command_ribbon.parameter_buttons["drawing.cancel"].click()
+            window.workspace_commands.parameter_buttons["drawing.cancel"].click()
             assert window.preview_label.selection_mode() is None
-            report["checks"].append("ribbon ROI drawing and cancellation use existing parameter controls")
-            window.workflow_navigation.setCurrentRow(window.workflow_order.index(1))
+            report["checks"].append("contextual ROI drawing and cancellation use existing parameter controls")
+            window.workflow_navigation.setCurrentIndex(window.workflow_order.index(1))
             window.run_tracking_button.click()
             wait_for(lambda: window._background_tasks.idle)
             results = window.current_task.pipeline.results
@@ -90,12 +100,12 @@ def run(report_path: str) -> int:
             report["checks"].append("frozen tracking helper: 24 frames, positions and times")
             assert window.analysis_workspace_controller.select_series(source.series_id)
             window.sidebar_tabs.setCurrentWidget(window.review_tab)
-            window.command_ribbon.command_buttons["physics.fit"].click()
+            window.workspace_commands.command_buttons["physics.fit"].click()
             window.fit_panel.run_button.click()
             wait_for(lambda: window._background_tasks.idle)
             fit = window.analysis_workspace_controller.state.fit_result
             assert fit is not None and fit.sample_count == 24
-            window.command_ribbon.command_buttons["physics.export"].click()
+            window.action_registry.action("physics.export").trigger()
             wait_for(lambda: window._background_tasks.idle)
             assert {p.suffix for p in exports.iterdir()} == {".csv", ".npz", ".md"}
             with np.load(next(exports.glob("*.npz")), allow_pickle=False) as archive:
@@ -105,14 +115,24 @@ def run(report_path: str) -> int:
             assert window.physics_workspace.layout_state().page == "Plot"
             assert window.physics_workspace.tabs.tabText(window.physics_workspace.tabs.currentIndex()) == "图表"
             window.sidebar_tabs.setCurrentWidget(window.tracking_tab)
+            window.resize(1488, 1058)
+            window.workspace_splitter.setSizes([570, 380])
+            window.upper_splitter.setSizes([285, 1202])
+            window.main_splitter.setSizes([870, 325])
+            window._physics_sample_activated(source.series_id, 12)
+            wait_for(lambda: window._background_tasks.idle)
+            assert window.current_task.preview_frame_index == 12
+            assert window.physics_workspace.plot.selected_sample_index == 12
             app.processEvents()
-            window.grab().save(str(Path(report_path).with_suffix(".png")))
+            report["capture"] = {"viewport": [window.width(), window.height()],
+                                 "native_dpr": window.devicePixelRatioF(), "saved_dpr": 1}
+            capture(window, Path(report_path).with_suffix(".png"))
             window.resize(1024, 768)
             app.processEvents()
             assert (window.width(), window.height()) == (1024, 768)
             assert window.run_tracking_button.isVisible()
-            window.grab().save(str(Path(report_path).with_name("bundle-compact.png")))
-            report["checks"].append("engineering ribbon and native 1024x768 layout")
+            capture(window, Path(report_path).with_name("bundle-compact.png"))
+            report["checks"].append("graphite workbench and native 1024x768 layout")
             window.project_path = root / "smoke.ntproj"
             assert window._save_project()
             wait_for(lambda: window._background_tasks.idle)

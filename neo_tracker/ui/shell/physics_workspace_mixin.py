@@ -172,6 +172,7 @@ class PhysicsWorkspaceMixin:
                 )
             elif selected is not None:
                 self.physics_inspector.show_series(selected)
+        self._refresh_physics_page_inspector(self.physics_workspace.current_page)
         self._refresh_draft_state()
         return True
 
@@ -1043,6 +1044,7 @@ class PhysicsWorkspaceMixin:
     def _restore_physics_layout(self) -> None:
         state = self._physics_layout_store.load()
         if state is None:
+            self.physics_workspace.show_page("Plot")
             return
         self._restoring_physics_layout = True
         try:

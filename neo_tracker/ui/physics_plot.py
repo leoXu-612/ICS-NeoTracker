@@ -215,7 +215,7 @@ class PhysicsPlot(QWidget):
         bounds = self._data_bounds()
         return None if bounds is None else bounds[:2]
 
-    def set_series(self, series: Sequence[SampleSeries]) -> None:
+    def set_series(self, series: Sequence[SampleSeries], *, preserve_fit: bool = False) -> None:
         items = tuple(series)
         if len(items) > 8:
             raise ValueError("the physics plot supports at most eight visible series")
@@ -229,6 +229,7 @@ class PhysicsPlot(QWidget):
             not items[0].unit or any(item.unit != items[0].unit for item in items[1:])
         ):
             raise ValueError("visible plot series must share one known unit")
+        keep_fit = preserve_fit and bool(items and self._series and items[0] is self._series[0])
         self._series = items
         self._valid_indices = {
             item.series_id: np.flatnonzero(
@@ -240,7 +241,8 @@ class PhysicsPlot(QWidget):
             indices.setflags(write=False)
         self._selected_series_id = items[0].series_id if items else None
         self._selected_sample_index = None
-        self._fit_series = None
+        if not keep_fit:
+            self._fit_series = None
         self._range_s = None
         self._envelope_cache.clear()
         self._prepare_envelopes()

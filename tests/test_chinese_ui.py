@@ -30,12 +30,12 @@ class ChineseDesktopTests(unittest.TestCase):
         self.assertEqual(window.add_media_button.text(), "导入素材")
         self.assertEqual(window.save_project_button.text(), "保存项目")
         self.assertEqual(window.run_tracking_button.text(), "开始追踪")
-        self.assertEqual([window.workflow_navigation.item(i).text() for i in range(7)],
+        self.assertEqual([window.workflow_navigation.itemText(i) for i in range(7)],
                          ["素材", "定标", "追踪", "检查", "信号", "流程", "高级"])
         self.assertFalse(window.sidebar_tabs.tabBar().isVisible())
         self.assertIn("从一段实验视频开始", window.preview_label.text())
         for index in range(7):
-            window.workflow_navigation.setCurrentRow(index)
+            window.workflow_navigation.setCurrentIndex(index)
             self.app.processEvents()
             target = window.workflow_order[index]
             self.assertEqual(window.sidebar_tabs.currentIndex(), target)
@@ -70,10 +70,11 @@ class ChineseDesktopTests(unittest.TestCase):
 
     def test_navigation_respects_busy_gate_and_export_headers_stay_canonical(self):
         window = self.window
+        original = window.sidebar_tabs.currentIndex()
         window.sidebar_tabs.setEnabled(False)
-        window.workflow_navigation.setCurrentRow(4)
-        self.assertEqual(window.sidebar_tabs.currentIndex(), 0)
-        self.assertEqual(window.workflow_navigation.currentRow(), 0)
+        window.workflow_navigation.setCurrentIndex(4)
+        self.assertEqual(window.sidebar_tabs.currentIndex(), original)
+        self.assertEqual(window.workflow_navigation.currentIndex(), window.workflow_order.index(original))
         model = window.physics_workspace.series_model
         self.assertEqual(model.headerData(0, Qt.Orientation.Horizontal), "帧")
         self.assertEqual(model.copy_rows([]), "Frame\tTime\tValue\tValid\tSource\tUnit")

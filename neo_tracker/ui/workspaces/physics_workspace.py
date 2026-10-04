@@ -9,11 +9,13 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
+    QCheckBox,
     QComboBox,
     QFrame,
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QMenu,
     QPushButton,
     QScrollArea,
     QSizePolicy,
@@ -28,6 +30,7 @@ from PySide6.QtWidgets import (
 from neo_tracker.kinematics import SampleSeries
 from neo_tracker.ui.physics_plot import PhysicsPlot
 from neo_tracker.ui.series_table_model import SeriesTableModel
+from neo_tracker.ui.nearby_samples_model import NearbySamplesModel
 from neo_tracker.ui.view_state import PHYSICS_WORKSPACE_PAGES, PhysicsWorkspaceState
 
 
@@ -92,7 +95,8 @@ class PhysicsWorkspace(QFrame):
         )
         header_layout.addWidget(title)
         header_layout.addWidget(self.cursor_label, 1)
-        header_layout.addWidget(self.focus_button)
+        self.focus_button.setParent(header)
+        self.focus_button.hide()
         header_layout.addWidget(self.collapse_button)
         outer.addWidget(header)
 
@@ -162,17 +166,52 @@ class PhysicsWorkspace(QFrame):
         )
         self.export_plot_image_button.setEnabled(False)
         self.export_plot_image_button.clicked.connect(self.plotImageExportRequested)
-        header_layout.insertWidget(2, self.export_plot_image_button)
+        self.export_plot_image_button.setParent(header)
         self.export_plot_image_button.hide()
-        self.layoutStateChanged.connect(
-            lambda state: self.export_plot_image_button.setVisible(
-                not state.collapsed and state.page == "Plot"
-            )
-        )
         plot_page = QWidget()
         plot_layout = QVBoxLayout(plot_page)
         plot_layout.setContentsMargins(8, 7, 8, 8)
-        plot_layout.addWidget(self.plot, 1)
+        self.plot_toolbar = QHBoxLayout()
+        self.plot_series_combo = QComboBox()
+        self.plot_series_combo.setMinimumContentsLength(16)
+        self.plot_series_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.plot_series_combo.setAccessibleName(tr('Plot quantity'))
+        self.plot_series_combo.setModel(self.series_combo.model())
+        self.plot_series_combo.currentIndexChanged.connect(self.series_combo.setCurrentIndex)
+        self.series_combo.currentIndexChanged.connect(self.plot_series_combo.setCurrentIndex)
+        self.plot_toolbar.addWidget(self.plot_series_combo)
+        self.compare_checkbox = QCheckBox(tr('Compare compatible series'))
+        self.compare_checkbox.setChecked(True)
+        self.compare_checkbox.toggled.connect(self._comparison_changed)
+        self.plot_toolbar.addWidget(self.compare_checkbox)
+        self.plot_toolbar.addStretch(1)
+        plot_layout.addLayout(self.plot_toolbar)
+        plot_body = QHBoxLayout()
+        plot_body.setSpacing(12)
+        plot_body.addWidget(self.plot, 1)
+        self.nearby_panel = QFrame()
+        self.nearby_panel.setObjectName("nearbySamples")
+        self.nearby_panel.setMinimumWidth(260)
+        self.nearby_panel.setMaximumWidth(340)
+        nearby_layout = QVBoxLayout(self.nearby_panel)
+        nearby_layout.setContentsMargins(10, 10, 10, 10)
+        nearby_layout.addWidget(QLabel(tr('Samples near cursor')))
+        self.nearby_model = NearbySamplesModel(self.series_model, self)
+        self.nearby_table = QTableView()
+        self.nearby_table.setAccessibleName(tr('Samples near cursor'))
+        self.nearby_table.setModel(self.nearby_model)
+        self.nearby_table.verticalHeader().hide()
+        self.nearby_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.nearby_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.nearby_table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.nearby_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.nearby_table.setTabKeyNavigation(False)
+        self.nearby_table.setMinimumHeight(125)
+        self.nearby_table.clicked.connect(self._nearby_sample_activated)
+        self.nearby_table.activated.connect(self._nearby_sample_activated)
+        nearby_layout.addWidget(self.nearby_table)
+        plot_body.addWidget(self.nearby_panel)
+        plot_layout.addLayout(plot_body, 1)
         self._add_page("Plot", plot_page)
 
         self.fit_stack = QStackedWidget()
@@ -224,6 +263,17 @@ class PhysicsWorkspace(QFrame):
                 "Open Signal controls",
             ),
         )
+
+        self.more_pages_button = QToolButton()
+        self.more_pages_button.setText(tr('More analysis views'))
+        self.more_pages_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        more_menu = QMenu(self.more_pages_button)
+        for page in ("Diagnostics", "Runs", "Edits", "Signal"):
+            action = more_menu.addAction(tr(page))
+            action.triggered.connect(lambda _checked=False, page=page: self.show_page(page))
+        self.more_pages_button.setMenu(more_menu)
+        self.tabs.setCornerWidget(self.more_pages_button, Qt.Corner.TopRightCorner)
+        self._sync_page_visibility()
 
         self.setStyleSheet(
             """
@@ -286,12 +336,15 @@ class PhysicsWorkspace(QFrame):
         self._series = {item.series_id: item for item in items}
         previous = self.series_combo.currentData()
         self.series_combo.blockSignals(True)
+        self.plot_series_combo.blockSignals(True)
         self.series_combo.clear()
         for item in items:
             unit = item.unit or "unit unavailable"
             self.series_combo.addItem(f"{tr(item.name)} · {unit}", item.series_id)
         index = self.series_combo.findData(previous)
         self.series_combo.setCurrentIndex(index if index >= 0 else (0 if items else -1))
+        self.plot_series_combo.setCurrentIndex(self.series_combo.currentIndex())
+        self.plot_series_combo.blockSignals(False)
         self.series_combo.blockSignals(False)
         selected = self._series.get(str(self.series_combo.currentData()))
         self.plot.set_series(self._plot_series_for(selected) if selected is not None else ())
@@ -348,6 +401,9 @@ class PhysicsWorkspace(QFrame):
             if combo_index >= 0 and combo_index != self.series_combo.currentIndex():
                 self.series_combo.blockSignals(True)
                 self.series_combo.setCurrentIndex(combo_index)
+                self.plot_series_combo.blockSignals(True)
+                self.plot_series_combo.setCurrentIndex(combo_index)
+                self.plot_series_combo.blockSignals(False)
                 self.series_combo.blockSignals(False)
                 self.series_model.set_series(source)
             self._ensure_plot_series_visible(source)
@@ -363,6 +419,8 @@ class PhysicsWorkspace(QFrame):
             self.plot.set_selected_sample(int(sample_index), source.series_id)
             self.copy_row_button.setEnabled(True)
             self._set_data_status(source, int(sample_index))
+            self.nearby_model.center_on(int(sample_index))
+            self.nearby_table.selectRow(int(sample_index) - self.nearby_model.sample_index(0))
         else:
             self.series_table.selectionModel().blockSignals(True)
             self.series_table.clearSelection()
@@ -370,6 +428,8 @@ class PhysicsWorkspace(QFrame):
             self.plot.set_selected_sample(None)
             self.copy_row_button.setEnabled(False)
             self._set_data_status(self.series_model.series)
+            self.nearby_model.center_on(None)
+            self.nearby_table.clearSelection()
         self.set_cursor(frame_index, time_s, match)
 
     def remember_height(self, height: int) -> None:
@@ -427,6 +487,7 @@ class PhysicsWorkspace(QFrame):
             raise ValueError(f"unknown physics workspace page: {page}")
         for index in range(self.tabs.count()):
             if self.tabs.tabBar().tabData(index) == page:
+                self.tabs.tabBar().setTabVisible(index, True)
                 self.tabs.setCurrentIndex(index)
                 self.set_collapsed(False)
                 return
@@ -457,6 +518,8 @@ class PhysicsWorkspace(QFrame):
             self.plot.set_selected_range(*selected_range)
 
     def _plot_series_for(self, source: SampleSeries) -> tuple[SampleSeries, ...]:
+        if not self.compare_checkbox.isChecked():
+            return (source,)
         compatible = tuple(
             item
             for item in self._series.values()
@@ -465,6 +528,22 @@ class PhysicsWorkspace(QFrame):
             and item.unit == source.unit
         )
         return (source, *compatible[:7])
+
+    def _comparison_changed(self, _checked: bool) -> None:
+        source = self.series_model.series
+        if source is not None:
+            selected = self.plot.selected_sample_index
+            time_range = self.plot.selected_range
+            self.plot.set_series(self._plot_series_for(source), preserve_fit=True)
+            self.plot.set_selected_sample(selected, source.series_id)
+            if time_range is not None:
+                self.plot.set_selected_range(*time_range)
+            self.pageChanged.emit(self.current_page)
+
+    def _nearby_sample_activated(self, index) -> None:
+        source = self.series_model.series
+        if source is not None and index.isValid():
+            self.sampleActivated.emit(source.series_id, self.nearby_model.sample_index(index.row()))
 
     def _table_selection_changed(self) -> None:
         rows = self.series_table.selectionModel().selectedRows()
@@ -481,6 +560,8 @@ class PhysicsWorkspace(QFrame):
         self.plot.set_selected_sample(row, source.series_id)
         self.set_cursor(frame, time_s if math.isfinite(time_s) else None, "exact")
         self._set_data_status(source, row)
+        self.nearby_model.center_on(row)
+        self.nearby_table.selectRow(row - self.nearby_model.sample_index(0))
         self.sampleActivated.emit(source.series_id, row)
 
     def _copy_selected_rows(self) -> None:
@@ -543,9 +624,15 @@ class PhysicsWorkspace(QFrame):
         self.copy_status_label.setAccessibleDescription(tr(text))
 
     def _page_changed(self, _index: int) -> None:
+        self._sync_page_visibility()
         self.pageChanged.emit(self.current_page)
         if not self._collapsed:
             self.layoutStateChanged.emit(self.layout_state())
+
+    def _sync_page_visibility(self) -> None:
+        bar = self.tabs.tabBar()
+        for index in range(self.tabs.count()):
+            bar.setTabVisible(index, index < 3 or index == self.tabs.currentIndex())
 
     def _route_page(self, route: str, text: str, button_text: str) -> QWidget:
         page = QWidget()

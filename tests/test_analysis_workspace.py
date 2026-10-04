@@ -34,6 +34,39 @@ def make_series() -> SampleSeries:
 
 
 class PhysicsWorkspaceTests(unittest.TestCase):
+    def test_nearby_samples_share_source_values_and_emit_canonical_row(self) -> None:
+        workspace = PhysicsWorkspace()
+        source = make_series()
+        workspace.set_series((source,))
+        events = []
+        workspace.sampleActivated.connect(lambda series, row: events.append((series, row)))
+        workspace.apply_selection(source.series_id, 2, 2, 0.09, "exact")
+        self.assertEqual(events, [])
+        model = workspace.nearby_model
+        self.assertEqual(model.rowCount(), 3)
+        self.assertIs(model.source.series, source)
+        self.assertEqual(model.data(model.index(1, 1)), "0.090")
+        self.assertEqual(model.data(model.index(1, 2)), "2")
+        workspace._nearby_sample_activated(model.index(2, 0))
+        self.assertEqual(events, [(source.series_id, 3)])
+        workspace.apply_selection(source.series_id, 0, 0, 0.0, "exact")
+        self.assertEqual(model.sample_index(0), 0)
+        workspace.set_series(())
+        self.assertEqual(model.rowCount(), 0)
+
+    def test_plot_quantity_selector_and_comparison_remain_linked(self) -> None:
+        workspace = PhysicsWorkspace()
+        source = make_series()
+        other = replace(source, series_id="other:x", name="Other x")
+        workspace.set_series((source, other))
+        workspace.compare_checkbox.setChecked(False)
+        self.assertEqual(workspace.plot.series_ids, (source.series_id,))
+        workspace.plot_series_combo.setCurrentIndex(1)
+        self.assertIs(workspace.series_model.series, other)
+        self.assertEqual(workspace.series_combo.currentIndex(), 1)
+        workspace.compare_checkbox.setChecked(True)
+        self.assertEqual(workspace.plot.series_ids, (other.series_id, source.series_id))
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.app = QApplication.instance() or QApplication([])
@@ -398,7 +431,7 @@ class MainWindowPhysicsWorkspaceTests(unittest.TestCase):
         window.set_physics_series((self.sparse_series(),))
         window.physics_workspace.show_page("Plot")
         window.show()
-        button = window.physics_workspace.export_plot_image_button
+        button = window.workspace_commands.export_button
         button.setFocus(Qt.FocusReason.TabFocusReason)
         QApplication.processEvents()
         self.assertTrue(button.isVisible())
@@ -412,9 +445,10 @@ class MainWindowPhysicsWorkspaceTests(unittest.TestCase):
                 "neo_tracker.ui.shell.physics_workspace_mixin.QFileDialog.getSaveFileName",
                 return_value=(str(path), "PNG images (*.png)"),
             ) as save_dialog:
-                QTest.keyPress(button, Qt.Key.Key_Space)
-                save_dialog.assert_not_called()
-                QTest.keyRelease(button, Qt.Key.Key_Space)
+                menu = button.menu()
+                menu.popup(button.mapToGlobal(button.rect().bottomLeft()))
+                menu.setActiveAction(window.workspace_commands.plot_export_action)
+                QTest.keyClick(menu, Qt.Key.Key_Return)
                 save_dialog.assert_called_once()
 
             self.assertGreater(path.stat().st_size, 0)

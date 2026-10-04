@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import math
 
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
-from PySide6.QtGui import QBrush, QColor
+from PySide6.QtGui import QBrush, QColor, QPalette
 
 from neo_tracker.kinematics import SampleSeries
 from neo_tracker.ui.language import tr
@@ -107,7 +107,9 @@ class SeriesTableModel(QAbstractTableModel):
                 return int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             return int(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         if role == Qt.ItemDataRole.ForegroundRole and not bool(series.valid_mask[row]):
-            return QBrush(QColor("#7A5B1C"))
+            parent = self.parent()
+            dark = hasattr(parent, "palette") and parent.palette().color(QPalette.ColorRole.Base).lightness() < 128
+            return QBrush(QColor("#ffd18a" if dark else "#7A5B1C"))
         if role not in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole):
             return None
         key = (row, column, int(role))

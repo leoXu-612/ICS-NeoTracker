@@ -655,12 +655,12 @@ class MainWindowStructureTests(unittest.TestCase):
         window.add_media_button.setFocus(Qt.FocusReason.TabFocusReason)
         QCoreApplication.processEvents()
         add_focus = window.grab().toImage().constBits().tobytes()
-        window.open_project_button.setFocus(Qt.FocusReason.TabFocusReason)
+        window.workflow_navigation.setFocus(Qt.FocusReason.TabFocusReason)
         QCoreApplication.processEvents()
         open_focus = window.grab().toImage().constBits().tobytes()
 
         self.assertIn("QPushButton:focus", window.styleSheet())
-        self.assertIn("border: 2px solid #4b93e1", window.styleSheet())
+        self.assertIn("border: 2px solid #409cff", window.styleSheet())
         self.assertNotEqual(add_focus, open_focus)
 
     def test_application_font_size_is_inherited_instead_of_forced_to_pixels(self) -> None:
@@ -683,7 +683,7 @@ class MainWindowStructureTests(unittest.TestCase):
         finally:
             app.setFont(original_font)
 
-    def test_light_scroll_surfaces_and_status_bar_ignore_dark_system_background(self) -> None:
+    def test_graphite_scroll_surfaces_do_not_change_system_palette(self) -> None:
         original_palette = self.app.palette()
         self.addCleanup(self.app.setPalette, original_palette)
         dark_palette = QPalette(original_palette)
@@ -696,27 +696,27 @@ class MainWindowStructureTests(unittest.TestCase):
         window.resize(1440, 900)
         window.show()
 
-        def assert_light_background(widget: QWidget) -> None:
+        def assert_graphite_background(widget: QWidget) -> None:
             QCoreApplication.processEvents()
             image = window.grab().toImage()
             point = widget.mapTo(window, QPoint(2, 2))
             scale = image.devicePixelRatio()
             self.assertEqual(
                 image.pixelColor(int(point.x() * scale), int(point.y() * scale)).name(),
-                "#f3f5f7",
+                "#20252b" if widget is window.statusBar() else "#23282e",
                 widget.objectName(),
             )
 
         for index in range(window.sidebar_tabs.count()):
             with self.subTest(page=window.sidebar_tabs.tabText(index)):
                 window.sidebar_tabs.setCurrentIndex(index)
-                assert_light_background(window.sidebar_tabs.widget(index).viewport())
+                assert_graphite_background(window.sidebar_tabs.widget(index).viewport())
 
         window.physics_workspace.show_page("Fit")
         fit_scroll = window.physics_workspace.findChild(QScrollArea, "physicsFitPage")
         self.assertIsNotNone(fit_scroll)
-        assert_light_background(fit_scroll.viewport())
-        assert_light_background(window.statusBar())
+        assert_graphite_background(fit_scroll.viewport())
+        assert_graphite_background(window.statusBar())
         self.assertEqual(self.app.palette(), dark_palette)
 
     def test_preview_transport_exposes_named_frame_controls_and_label_buddy(self) -> None:

@@ -1,6 +1,28 @@
 """Graphite workbench chrome; scientific exports keep their print palette."""
 
-from PySide6.QtGui import QColor, QPalette
+from PySide6.QtGui import QColor, QIcon, QPainter, QPalette
+from PySide6.QtCore import QSize, Qt
+
+
+def workbench_icon(icon: QIcon) -> QIcon:
+    """Tint native icon silhouettes, including fallback icons, for graphite chrome."""
+    if icon.isNull():
+        return icon
+    result = QIcon()
+    for mode, color in ((QIcon.Mode.Normal, "#e7edf5"), (QIcon.Mode.Disabled, "#7e8995")):
+        for size in (16, 32, 64):
+            pixmap = icon.pixmap(QSize(size, size))
+            painter = QPainter(pixmap)
+            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+            painter.fillRect(pixmap.rect(), QColor(color))
+            painter.end()
+            result.addPixmap(pixmap, mode)
+    return result
+
+
+def configure_desktop_appearance(app) -> None:
+    """Use public Qt appearance APIs for this process's native icon/titlebar style."""
+    app.styleHints().setColorScheme(Qt.ColorScheme.Dark)
 
 
 def apply_desktop_theme(window) -> None:
@@ -46,6 +68,7 @@ def apply_desktop_theme(window) -> None:
         QTabBar::tab { background: transparent; border: none; color: #aeb8c4; padding: 7px 13px; margin: 0; }
         QTabBar::tab:selected { background: #2c4258; color: #a9d5ff; border-bottom: 2px solid #409cff; }
         QTabBar::tab:hover:!selected { background: #303740; }
+        QTabWidget::tab-bar { alignment: left; }
         QPushButton, QToolButton { background: #30373f; border: 1px solid #48515b; border-radius: 5px; padding: 4px 8px; min-height: 20px; color: #ecf0f5; }
         QPushButton:hover, QToolButton:hover { background: #3a444f; border-color: #687685; }
         QPushButton:pressed, QToolButton:pressed { background: #224b76; border-color: #409cff; }
@@ -54,11 +77,11 @@ def apply_desktop_theme(window) -> None:
         QPushButton#runTrackingButton:hover { background: #3a444f; }
         QPushButton#runTrackingButton[trackingBusy="true"] { background: #963f3c; border-color: #b75853; color: white; }
         QToolButton#exportMenuButton { background: #087cf0; border-color: #2994ff; padding: 5px 16px; color: white; font-weight: 600; }
+        QToolButton::menu-indicator { image: none; width: 0; }
         QPushButton#addMediaButton, QPushButton#transportButton { background: transparent; border-color: transparent; }
         QPushButton#addMediaButton:hover, QPushButton#transportButton:hover { background: #3a444f; }
         QPushButton#transportButton { min-width: 22px; padding: 3px 5px; }
         QLineEdit, QPlainTextEdit, QTextBrowser, QListWidget, QTableView, QComboBox, QSpinBox, QDoubleSpinBox { background: #2d343c; border: 1px solid #48515b; border-radius: 4px; padding: 4px; selection-background-color: #234c75; selection-color: #ffffff; }
-        QComboBox::drop-down { border: none; width: 20px; }
         QListWidget#taskList { border: none; background: #23282e; padding: 8px; }
         QListWidget::item { padding: 9px 7px; border: 1px solid transparent; border-radius: 4px; }
         QListWidget::item:selected { background: #243e59; border-color: #409cff; color: #f5f8fc; }
