@@ -1,0 +1,34 @@
+{
+  "frozen": true,
+  "executable": "/Users/leo.xu/Downloads/Neo-Tracker-studio-20261005/Neo-Tracker.app/Contents/MacOS/Neo-Tracker",
+  "passed": true,
+  "checks": [
+    "Cocoa window exposed",
+    "Simplified Chinese primary actions",
+    "frozen probe and preview helpers",
+    "contextual ROI drawing and cancellation use existing parameter controls",
+    "frozen tracking helper: 24 frames, positions and times",
+    "fit and CSV/NPZ/Markdown export",
+    "graphite workbench and native 1024x768 layout",
+    "frozen project-open helper and persistence",
+    "bundled SciPy signal and optimizer",
+    "all test windows closed; temporary media removed"
+  ],
+  "bundled_modules": {
+    "numpy": "/Users/leo.xu/Downloads/Neo-Tracker-studio-20261005/Neo-Tracker.app/Contents/Frameworks/numpy/__init__.py",
+    "cv2": "/Users/leo.xu/Downloads/Neo-Tracker-studio-20261005/Neo-Tracker.app/Contents/Frameworks/cv2/__init__.py",
+    "scipy": "/Users/leo.xu/Downloads/Neo-Tracker-studio-20261005/Neo-Tracker.app/Contents/Frameworks/scipy/__init__.py",
+    "PySide6": "/Users/leo.xu/Downloads/Neo-Tracker-studio-20261005/Neo-Tracker.app/Contents/Frameworks/PySide6/__init__.py",
+    "neo_tracker": "/Users/leo.xu/Downloads/Neo-Tracker-studio-20261005/Neo-Tracker.app/Contents/Frameworks/neo_tracker/__init__.py"
+  },
+  "capture": {
+    "viewport": [
+      1488,
+      1058
+    ],
+    "native_dpr": 2.0,
+    "saved_dpr": 1
+  },
+  "qt_platform": "cocoa",
+  "opencv": "4.13.0"
+}

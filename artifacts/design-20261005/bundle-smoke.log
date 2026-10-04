@@ -1,0 +1,2 @@
+qt.qpa.fonts: Populating font family aliases took 147 ms. Replace uses of missing font family "Sans-serif" with one that exists to avoid this cost. 
+2026-10-05 01:19:32.892 Neo-Tracker[45733:16634935] error messaging the mach port for IMKCFRunLoopWakeUpReliable

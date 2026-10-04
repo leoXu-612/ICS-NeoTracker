@@ -1,0 +1,26 @@
+{
+  "frozen": false,
+  "executable": "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3",
+  "passed": true,
+  "checks": [
+    "Cocoa window exposed",
+    "Simplified Chinese primary actions",
+    "frozen probe and preview helpers",
+    "contextual ROI drawing and cancellation use existing parameter controls",
+    "frozen tracking helper: 24 frames, positions and times",
+    "fit and CSV/NPZ/Markdown export",
+    "graphite workbench and native 1024x768 layout",
+    "frozen project-open helper and persistence",
+    "bundled SciPy signal and optimizer",
+    "all test windows closed; temporary media removed"
+  ],
+  "bundled_modules": {
+    "numpy": "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/numpy/__init__.py",
+    "cv2": "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/cv2/__init__.py",
+    "scipy": "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/scipy/__init__.py",
+    "PySide6": "/Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/PySide6/__init__.py",
+    "neo_tracker": "/Users/leo.xu/Desktop/Codex/ICS-Project-/_worktrees/ICS-NeoTracker-preview-draft-v04/neo_tracker/__init__.py"
+  },
+  "qt_platform": "cocoa",
+  "opencv": "4.13.0"
+}
