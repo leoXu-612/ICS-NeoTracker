@@ -341,16 +341,29 @@ neo-tracker
 
 ## Deployment scope
 
-当前交付范围是**源码安装的内部 Python 工具**，不是签名/notarized 的分发式 macOS App：
+从 [GitHub Releases](https://github.com/leoXu-612/ICS-NeoTracker/releases) 下载独立桌面包，无需安装 Python：
 
-- 运行方式：`python3 -m neo_tracker` 或 `neo-tracker` 入口脚本（需要本机 Python 3.12
-  环境与 pip 安装的依赖，见上）。
-- 未提供：`.app` 打包、代码签名（codesign）、notarization、自动更新或回滚通道；
-  Gatekeeper/Quarantine 未处理。
-- 平台证据：macOS 15.7.7 Apple Silicon 原生窗口验证（Retina 2×）；其他 macOS 版本、
-  Intel、Linux 未做部署验证。
-- 若未来改为分发式 App，需先补齐签名/notarization 与干净环境安装/升级/回滚矩阵
-  （见 FORDEEPSEEK.md P2）。
+- Apple Silicon Mac：`macOS-arm64.dmg` 或 ZIP。
+- Intel Mac：`macOS-x64.dmg` 或 ZIP。
+- Windows x64：解压 `Windows-x64.zip`，保留完整目录并运行 `Neo-Tracker.exe`。
+
+macOS DMG 中将 `Neo-Tracker.app` 拖入 Applications。当前包仅为 ad-hoc 签名，未经
+Developer ID 签名或 Apple 公证，首次打开可能需要在“系统设置 → 隐私与安全性”中允许。
+Windows 包未经 Authenticode 签名，可能显示 SmartScreen 提示。尚无自动更新通道。
+
+`.github/workflows/release.yml` 使用 Python 3.12 和 `packaging/requirements.txt` 中固定的
+依赖版本分别在原生 macOS arm64、macOS Intel 和 Windows x64 runner 构建。每个包的实际
+可执行程序须通过窗口启动、视频探测、预览解码、隔离追踪、项目保存/打开和 STFT 检查后
+才能归档；全部平台成功后才发布。Release 附带 SHA-256 校验值和含源码提交的构建记录。
+这些自动检查不代表完整的真实用户安装、升级或长视频人工验收。
+
+源码开发仍可使用上面的 pip 安装方式。手动构建命令：
+
+```bash
+python3 -m pip install -r packaging/requirements.txt
+python3 -m pip install --no-deps .
+python3 -m PyInstaller --noconfirm --clean packaging/neo-tracker.spec
+```
 
 ## Test
 

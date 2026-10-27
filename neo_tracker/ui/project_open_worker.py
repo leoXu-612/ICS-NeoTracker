@@ -613,11 +613,11 @@ def load_project_isolated(
     stage_path = Path(stage.name)
     stage.close()
     os.chmod(stage_path, 0o600)
+    command = [sys.executable]
+    if not getattr(sys, "frozen", False):
+        command += ["-m", "neo_tracker"]
     process = subprocess.Popen(
-        [
-            sys.executable,
-            "-m",
-            "neo_tracker.ui.project_open_worker",
+        command + [
             "--isolated-load",
             str(path),
             str(stage_path),
@@ -626,6 +626,7 @@ def load_project_isolated(
         stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,
         close_fds=True,
+        **({"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}),
     )
     deadline = monotonic() + _PROJECT_OPEN_LOAD_DEADLINE_S
     try:
@@ -877,7 +878,7 @@ def _run_isolated_load_cli(arguments: list[str]) -> int:
         return 2
     try:
         os.nice(10)
-    except OSError:
+    except (AttributeError, OSError):
         pass
     reply = _isolated_project_load_entry(arguments[1], arguments[2])
     encoded = json.dumps(reply, ensure_ascii=False, allow_nan=False).encode("utf-8")
